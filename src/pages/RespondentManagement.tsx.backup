@@ -1,0 +1,1091 @@
+import React, { useState, useEffect } from 'react';
+import { StudentService, StudentWithAnalysis } from '../services/studentService';
+import Papa from 'papaparse';
+import { supabase } from '../utils/index';
+import { useAuth } from '../contexts/AuthContext';
+import * as XLSX from 'xlsx';
+
+// CSV 업로드용 학생 데이터 인터페이스
+interface StudentUploadData {
+  학년: string;
+  반: string;
+  번호: string;
+  이름: string;
+  성별: string;
+  생년월일: string;
+  입학일: string;
+  어머니명: string;
+  어머니연락처: string;
+  아버지명: string;
+  아버지연락처: string;
+  이메일: string;
+}
+
+// 학생 카드 컴포넌트
+const StudentCard: React.FC<{
+  student: StudentWithAnalysis;
+  onViewDetails: (student: StudentWithAnalysis) => void;
+  onAddMemo: (student: StudentWithAnalysis) => void;
+}> = ({ student, onViewDetails, onAddMemo }) => {
+  // parent_contact가 존재하는지 확인하고 안전하게 접근
+  // const parentContact = student.parent_contact as any;
+  
+  // 위험도 계산 (네트워크 분석 결과 기반)
+  const analysisResult = student.network_analysis_results?.[0];
+  const riskLevel = analysisResult?.risk_indicators ? 
+    (analysisResult.risk_indicators as any)?.isolation_risk || 'low' : 'low';
+  
+  const getRiskColor = (risk: string) => {
+    switch (risk) {
+      case 'high': return 'bg-red-100 text-red-800';
+      case 'medium': return 'bg-yellow-100 text-yellow-800';
+      default: return 'bg-green-100 text-green-800';
+    }
+  };
+
+  const getRiskLabel = (risk: string) => {
+    switch (risk) {
+      case 'high': return '주의 필요';
+      case 'medium': return '관찰 중';
+      default: return '안정';
+    }
+  };
+
+  return (
+    <div className="bg-white border border-gray-200 rounded-lg p-6 hover:shadow-md transition-shadow">
+      <div className="flex items-start justify-between mb-4">
+        <div className="flex items-center space-x-4">
+          <div className="w-12 h-12 bg-blue-600 rounded-full flex items-center justify-center">
+            <span className="text-white font-semibold">{student.name.charAt(0)}</span>
+          </div>
+          <div>
+            <h3 className="text-lg font-semibold text-gray-900">{student.name}</h3>
+            <p className="text-sm text-gray-600">{student.grade}학년 {student.class}반 · {student.student_number}</p>
+          </div>
+        </div>
+        
+        <span className={`px-2 py-1 rounded-full text-xs font-medium ${getRiskColor(riskLevel)}`}>
+          {getRiskLabel(riskLevel)}
+        </span>
+      </div>
+
+      <div className="grid grid-cols-2 gap-4 mb-4 text-sm">
+        <div>
+          <span className="text-gray-600">성별:</span>
+          <span className="ml-2 text-gray-900">{student.gender === 'male' ? '남' : '여'}</span>
+        </div>
+        <div>
+          <span className="text-gray-600">생년월일:</span>
+          <span className="ml-2 text-gray-900">{student.birth_date}</span>
+        </div>
+        <div>
+          <span className="text-gray-600">입학일:</span>
+          <span className="ml-2 text-gray-900">{new Date(student.enrolled_at).toLocaleDateString()}</span>
+        </div>
+        <div>
+          <span className="text-gray-600">교육ID:</span>
+          <span className="ml-2 text-gray-900">{student.lifelong_education_id}</span>
+        </div>
+      </div>
+
+      {/* 네트워크 분석 정보 */}
+      {analysisResult && (
+        <div className="mb-4 p-3 bg-gray-50 rounded-lg">
+          <h4 className="text-sm font-medium text-gray-700 mb-2">교우관계 분석</h4>
+          <div className="grid grid-cols-2 gap-2 text-xs">
+            <div>
+              <span className="text-gray-600">중심성:</span>
+              <span className="ml-2 text-gray-900">
+                {analysisResult.centrality_scores ? 
+                  Math.round(((analysisResult.centrality_scores as any)?.degree || 0) * 100) / 100 : 'N/A'}
+              </span>
+            </div>
+            <div>
+              <span className="text-gray-600">소속 그룹:</span>
+              <span className="ml-2 text-gray-900">{analysisResult.community_membership || 'N/A'}</span>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 메모 수 */}
+      <div className="mb-4 text-sm">
+        <span className="text-gray-600">교사 메모:</span>
+        <span className="ml-2 text-gray-900">{student.teacher_memos?.length || 0}개</span>
+        <span className="ml-4 text-gray-600">개입 기록:</span>
+        <span className="ml-2 text-gray-900">{student.intervention_logs?.length || 0}개</span>
+      </div>
+
+      <div className="flex space-x-2">
+        <button
+          onClick={() => onViewDetails(student)}
+          className="flex-1 bg-blue-600 text-white py-2 px-4 rounded-md text-sm font-medium hover:bg-blue-700 transition-colors"
+        >
+          상세보기
+        </button>
+        <button
+          onClick={() => onAddMemo(student)}
+          className="bg-gray-100 text-gray-700 py-2 px-4 rounded-md text-sm font-medium hover:bg-gray-200 transition-colors"
+        >
+          메모 추가
+        </button>
+      </div>
+    </div>
+  );
+};
+
+// 학생 상세 정보 모달
+const StudentDetailModal: React.FC<{
+  student: StudentWithAnalysis | null;
+  isOpen: boolean;
+  onClose: () => void;
+}> = ({ student, isOpen, onClose }) => {
+  if (!isOpen || !student) return null;
+
+  const parentContact = student.parent_contact as any;
+  const analysisResult = student.network_analysis_results?.[0];
+
+  // 디버깅: 학부모 연락처 정보 로그
+  console.log('👨‍👩‍👧‍👦 학생 상세보기 - 학부모 연락처:', {
+    studentId: student.id,
+    studentName: student.name,
+    parent_contact: student.parent_contact,
+    parentContact: parentContact
+  });
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      <div className="bg-white rounded-lg p-6 w-full max-w-4xl max-h-[90vh] overflow-y-auto">
+        <div className="flex items-center justify-between mb-6">
+          <h2 className="text-2xl font-bold text-gray-900">{student.name} 상세 정보</h2>
+          <button
+            onClick={onClose}
+            className="text-gray-500 hover:text-gray-700"
+          >
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* 기본 정보 */}
+          <div className="space-y-4">
+            <h3 className="text-lg font-semibold text-gray-900">기본 정보</h3>
+            <div className="bg-gray-50 rounded-lg p-4">
+              <div className="grid grid-cols-2 gap-4 text-sm">
+                <div>
+                  <span className="font-medium text-gray-600">학번:</span>
+                  <span className="ml-2 text-gray-900">{student.student_number}</span>
+                </div>
+                <div>
+                  <span className="font-medium text-gray-600">학급:</span>
+                  <span className="ml-2 text-gray-900">{student.grade}학년 {student.class}반</span>
+                </div>
+                <div>
+                  <span className="font-medium text-gray-600">성별:</span>
+                  <span className="ml-2 text-gray-900">{student.gender === 'male' ? '남자' : '여자'}</span>
+                </div>
+                <div>
+                  <span className="font-medium text-gray-600">생년월일:</span>
+                  <span className="ml-2 text-gray-900">{student.birth_date}</span>
+                </div>
+                <div className="col-span-2">
+                  <span className="font-medium text-gray-600">교육 ID:</span>
+                  <span className="ml-2 text-gray-900">{student.lifelong_education_id}</span>
+                </div>
+                <div className="col-span-2">
+                  <span className="font-medium text-gray-600">입학일:</span>
+                  <span className="ml-2 text-gray-900">{new Date(student.enrolled_at).toLocaleDateString()}</span>
+                </div>
+              </div>
+            </div>
+
+            {/* 학부모 연락처 */}
+            <h3 className="text-lg font-semibold text-gray-900">학부모 연락처</h3>
+            <div className="bg-gray-50 rounded-lg p-4">
+              {/* 어머니 정보 */}
+              {parentContact?.motherName && (
+                <div className="mb-3 p-3 bg-pink-50 rounded-lg">
+                  <h4 className="text-sm font-medium text-pink-700 mb-2">어머니</h4>
+                  <div className="space-y-1">
+                    <div>
+                      <span className="text-sm font-medium text-gray-600">이름:</span>
+                      <span className="ml-2 text-sm text-gray-900">{parentContact.motherName}</span>
+                    </div>
+                    {parentContact?.motherPhone && (
+                      <div>
+                        <span className="text-sm font-medium text-gray-600">연락처:</span>
+                        <span className="ml-2 text-sm text-gray-900">{parentContact.motherPhone}</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+              
+              {/* 아버지 정보 */}
+              {parentContact?.fatherName && (
+                <div className="mb-3 p-3 bg-blue-50 rounded-lg">
+                  <h4 className="text-sm font-medium text-blue-700 mb-2">아버지</h4>
+                  <div className="space-y-1">
+                    <div>
+                      <span className="text-sm font-medium text-gray-600">이름:</span>
+                      <span className="ml-2 text-sm text-gray-900">{parentContact.fatherName}</span>
+                    </div>
+                    {parentContact?.fatherPhone && (
+                      <div>
+                        <span className="text-sm font-medium text-gray-600">연락처:</span>
+                        <span className="ml-2 text-sm text-gray-900">{parentContact.fatherPhone}</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+              
+              {/* 이메일 정보 */}
+              {parentContact?.email && (
+                <div className="mb-3 p-3 bg-purple-50 rounded-lg">
+                  <h4 className="text-sm font-medium text-purple-700 mb-2">연락처</h4>
+                  <div>
+                    <span className="text-sm font-medium text-gray-600">이메일:</span>
+                    <span className="ml-2 text-sm text-gray-900">{parentContact.email}</span>
+                  </div>
+                </div>
+              )}
+              
+              {/* 정보가 없는 경우 */}
+              {!parentContact?.motherName && !parentContact?.fatherName && !parentContact?.email && (
+                <div className="text-sm text-gray-500 italic text-center py-4">
+                  학부모 연락처 정보가 없습니다.
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* 네트워크 분석 결과 */}
+          <div className="space-y-4">
+            <h3 className="text-lg font-semibold text-gray-900">교우관계 분석</h3>
+            {analysisResult ? (
+              <div className="bg-gray-50 rounded-lg p-4">
+                <div className="space-y-3">
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-700">중심성 지수</h4>
+                    <div className="mt-2 grid grid-cols-2 gap-2 text-sm">
+                      {analysisResult.centrality_scores && (
+                        <>
+                          <div>
+                            <span className="text-gray-600">연결 중심성:</span>
+                            <span className="ml-2 text-gray-900">
+                              {Math.round(((analysisResult.centrality_scores as any)?.degree || 0) * 100) / 100}
+                            </span>
+                          </div>
+                          <div>
+                            <span className="text-gray-600">근접 중심성:</span>
+                            <span className="ml-2 text-gray-900">
+                              {Math.round(((analysisResult.centrality_scores as any)?.closeness || 0) * 100) / 100}
+                            </span>
+                          </div>
+                          <div>
+                            <span className="text-gray-600">매개 중심성:</span>
+                            <span className="ml-2 text-gray-900">
+                              {Math.round(((analysisResult.centrality_scores as any)?.betweenness || 0) * 100) / 100}
+                            </span>
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                  
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-700">소속 그룹</h4>
+                    <p className="text-sm text-gray-900 mt-1">{analysisResult.community_membership || '미분류'}</p>
+                  </div>
+                  
+                  {analysisResult.risk_indicators && (
+                    <div>
+                      <h4 className="text-sm font-medium text-gray-700">위험 지표</h4>
+                      <div className="mt-2 text-sm">
+                        <span className="text-gray-600">고립 위험도:</span>
+                        <span className="ml-2 text-gray-900">
+                          {(analysisResult.risk_indicators as any)?.isolation_risk || 'low'}
+                        </span>
+                      </div>
+                    </div>
+                  )}
+                  
+                  {analysisResult.recommendations && (
+                    <div>
+                      <h4 className="text-sm font-medium text-gray-700">권장사항</h4>
+                      <p className="text-sm text-gray-900 mt-1">
+                        {(analysisResult.recommendations as any)?.intervention || '정기 관찰'}
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            ) : (
+              <div className="bg-gray-50 rounded-lg p-4">
+                <p className="text-sm text-gray-500">아직 분석 결과가 없습니다.</p>
+              </div>
+            )}
+
+            {/* 교사 메모 */}
+            <h3 className="text-lg font-semibold text-gray-900">교사 메모</h3>
+            <div className="bg-gray-50 rounded-lg p-4 max-h-48 overflow-y-auto">
+              {student.teacher_memos && student.teacher_memos.length > 0 ? (
+                <div className="space-y-2">
+                  {student.teacher_memos.map((memo) => (
+                    <div key={memo.id} className="text-sm">
+                      <div className="flex justify-between items-start">
+                        <span className="font-medium text-gray-700">{memo.memo_type}</span>
+                        <span className="text-xs text-gray-500">
+                          {new Date(memo.created_at || '').toLocaleDateString()}
+                        </span>
+                      </div>
+                      <p className="text-gray-900 mt-1">{memo.content}</p>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-sm text-gray-500">메모가 없습니다.</p>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const RespondentManagement: React.FC = () => {
+  const { user } = useAuth(); // 현재 로그인한 사용자 정보
+  const [students, setStudents] = useState<StudentWithAnalysis[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [gradeFilter, setGradeFilter] = useState<string>('all');
+  const [classFilter, setClassFilter] = useState<string>('all');
+  const [riskFilter, setRiskFilter] = useState<string>('all');
+  const [selectedStudent, setSelectedStudent] = useState<StudentWithAnalysis | null>(null);
+  const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  // 샘플 데이터 생성 함수
+  const generateSampleStudents = (): StudentWithAnalysis[] => {
+    const names = ['김민수', '이지영', '박준호', '최서연', '정다은', '강태현'];
+    const grades = ['1', '2', '3'];
+    const classes = ['1', '2', '3'];
+    
+    return Array.from({ length: 6 }, (_, index) => ({
+      id: `student-${index + 1}`,
+      lifelong_education_id: `LEI-${String(index + 1).padStart(6, '0')}`,
+      current_school_id: '00000000-0000-0000-0000-000000000011',
+      student_number: String(index + 1).padStart(4, '0'),
+      name: names[index],
+      birth_date: `2010-0${(index % 12) + 1}-15`,
+      gender: index % 2 === 0 ? 'male' : 'female',
+      grade: grades[Math.floor(index / 2)],
+      class: classes[index % 3],
+      parent_contact: {
+        mother: {
+          name: '김○○',
+          phone: `010-1111-${String(index + 1).padStart(4, '0')}`
+        }
+      },
+      enrolled_at: '2021-03-01T00:00:00Z',
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+      is_active: true,
+      network_analysis_results: [{
+        id: `analysis-${index + 1}`,
+        survey_id: 'survey-1',
+        student_id: `student-${index + 1}`,
+        analysis_type: 'friendship_network',
+        centrality_scores: {
+          degree: Math.floor(Math.random() * 15) + 5,
+          betweenness: Math.random(),
+          closeness: Math.random(),
+          eigenvector: Math.random()
+        },
+        community_membership: `group_${Math.floor(Math.random() * 5) + 1}`,
+        risk_indicators: {
+          isolation_risk: Math.random() > 0.7 ? 'high' : Math.random() > 0.4 ? 'medium' : 'low',
+          popularity: Math.random() * 10
+        },
+        recommendations: {
+          intervention: Math.random() > 0.7 ? 'enhanced_monitoring' : 'routine'
+        },
+        calculated_at: new Date().toISOString()
+      }],
+      teacher_memos: [],
+      intervention_logs: []
+    }));
+  };
+
+  // 실제 학생 데이터 로드
+  useEffect(() => {
+    const loadStudents = async () => {
+      if (!user) return;
+      
+      try {
+        setLoading(true);
+        setError(null);
+        
+        // 디버깅: 사용자 정보 로그
+        console.log('🔍 사용자 정보:', {
+          id: user.id,
+          name: user.name,
+          role: user.role,
+          schoolId: user.schoolId,
+          school_id: user.school_id,
+          grade: user.grade,
+          class: user.class
+        });
+        
+        const schoolId = user.school_id || '00000000-0000-0000-0000-000000000011';
+        
+        let studentsData: StudentWithAnalysis[];
+        
+        // 담임선생님인 경우 자신의 담당 반 학생만 조회
+        if (user.role === 'homeroom_teacher' && user.grade && user.class) {
+          // 담임선생님은 자신의 담당 반만 볼 수 있음
+          if (searchTerm) {
+            studentsData = await StudentService.searchStudents(schoolId, searchTerm);
+            // 검색 결과에서도 자신의 반만 필터링
+            studentsData = studentsData.filter(student => 
+              student.grade === user.grade && student.class === user.class
+            );
+          } else {
+            studentsData = await StudentService.getStudentsByGradeAndClass(
+              schoolId,
+              user.grade,
+              user.class
+            );
+          }
+        } else {
+          // 학교관리자, 학년부장, 교육청관리자는 전체 또는 필터된 데이터 조회
+          if (searchTerm) {
+            studentsData = await StudentService.searchStudents(schoolId, searchTerm);
+          } else if (gradeFilter !== 'all' || classFilter !== 'all') {
+            studentsData = await StudentService.getStudentsByGradeAndClass(
+              schoolId,
+              gradeFilter !== 'all' ? gradeFilter : undefined,
+              classFilter !== 'all' ? classFilter : undefined
+            );
+          } else if (riskFilter === 'high') {
+            studentsData = await StudentService.getHighRiskStudents(schoolId);
+          } else {
+            studentsData = await StudentService.getAllStudents(schoolId);
+          }
+          
+          // 학년부장인 경우 자신의 담당 학년만 필터링
+          if (user.role === 'grade_teacher' && user.grade) {
+            studentsData = studentsData.filter(student => student.grade === user.grade);
+          }
+        }
+        
+        setStudents(studentsData);
+      } catch (error) {
+        console.error('Failed to load students:', error);
+        setError('학생 데이터를 불러오는데 실패했습니다. 샘플 데이터를 표시합니다.');
+        
+        // 에러 발생 시 샘플 데이터 사용 (권한에 따라 필터링)
+        let sampleStudents = generateSampleStudents();
+        
+        if (user.role === 'homeroom_teacher' && user.grade && user.class) {
+          sampleStudents = sampleStudents.filter(student => 
+            student.grade === user.grade && student.class === user.class
+          );
+        } else if (user.role === 'grade_teacher' && user.grade) {
+          sampleStudents = sampleStudents.filter(student => student.grade === user.grade);
+        }
+        
+        setStudents(sampleStudents);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadStudents();
+  }, [user, searchTerm, gradeFilter, classFilter, riskFilter]);
+
+  const handleViewDetails = (student: StudentWithAnalysis) => {
+    setSelectedStudent(student);
+    setIsDetailModalOpen(true);
+  };
+
+  const handleAddMemo = async (student: StudentWithAnalysis) => {
+    try {
+      const content = prompt('학생에 대한 메모를 입력하세요:');
+      if (!content) return;
+
+      const teacherId = '00000000-0000-0000-0000-000000000021'; // 임시 교사 ID
+      
+      await StudentService.addTeacherMemo(
+        student.id,
+        teacherId,
+        content,
+        'observation',
+        'private'
+      );
+
+      // 메모 추가 후 학생 목록 새로고침
+      if (!user) {
+        alert('사용자 정보를 찾을 수 없습니다.');
+        return;
+      }
+      
+      const schoolId = user.school_id || '00000000-0000-0000-0000-000000000011';
+      const updatedStudents = await StudentService.getAllStudents(schoolId);
+      setStudents(updatedStudents);
+      
+      alert('메모가 성공적으로 추가되었습니다.');
+    } catch (error) {
+      console.error('Failed to add memo:', error);
+      alert('메모 추가에 실패했습니다.');
+    }
+  };
+
+  const handleDownloadTemplate = () => {
+    // 엑셀 템플릿 다운로드
+    const headers = ['학년', '반', '번호', '이름', '성별', '생년월일', '입학일', '어머니명', '어머니연락처', '아버지명', '아버지연락처', '이메일'];
+    
+    const sampleData = [
+      ['3', '1', '1', '김철수', '남', '2010-03-15', '2023-03-01', '김○○', '010-1234-5678', '김○○', '010-1111-1111', 'family1@email.com'],
+      ['3', '1', '2', '이영희', '여', '2010-05-20', '2023-03-01', '이○○', '010-2345-6789', '이○○', '010-2222-2222', 'family2@email.com'],
+      ['3', '1', '3', '박민수', '남', '2010-07-10', '2023-03-01', '박○○', '010-3456-7890', '박○○', '010-3333-3333', 'family3@email.com'],
+      ['3', '1', '4', '최지우', '여', '2010-04-22', '2023-03-01', '최○○', '010-4567-8901', '최○○', '010-4444-4444', 'family4@email.com'],
+      ['3', '1', '5', '정하은', '여', '2010-08-05', '2023-03-01', '정○○', '010-5678-9012', '정○○', '010-5555-5555', 'family5@email.com'],
+      ['3', '1', '6', '강도윤', '남', '2010-12-30', '2023-03-01', '강○○', '010-6789-0123', '강○○', '010-6666-6666', 'family6@email.com'],
+      ['3', '1', '7', '윤서연', '여', '2010-02-18', '2023-03-01', '윤○○', '010-7890-1234', '윤○○', '010-7777-7777', 'family7@email.com'],
+      ['3', '1', '8', '장민호', '남', '2010-09-11', '2023-03-01', '장○○', '010-8901-2345', '장○○', '010-8888-8888', 'family8@email.com']
+    ];
+
+    // 워크북 생성
+    const workbook = XLSX.utils.book_new();
+    
+    // 워크시트 생성
+    const worksheet = XLSX.utils.aoa_to_sheet([headers, ...sampleData]);
+    
+    // 열 너비 자동 조정
+    const columnWidths = headers.map(header => ({ wch: Math.max(header.length, 15) }));
+    worksheet['!cols'] = columnWidths;
+    
+    // 워크북에 워크시트 추가
+    XLSX.utils.book_append_sheet(workbook, worksheet, '학생명단');
+    
+    // 엑셀 파일 다운로드
+    XLSX.writeFile(workbook, '학생명단_템플릿.xlsx');
+  };
+
+    const handleExcelUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    try {
+      setLoading(true);
+      
+      let studentData: StudentUploadData[] = [];
+      
+      // 파일 확장자에 따라 처리 방식 결정
+      if (file.name.endsWith('.xlsx') || file.name.endsWith('.xls')) {
+        // 엑셀 파일 처리
+        const arrayBuffer = await file.arrayBuffer();
+        const workbook = XLSX.read(arrayBuffer, { type: 'array' });
+        const worksheet = workbook.Sheets[workbook.SheetNames[0]];
+        const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+        
+        // 첫 번째 행을 헤더로 사용하고 나머지를 데이터로 변환
+        const headers = jsonData[0] as string[];
+        const dataRows = jsonData.slice(1) as string[][];
+        
+        studentData = dataRows.map(row => ({
+          학년: row[0] || '',
+          반: row[1] || '',
+          번호: row[2] || '',
+          이름: row[3] || '',
+          성별: row[4] || '',
+          생년월일: row[5] || '',
+          입학일: row[6] || '',
+          어머니명: row[7] || '',
+          어머니연락처: row[8] || '',
+          아버지명: row[9] || '',
+          아버지연락처: row[10] || '',
+          이메일: row[11] || ''
+        }));
+        
+        // 엑셀 파일 처리 후 데이터 검증 및 저장
+        await processStudentData(studentData);
+        
+      } else if (file.name.endsWith('.csv')) {
+        // CSV 파일 처리 (기존 방식 유지)
+        Papa.parse(file, {
+          header: true,
+          encoding: 'UTF-8',
+          complete: async (results) => {
+            try {
+              const csvStudentData = results.data as StudentUploadData[];
+              await processStudentData(csvStudentData);
+            } catch (parseError) {
+              console.error('CSV parsing error:', parseError);
+              alert('CSV 파일 처리 중 오류가 발생했습니다.');
+            } finally {
+              setLoading(false);
+            }
+          },
+          error: (error) => {
+            console.error('CSV file error:', error);
+            alert('CSV 파일 읽기에 실패했습니다. 파일 형식을 확인해주세요.');
+            setLoading(false);
+          }
+        });
+      } else {
+        alert('지원하지 않는 파일 형식입니다. .xlsx, .xls, .csv 파일만 업로드 가능합니다.');
+        setLoading(false);
+        return;
+      }
+      
+    } catch (error) {
+      console.error('File upload error:', error);
+      alert('파일 업로드에 실패했습니다.');
+      setLoading(false);
+    }
+    
+    // 파일 입력 초기화
+    event.target.value = '';
+  };
+
+  // 학생 데이터 처리 함수 (공통 로직)
+  const processStudentData = async (studentData: StudentUploadData[]) => {
+    try {
+      // 데이터 검증
+      const validStudents = studentData.filter(student => 
+        student.학년 && student.반 && student.번호 && student.이름 && student.성별 && student.생년월일 && student.입학일
+      );
+
+      if (validStudents.length === 0) {
+        alert('올바른 형식의 학생 데이터가 없습니다.\n\n다음 사항을 확인해주세요:\n- 헤더가 정확한지 (학년,반,번호,이름,성별,생년월일,입학일,어머니명,어머니연락처,아버지명,아버지연락처,이메일)\n- 필수 항목이 모두 입력되었는지\n- 파일이 UTF-8로 저장되었는지');
+        setLoading(false);
+        return;
+      }
+
+      // 중복 학번 검사
+      const duplicateCheck = new Set();
+      const duplicates = [];
+      
+      for (const student of validStudents) {
+        const key = `${student.학년}-${student.반}-${student.번호}`;
+        if (duplicateCheck.has(key)) {
+          duplicates.push(`${student.학년}학년 ${student.반}반 ${student.번호}번`);
+        }
+        duplicateCheck.add(key);
+      }
+
+      if (duplicates.length > 0) {
+        alert(`중복된 학번이 있습니다:\n${duplicates.join(', ')}\n\n중복을 제거하고 다시 시도해주세요.`);
+        setLoading(false);
+        return;
+      }
+
+      // 현재 학교 ID (로그인한 사용자의 학교 ID 사용)
+      if (!user) {
+        alert('사용자 정보를 찾을 수 없습니다. 다시 로그인해주세요.');
+        setLoading(false);
+        return;
+      }
+      
+      // 디버깅: 업로드 시 사용자 정보 로그
+      console.log('📤 파일 업로드 시 사용자 정보:', {
+        id: user.id,
+        name: user.name,
+        role: user.role,
+        schoolId: user.schoolId,
+        school_id: user.school_id,
+        grade: user.grade,
+        class: user.class
+      });
+      
+      const schoolId = user.school_id || '00000000-0000-0000-0000-000000000011';
+
+      // 학생 데이터를 Supabase 형식으로 변환
+      const studentsToInsert = validStudents.map((student, index) => ({
+        lifelong_education_id: `LEI-${Date.now()}-${index}`, // 임시 LEI 생성
+        current_school_id: schoolId,
+        student_number: student.번호,
+        name: student.이름,
+        birth_date: student.생년월일,
+        gender: student.성별 === '남' ? 'male' : 'female',
+        grade: student.grade,
+        class: student.반,
+        parent_contact: {
+          motherName: student.어머니명 || '',
+          motherPhone: student.어머니연락처 || '',
+          fatherName: student.아버지명 || '',
+          fatherPhone: student.아버지연락처 || '',
+          email: student.이메일 || ''
+        },
+        enrolled_at: student.입학일, // CSV의 입학일 컬럼 값 사용
+        is_active: true
+      }));
+
+      // Supabase에 일괄 삽입
+      const { error } = await supabase
+        .from('students')
+        .insert(studentsToInsert)
+        .select();
+
+      if (error) {
+        console.error('Database insert error:', error);
+        alert(`데이터베이스 저장 중 오류가 발생했습니다:\n${error.message}`);
+        setLoading(false);
+        return;
+      }
+
+      // 성공 메시지
+      const gradeClassSummary = Array.from(new Set(validStudents.map(s => `${s.학년}학년 ${s.반}반`))).join(', ');
+      alert(`✅ 학생 데이터 업로드 완료!\n\n• 저장된 학생 수: ${validStudents.length}명\n• 대상 학급: ${gradeClassSummary}\n• 처리된 시간: ${new Date().toLocaleString()}`);
+      
+      // 학생 목록 새로고침
+      const updatedStudents = await StudentService.getAllStudents(schoolId);
+      setStudents(updatedStudents);
+      
+    } catch (error) {
+      console.error('Data processing error:', error);
+      alert('데이터 처리 중 오류가 발생했습니다.');
+    } finally {
+      setLoading(false);
+    }
+  };
+            
+            // 데이터 검증
+            const validStudents = studentData.filter(student => 
+              student.학년 && student.반 && student.번호 && student.이름 && student.성별 && student.생년월일 && student.입학일
+            );
+
+            if (validStudents.length === 0) {
+              alert('올바른 형식의 학생 데이터가 없습니다.\n\n다음 사항을 확인해주세요:\n- 헤더가 정확한지 (학년,반,번호,이름,성별,생년월일,입학일,어머니명,어머니연락처,아버지명,아버지연락처,이메일)\n- 필수 항목이 모두 입력되었는지\n- 파일이 UTF-8로 저장되었는지');
+              return;
+            }
+
+            // 중복 학번 검사
+            const duplicateCheck = new Set();
+            const duplicates = [];
+            
+            for (const student of validStudents) {
+              const key = `${student.학년}-${student.반}-${student.번호}`;
+              if (duplicateCheck.has(key)) {
+                duplicates.push(`${student.학년}학년 ${student.반}반 ${student.번호}번`);
+              }
+              duplicateCheck.add(key);
+            }
+
+            if (duplicates.length > 0) {
+              alert(`중복된 학번이 있습니다:\n${duplicates.join(', ')}\n\n중복을 제거하고 다시 시도해주세요.`);
+              return;
+            }
+
+            // 현재 학교 ID (로그인한 사용자의 학교 ID 사용)
+            if (!user) {
+              alert('사용자 정보를 찾을 수 없습니다. 다시 로그인해주세요.');
+              return;
+            }
+            
+            // 디버깅: 업로드 시 사용자 정보 로그
+            console.log('📤 CSV 업로드 시 사용자 정보:', {
+              id: user.id,
+              name: user.name,
+              role: user.role,
+              schoolId: user.schoolId,
+              school_id: user.school_id,
+              grade: user.grade,
+              class: user.class
+            });
+            
+            const schoolId = user.school_id || '00000000-0000-0000-0000-000000000011';
+
+            // 학생 데이터를 Supabase 형식으로 변환
+            const studentsToInsert = validStudents.map((student, index) => ({
+              lifelong_education_id: `LEI-${Date.now()}-${index}`, // 임시 LEI 생성
+              current_school_id: schoolId,
+              student_number: student.번호,
+              name: student.이름,
+              birth_date: student.생년월일,
+              gender: student.성별 === '남' ? 'male' : 'female',
+              grade: student.학년,
+              class: student.반,
+              parent_contact: {
+                motherName: student.어머니명 || '',
+                motherPhone: student.어머니연락처 || '',
+                fatherName: student.아버지명 || '',
+                fatherPhone: student.아버지연락처 || '',
+                email: student.이메일 || ''
+              },
+              enrolled_at: student.입학일, // CSV의 입학일 컬럼 값 사용
+              is_active: true
+            }));
+
+            // Supabase에 일괄 삽입
+            const { error } = await supabase
+              .from('students')
+              .insert(studentsToInsert)
+              .select();
+
+            if (error) {
+              console.error('Database insert error:', error);
+              alert(`데이터베이스 저장 중 오류가 발생했습니다:\n${error.message}`);
+              return;
+            }
+
+            // 성공 메시지
+            const gradeClassSummary = Array.from(new Set(validStudents.map(s => `${s.학년}학년 ${s.반}반`))).join(', ');
+            alert(`✅ 학생 데이터 업로드 완료!\n\n• 저장된 학생 수: ${validStudents.length}명\n• 대상 학급: ${gradeClassSummary}\n• 처리된 시간: ${new Date().toLocaleString()}`);
+            
+            // 학생 목록 새로고침
+            const updatedStudents = await StudentService.getAllStudents(schoolId);
+            setStudents(updatedStudents);
+            
+          } catch (parseError) {
+            console.error('Data processing error:', parseError);
+            alert('데이터 처리 중 오류가 발생했습니다.');
+          } finally {
+            setLoading(false);
+          }
+        },
+        error: (error) => {
+          console.error('File parsing error:', error);
+          alert('파일 읽기에 실패했습니다. CSV 형식을 확인해주세요.');
+          setLoading(false);
+        }
+      });
+      
+      // 파일 입력 초기화
+      event.target.value = '';
+    } catch (error) {
+      console.error('Failed to upload file:', error);
+      alert('파일 업로드에 실패했습니다.');
+      setLoading(false);
+    }
+  };
+
+  const filteredStudents = students.filter(student => {
+    const matchesSearch = student.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         student.student_number.includes(searchTerm);
+    const matchesGrade = gradeFilter === 'all' || student.grade === gradeFilter;
+    const matchesClass = classFilter === 'all' || student.class === classFilter;
+    
+    let matchesRisk = true;
+    if (riskFilter !== 'all') {
+      const analysisResult = student.network_analysis_results?.[0];
+      const riskLevel = analysisResult?.risk_indicators ? 
+        (analysisResult.risk_indicators as any)?.isolation_risk || 'low' : 'low';
+      matchesRisk = riskLevel === riskFilter;
+    }
+    
+    return matchesSearch && matchesGrade && matchesClass && matchesRisk;
+  });
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-lg font-medium text-gray-900 mb-2">학생 데이터 처리 중...</p>
+          <p className="text-gray-600">파일을 업로드하고 데이터베이스에 저장하는 중입니다.</p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-gray-50 p-6">
+      <div className="max-w-7xl mx-auto">
+        {/* 헤더 */}
+        <div className="mb-8">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-3xl font-bold text-gray-900 mb-2">학생 관리</h1>
+              <div className="flex items-center space-x-4 mb-2">
+                <p className="text-gray-600">학생들의 기본 정보와 교우관계 분석 결과를 확인하고 관리합니다.</p>
+                {user && (
+                  <div className="flex items-center space-x-2 bg-blue-50 px-3 py-1 rounded-full">
+                    <svg className="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                    </svg>
+                    <span className="text-sm font-medium text-blue-700">
+                      {user.name} ({user.role === 'homeroom_teacher' ? '담임교사' : 
+                       user.role === 'grade_teacher' ? '학년부장' :
+                       user.role === 'school_admin' ? '학교관리자' : '교육청관리자'})
+                    </span>
+                    {user.role === 'homeroom_teacher' && user.grade && user.class && (
+                      <span className="text-sm text-blue-600">
+                        - {user.grade}학년 {user.class}반 담당
+                      </span>
+                    )}
+                    {user.role === 'grade_teacher' && user.grade && (
+                      <span className="text-sm text-blue-600">
+                        - {user.grade}학년 담당
+                      </span>
+                    )}
+                  </div>
+                )}
+              </div>
+              {user?.role === 'homeroom_teacher' && (
+                <div className="text-sm text-amber-600 bg-amber-50 px-3 py-1 rounded-lg inline-block">
+                  💡 담임선생님은 담당 반 학생들만 확인할 수 있습니다.
+                </div>
+              )}
+            </div>
+            <div className="flex space-x-3">
+              <button
+                onClick={handleDownloadTemplate}
+                className="inline-flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+              >
+                <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+                엑셀 템플릿 다운로드
+              </button>
+              <button
+                onClick={() => document.getElementById('excel-upload')?.click()}
+                className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+              >
+                <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                </svg>
+                학생 명단 업로드
+              </button>
+              <input
+                id="excel-upload"
+                type="file"
+                accept=".csv,.xlsx,.xls"
+                onChange={handleExcelUpload}
+                className="hidden"
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* 에러 메시지 */}
+        {error && (
+          <div className="mb-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+            <div className="flex">
+              <div className="flex-shrink-0">
+                <svg className="h-5 w-5 text-yellow-400" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                </svg>
+              </div>
+              <div className="ml-3">
+                <p className="text-sm text-yellow-700">{error}</p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* 필터 컨트롤 */}
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            {/* 검색 */}
+            <div className="relative">
+              <input
+                type="text"
+                placeholder="학생 이름 또는 학번 검색..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              />
+              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <svg className="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                </svg>
+              </div>
+            </div>
+
+            {/* 학년 필터 */}
+            <select
+              value={user?.role === 'homeroom_teacher' && user?.grade ? user.grade : gradeFilter}
+              onChange={(e) => setGradeFilter(e.target.value)}
+              disabled={user?.role === 'homeroom_teacher'}
+              className={`px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
+                user?.role === 'homeroom_teacher' ? 'bg-gray-100 text-gray-500 cursor-not-allowed' : ''
+              }`}
+            >
+              {user?.role === 'homeroom_teacher' && user?.grade ? (
+                <option value={user.grade}>{user.grade}학년 (담당)</option>
+              ) : (
+                <>
+                  <option value="all">모든 학년</option>
+                  <option value="1">1학년</option>
+                  <option value="2">2학년</option>
+                  <option value="3">3학년</option>
+                </>
+              )}
+            </select>
+
+            {/* 반 필터 */}
+            <select
+              value={user?.role === 'homeroom_teacher' && user?.class ? user.class : classFilter}
+              onChange={(e) => setClassFilter(e.target.value)}
+              disabled={user?.role === 'homeroom_teacher'}
+              className={`px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
+                user?.role === 'homeroom_teacher' ? 'bg-gray-100 text-gray-500 cursor-not-allowed' : ''
+              }`}
+            >
+              {user?.role === 'homeroom_teacher' && user?.class ? (
+                <option value={user.class}>{user.class}반 (담당)</option>
+              ) : (
+                <>
+                  <option value="all">모든 반</option>
+                  <option value="1">1반</option>
+                  <option value="2">2반</option>
+                  <option value="3">3반</option>
+                </>
+              )}
+            </select>
+
+            {/* 위험도 필터 */}
+            <select
+              value={riskFilter}
+              onChange={(e) => setRiskFilter(e.target.value)}
+              className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            >
+              <option value="all">모든 위험도</option>
+              <option value="high">주의 필요</option>
+              <option value="medium">관찰 중</option>
+              <option value="low">안정</option>
+            </select>
+          </div>
+        </div>
+
+        {/* 학생 목록 */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {filteredStudents.length === 0 ? (
+            <div className="col-span-full bg-white rounded-lg border border-gray-200 p-12 text-center">
+              <svg className="mx-auto h-12 w-12 text-gray-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+              </svg>
+              <h3 className="text-lg font-medium text-gray-900 mb-2">학생이 없습니다</h3>
+              <p className="text-gray-500">검색 조건을 변경해보세요.</p>
+            </div>
+          ) : (
+            filteredStudents.map(student => (
+              <StudentCard
+                key={student.id}
+                student={student}
+                onViewDetails={handleViewDetails}
+                onAddMemo={handleAddMemo}
+              />
+            ))
+          )}
+        </div>
+      </div>
+
+      {/* 학생 상세 정보 모달 */}
+      <StudentDetailModal
+        student={selectedStudent}
+        isOpen={isDetailModalOpen}
+        onClose={() => setIsDetailModalOpen(false)}
+      />
+    </div>
+  );
+};
+
+export default RespondentManagement;

@@ -1,0 +1,412 @@
+import { supabase, Tables } from '../lib/supabase';
+
+export type SurveyWithStats = Tables<'surveys'> & {
+  response_count?: number;
+  responseRate?: number;
+};
+
+export class SurveyService {
+  // 모든 설문 조회
+  static async getAllSurveys(schoolId: string): Promise<SurveyWithStats[]> {
+    try {
+      console.log('🔍 SurveyService.getAllSurveys 호출:', { schoolId });
+      
+      // 설문 데이터와 응답 수를 함께 조회
+      const { data, error } = await supabase
+        .from('surveys')
+        .select(`
+          *,
+          survey_responses(count)
+        `)
+        .eq('school_id', schoolId)
+        .order('created_at', { ascending: false });
+
+      console.log('🔍 Supabase 조회 결과:', { data, error });
+
+      if (error) {
+        console.error('Error fetching surveys:', error);
+        throw error;
+      }
+
+      // 응답 수 계산
+      const surveysWithStats = data?.map(survey => ({
+        ...survey,
+        response_count: (survey as any).survey_responses?.[0]?.count || 0,
+        responseRate: 0 // TODO: 대상 학생 수 대비 응답률 계산
+      }));
+
+      console.log('🔍 응답 수 계산 후 설문 데이터:', surveysWithStats);
+
+      return surveysWithStats as SurveyWithStats[];
+    } catch (error) {
+      console.error('SurveyService.getAllSurveys error:', error);
+      throw error;
+    }
+  }
+
+    // 상태별 설문 조회
+  static async getSurveysByStatus(
+    schoolId: string,
+    status: 'draft' | 'active' | 'completed' | 'archived'
+  ): Promise<SurveyWithStats[]> {
+    try {
+      const { data, error } = await supabase
+        .from('surveys')
+        .select(`
+          *,
+          survey_responses(count)
+        `)
+        .eq('school_id', schoolId)
+        .eq('status', status)
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('Error fetching surveys by status:', error);
+        throw error;
+      }
+
+      const surveysWithStats = data?.map(survey => ({
+        ...survey,
+        response_count: (survey as any).survey_responses?.[0]?.count || 0,
+        responseRate: 0
+      }));
+
+      return surveysWithStats as SurveyWithStats[];
+    } catch (error) {
+      console.error('SurveyService.getSurveysByStatus error:', error);
+      throw error;
+    }
+  }
+
+  // 학교, 학년, 반별 설문 조회
+  static async getSurveysBySchoolGradeClass(
+    schoolId: string,
+    gradeLevel?: string,
+    classNumber?: string
+  ): Promise<SurveyWithStats[]> {
+    try {
+      console.log('🔍 SurveyService.getSurveysBySchoolGradeClass 호출:', { 
+        schoolId, 
+        gradeLevel, 
+        classNumber,
+        schoolIdType: typeof schoolId,
+        gradeLevelType: typeof gradeLevel,
+        classNumberType: typeof classNumber
+      });
+      
+      // 학교 ID 유효성 검사
+      if (!schoolId || schoolId === 'undefined' || schoolId === 'null') {
+        throw new Error(`잘못된 학교 ID: ${schoolId}`);
+      }
+      
+      let query = supabase
+        .from('surveys')
+        .select(`
+          *,
+          survey_responses(count)
+        `)
+        .eq('school_id', schoolId)
+        .order('created_at', { ascending: false });
+
+      console.log('🔍 기본 쿼리 구성:', { schoolId, query: 'surveys 테이블에서 school_id로 필터링' });
+
+      // 학년 필터링
+      if (gradeLevel && gradeLevel !== 'undefined' && gradeLevel !== 'null') {
+        console.log('🔍 학년 필터링 추가:', { gradeLevel });
+        query = query.contains('target_grades', [gradeLevel]);
+      }
+
+      // 반 필터링
+      if (classNumber && classNumber !== 'undefined' && classNumber !== 'null') {
+        console.log('🔍 반 필터링 추가:', { classNumber });
+        query = query.contains('target_classes', [classNumber]);
+      }
+
+      console.log('🔍 최종 쿼리 실행 전:', { 
+        schoolId, 
+        gradeLevel: gradeLevel || '없음', 
+        classNumber: classNumber || '없음' 
+      });
+
+      const { data, error } = await query;
+
+      console.log('🔍 Supabase 조회 결과:', { 
+        data: data ? `${data.length}개 설문` : 'null', 
+        error,
+        rawData: data?.map(s => ({ 
+          id: s.id, 
+          title: s.title, 
+          status: s.status, 
+          target_grades: s.target_grades, 
+          target_classes: s.target_classes,
+          school_id: s.school_id,
+          created_by: s.created_by
+        }))
+      });
+
+      if (error) {
+        console.error('🔍 설문 조회 오류:', error);
+        throw error;
+      }
+
+      const surveysWithStats = data?.map(survey => ({
+        ...survey,
+        response_count: (survey as any).survey_responses?.[0]?.count || 0,
+        responseRate: 0
+      }));
+
+      console.log('🔍 응답 수 계산 후 설문 데이터:', {
+        count: surveysWithStats?.length || 0,
+        surveys: surveysWithStats?.map(s => ({ 
+          id: s.id, 
+          title: s.title, 
+          status: s.status,
+          target_grades: s.target_grades,
+          target_classes: s.target_classes,
+          response_count: s.response_count
+        }))
+      });
+
+      return surveysWithStats as SurveyWithStats[];
+    } catch (error) {
+      console.error('🔍 SurveyService.getSurveysBySchoolGradeClass 오류:', error);
+      throw error;
+    }
+  }
+
+  // 설문 생성
+  static async createSurvey(
+    schoolId: string,
+    title: string,
+    description: string,
+    templateId?: string,
+    targetGrades?: string[],
+    targetClasses?: string[],
+    startDate?: string,
+    endDate?: string,
+    createdBy?: string,
+    questions?: any[]
+  ): Promise<Tables<'surveys'> | null> {
+    try {
+      console.log('🔍 SurveyService.createSurvey 호출:', {
+        schoolId,
+        title,
+        description,
+        templateId,
+        targetGrades,
+        targetClasses,
+        startDate,
+        endDate,
+        createdBy,
+        questions
+      });
+
+      const { data, error } = await supabase
+        .from('surveys')
+        .insert({
+          school_id: schoolId,
+          template_id: templateId,
+          title: title,
+          description: description,
+          target_grades: targetGrades,
+          target_classes: targetClasses,
+          start_date: startDate || new Date().toISOString().split('T')[0],
+          end_date: endDate || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+          status: 'draft',
+          created_by: createdBy,
+          questions: questions || []
+        })
+        .select()
+        .single();
+
+      console.log('🔍 Supabase insert 결과:', { data, error });
+
+      if (error) {
+        console.error('Error creating survey:', error);
+        throw error;
+      }
+
+      console.log('🔍 설문 생성 성공:', data);
+      return data;
+    } catch (error) {
+      console.error('SurveyService.createSurvey error:', error);
+      throw error;
+    }
+  }
+
+  // 설문 상태 업데이트
+  static async updateSurveyStatus(surveyId: string, newStatus: string): Promise<boolean> {
+    try {
+      console.log('🔍 SurveyService.updateSurveyStatus 호출:', { surveyId, newStatus });
+      
+      const { error } = await supabase
+        .from('surveys')
+        .update({ 
+          status: newStatus,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', surveyId);
+      
+      if (error) {
+        console.error('Error updating survey status:', error);
+        throw error;
+      }
+      
+      console.log('🔍 설문 상태 업데이트 성공:', { surveyId, newStatus });
+      return true;
+    } catch (error) {
+      console.error('SurveyService.updateSurveyStatus error:', error);
+      throw error;
+    }
+  }
+
+  // 설문 수정
+  static async updateSurvey(
+    surveyId: string,
+    updates: Partial<Tables<'surveys'>>
+  ): Promise<Tables<'surveys'> | null> {
+    try {
+      const { data, error } = await supabase
+        .from('surveys')
+        .update(updates)
+        .eq('id', surveyId)
+        .select()
+        .single();
+
+      if (error) {
+        console.error('Error updating survey:', error);
+        throw error;
+      }
+
+      return data;
+    } catch (error) {
+      console.error('SurveyService.updateSurvey error:', error);
+      throw error;
+    }
+  }
+
+  // 설문 삭제
+  static async deleteSurvey(surveyId: string): Promise<boolean> {
+    try {
+      console.log('🔍 SurveyService.deleteSurvey 호출:', { surveyId });
+      
+      // 먼저 설문 응답 데이터 삭제
+      const { error: responseError } = await supabase
+        .from('survey_responses')
+        .delete()
+        .eq('survey_id', surveyId);
+
+      if (responseError) {
+        console.error('Error deleting survey responses:', responseError);
+        throw responseError;
+      }
+
+      // 설문 데이터 삭제
+      const { error: surveyError } = await supabase
+        .from('surveys')
+        .delete()
+        .eq('id', surveyId);
+
+      if (surveyError) {
+        console.error('Error deleting survey:', surveyError);
+        throw surveyError;
+      }
+
+      console.log('🔍 설문 삭제 성공:', { surveyId });
+      return true;
+    } catch (error) {
+      console.error('SurveyService.deleteSurvey error:', error);
+      throw error;
+    }
+  }
+
+
+
+  // 설문 상세 조회
+  static async getSurveyById(surveyId: string): Promise<SurveyWithStats | null> {
+    try {
+      const { data, error } = await supabase
+        .from('surveys')
+        .select(`
+          *,
+          survey_responses(count),
+          survey_templates(*)
+        `)
+        .eq('id', surveyId)
+        .single();
+
+      if (error) {
+        console.error('Error fetching survey by id:', error);
+        throw error;
+      }
+
+      const surveyWithStats = {
+        ...data,
+        response_count: (data as any).survey_responses?.[0]?.count || 0,
+        responseRate: 0
+      };
+
+      return surveyWithStats as SurveyWithStats;
+    } catch (error) {
+      console.error('SurveyService.getSurveyById error:', error);
+      throw error;
+    }
+  }
+
+  // 설문 응답 제출
+  static async submitSurveyResponse(
+    surveyId: string,
+    studentId: string,
+    responses: Record<string, any>,
+    ipAddress?: string,
+    userAgent?: string
+  ): Promise<Tables<'survey_responses'> | null> {
+    try {
+      const { data, error } = await supabase
+        .from('survey_responses')
+        .insert({
+          survey_id: surveyId,
+          student_id: studentId,
+          responses: responses,
+          ip_address: ipAddress,
+          user_agent: userAgent
+        })
+        .select()
+        .single();
+
+      if (error) {
+        console.error('Error submitting survey response:', error);
+        throw error;
+      }
+
+      return data;
+    } catch (error) {
+      console.error('SurveyService.submitSurveyResponse error:', error);
+      throw error;
+    }
+  }
+
+  // 설문 응답 조회
+  static async getSurveyResponses(surveyId: string): Promise<Tables<'survey_responses'>[]> {
+    try {
+      const { data, error } = await supabase
+        .from('survey_responses')
+        .select(`
+          *,
+          students(*)
+        `)
+        .eq('survey_id', surveyId)
+        .order('submitted_at', { ascending: false });
+
+      if (error) {
+        console.error('Error fetching survey responses:', error);
+        throw error;
+      }
+
+      return data as Tables<'survey_responses'>[];
+    } catch (error) {
+      console.error('SurveyService.getSurveyResponses error:', error);
+      throw error;
+    }
+  }
+}
