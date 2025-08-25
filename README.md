@@ -48,7 +48,7 @@ AI 기반 네트워크 분석을 통해 학생들의 교우관계를 시각화�
 
 ### 1. 저장소 클론
 ```bash
-git clone <repository-url>
+git clone https://github.com/wiseinbigdatateam/school-friendships-system.git
 cd school_friendships
 ```
 
