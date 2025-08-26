@@ -660,7 +660,7 @@ const Dashboard: React.FC = () => {
       </div>
 
       {/* 메인 콘텐츠 */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+      <div className="max-w-7xl mx-auto px-4 pb-16 sm:px-6 lg:px-8 pt-6">
         <div className="flex-row gap-6">
           {/* 상단 사이드바 - 설문 프로젝트 목록 */}
           <div className="w-full mb-6">
@@ -668,7 +668,7 @@ const Dashboard: React.FC = () => {
               <h3 className="text-lg font-semibold text-gray-900 mb-4">
                 설문 프로젝트 총 {surveyProjects.length}개
               </h3>
-              <div className="flex gap-2 w-full h-fit overflow-x-scroll">
+              <div className="flex gap-2 w-full h-fit overflow-x-auto">
                 {surveyProjects.map((project) => (
                   <div
                     key={project.id}
@@ -726,7 +726,7 @@ const Dashboard: React.FC = () => {
               <div className="grid grid-cols-4 gap-8">
                 {/* 설문 참여 예상 학생 수 */}
                 <div className="flex flex-col items-center">
-                  <div className="text-4xl font-bold text-blue-600 mb-2">
+                  <div className="text-4xl font-bold text-[#3F80EA] mb-2">
                     {participationData.totalStudents}
                   </div>
                   <div className="text-sm text-gray-600 text-center leading-tight">

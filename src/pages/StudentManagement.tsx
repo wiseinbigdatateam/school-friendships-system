@@ -1263,7 +1263,7 @@ const StudentManagement: React.FC = () => {
               {/* 권한별 접근 범위 표시 */}
               <div className="mt-2 p-3 bg-blue-50 border border-blue-200 rounded-lg">
                 <div className="flex items-center space-x-2">
-                  <div className="w-4 h-4 bg-blue-600 rounded-full"></div>
+                  <div className="w-4 h-4 bg-[#3F80EA] rounded-full"></div>
                   <span className="text-sm font-medium text-blue-900">
                     현재 접근 범위: {getAccessScope().description}
                   </span>
@@ -1280,7 +1280,7 @@ const StudentManagement: React.FC = () => {
               </button>
               <button
                 onClick={handleUploadStudents}
-                className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                className="inline-flex items-center px-4 py-2 bg-[#3F80EA] text-white rounded-lg hover:bg-blue-600 transition-colors"
                 title={
                   teacherInfo?.school_id
                     ? `${schoolName || "현재 학교"}에 학생 등록`
@@ -1306,7 +1306,7 @@ const StudentManagement: React.FC = () => {
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
               <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-3">
-                  <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center">
+                  <div className="w-8 h-8 bg-gray-300 rounded-full flex items-center justify-center">
                     <span className="text-white text-sm font-semibold">담</span>
                   </div>
                   <div>
@@ -1617,7 +1617,7 @@ const StudentManagement: React.FC = () => {
                 <div className="flex space-x-2">
                   <button
                     onClick={() => handleViewDetails(student)}
-                    className="flex-1 bg-blue-600 text-white py-2 px-4 rounded-md text-sm font-medium hover:bg-blue-700 transition-colors"
+                    className="flex-1 bg-[#3F80EA] text-white py-2 px-4 rounded-md text-sm font-medium hover:bg-blue-600 transition-colors"
                   >
                     상세보기
                   </button>

@@ -427,7 +427,7 @@ const ClassSurvey: React.FC = () => {
                 onClick={() => setViewMode("names")}
                 className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
                   viewMode === "names"
-                    ? "bg-blue-600 text-white"
+                    ? "bg-[#3F80EA] text-white"
                     : "bg-gray-100 text-gray-700 hover:bg-gray-200"
                 }`}
               >
@@ -437,7 +437,7 @@ const ClassSurvey: React.FC = () => {
                 onClick={() => setViewMode("graphs")}
                 className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
                   viewMode === "graphs"
-                    ? "bg-blue-600 text-white"
+                    ? "bg-[#3F80EA] text-white"
                     : "bg-gray-100 text-gray-700 hover:bg-gray-200"
                 }`}
               >

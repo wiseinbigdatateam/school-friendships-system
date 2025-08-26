@@ -601,7 +601,7 @@ const IndividualAnalysis: React.FC = () => {
           <div className="flex items-center justify-between">
             {/* 메뉴 탭 */}
             <div className="flex items-center space-x-8">
-              <button className="px-4 py-2 text-blue-600 border-b-2 border-blue-600 font-medium">
+              <button className="px-4 py-2 text-[#3F80EA] border-b-2 border-[#3F80EA] font-medium">
                 학생개인별 분석
               </button>
             </div>
@@ -615,7 +615,7 @@ const IndividualAnalysis: React.FC = () => {
                   {viewMode === "network" ? "네트워크" : "개인별"}) 분석
                 </p>
               </div>
-              <button className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm">
+              <button className="px-4 py-2 bg-[#3F80EA] text-white rounded-lg hover:bg-blue-600 transition-colors text-sm">
                 리포트
               </button>
             </div>
@@ -631,7 +631,7 @@ const IndividualAnalysis: React.FC = () => {
               분석 대상 리스트 총 {surveys.length}개
             </h2>
 
-            <div className="flex gap-2 w-full h-fit overflow-x-scroll">
+            <div className="flex gap-2 w-full h-fit overflow-x-auto">
               {surveys.map((survey) => (
                 <div
                   key={survey.id}
@@ -711,7 +711,7 @@ const IndividualAnalysis: React.FC = () => {
                             runPythonAnalysis(selectedStudent, selectedSurvey)
                           }
                           disabled={networkLoading}
-                          className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-sm"
+                          className="px-4 py-2 bg-[#3F80EA] text-white rounded-lg hover:bg-blue-600 disabled:bg-gray-400 disabled:cursor-not-allowed text-sm"
                         >
                           {networkLoading ? "분석 중..." : "파이썬 분석 실행"}
                         </button>
