@@ -1,30 +1,111 @@
-import React from 'react';
+import { useState, useEffect } from "react";
+import {
+  BarElement,
+  CategoryScale,
+  Chart as ChartJS,
+  LinearScale,
+  Tooltip,
+} from "chart.js";
+import { Bar } from "react-chartjs-2";
+ChartJS.register(CategoryScale, LinearScale, BarElement, Tooltip);
 
 interface BarChartProps {
-  data: Array<{
+  data: {
     date: string;
     count: number;
     cumulative: number;
-  }>;
+  }[];
+}
+
+interface GraphData {
+  labels: string[];
+  datasets: {
+    label: string;
+    data: number[];
+    backgroundColor: string;
+    barThickness: number;
+    borderRadius: number;
+  }[];
 }
 
 const BarChart: React.FC<BarChartProps> = ({ data }) => {
+  const [graphData, setGraphData] = useState<GraphData>({
+    labels: [],
+    datasets: [],
+  });
+  const [labels, setLabels] = useState<string[]>([]);
+
+  useEffect(() => {
+    console.log("data:", data);
+    if (data !== undefined) {
+      setLabels(data.map((item) => item.date));
+    }
+  }, [data]);
+
+  useEffect(() => {
+    if (labels.length > 0) {
+      setGraphData({
+        labels: labels,
+        datasets: [
+          {
+            label: "응답수",
+            data: data.map((item) => {
+              return item.count;
+            }),
+            backgroundColor: "rgba(256, 256, 256)",
+            barThickness: 6,
+            borderRadius: 5,
+          },
+        ],
+      });
+    }
+  }, [labels]);
+
+  const options = {
+    responsive: true,
+    // 캔버스 비율 유지
+    maintainAspectRatio: false,
+    devicePixelRatio: window.devicePixelRatio || 1,
+    plugins: {
+      legend: {
+        display: false,
+      },
+    },
+    scales: {
+      // x축 글씨 설정
+      x: {
+        grid: {
+          display: false,
+        },
+        ticks: {
+          font: {
+            size: 13,
+          },
+          color: "#fff",
+        },
+      },
+      // y축 글씨 및 고정최대값 설정
+      y: {
+        max: 20, // 동적인 데이터여야 함 (전체인원)
+        grid: {
+          color: "rgba(228,228,228,0.3)", // x-axis grid color
+        },
+        ticks: {
+          font: {
+            size: 13,
+          },
+          color: "#fff",
+        },
+      },
+    },
+  };
+
   if (!data || data.length === 0) {
     return (
       <div className="flex items-center justify-center h-64 text-gray-500">
         <p>데이터가 없습니다.</p>
       </div>
     );
-  }
-
-  const maxCount = Math.max(...data.map(d => d.count));
-  const maxCumulative = Math.max(...data.map(d => d.cumulative));
-  const maxValue = Math.max(maxCount, maxCumulative);
-
-  // Y축 값을 2씩 증가하도록 설정 (20, 18, 16, 14, 12, 10, 8, 6, 4, 2, 0)
-  const yAxisValues = [];
-  for (let i = maxValue; i >= 0; i -= 2) {
-    yAxisValues.push(i);
   }
 
   return (
@@ -36,43 +117,8 @@ const BarChart: React.FC<BarChartProps> = ({ data }) => {
       </div>
 
       {/* 차트 컨테이너 */}
-      <div className="relative h-96 bg-blue-600 rounded-lg overflow-hidden">
-        {/* Y축 라벨과 그리드 라인 */}
-        <div className="absolute left-0 top-0 bottom-0 w-12 flex flex-col justify-between py-4">
-          {yAxisValues.map((value, index) => (
-            <div key={index} className="relative flex items-center">
-              <span className="text-xs text-white font-medium w-8 text-right">{value}</span>
-              <div className="absolute left-12 w-full h-px bg-white opacity-30" style={{ width: 'calc(100vw - 3rem)' }}></div>
-            </div>
-          ))}
-        </div>
-
-        {/* 차트 영역 */}
-        <div className="ml-12 h-full py-4 pb-12 flex items-end justify-between px-8">
-          {data.map((item, index) => (
-            <div key={item.date} className="flex flex-col items-center h-full justify-end">
-              {/* 응답수 바 */}
-              {item.count > 0 && (
-                <div 
-                  className="w-4 bg-white transition-all duration-500"
-                  style={{ 
-                    height: `${(item.count / maxValue) * 100}%`,
-                    minHeight: item.count > 0 ? '2px' : '0px'
-                  }}
-                ></div>
-              )}
-            </div>
-          ))}
-        </div>
-
-        {/* X축 날짜 라벨 - 0 라인 밑 공간에 배치 */}
-        <div className="ml-12 h-12 flex justify-between px-8 items-center">
-          {data.map((item) => (
-            <span key={item.date} className="text-sm text-white font-semibold whitespace-nowrap">
-              {item.date}
-            </span>
-          ))}
-        </div>
+      <div className="relative px-5 py-6 h-96 bg-[#3F80EA] rounded-lg overflow-hidden">
+        <Bar data={graphData} options={options} />
       </div>
 
       {/* 데이터 테이블 */}
@@ -80,9 +126,14 @@ const BarChart: React.FC<BarChartProps> = ({ data }) => {
         <table className="w-full text-sm border border-gray-200 rounded-lg overflow-hidden">
           <thead className="bg-gray-50">
             <tr>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-b border-gray-200">구분</th>
+              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-b border-gray-200">
+                구분
+              </th>
               {data.map((item) => (
-                <th key={item.date} className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider border-b border-gray-200">
+                <th
+                  key={item.date}
+                  className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider border-b border-gray-200"
+                >
                   {item.date}
                 </th>
               ))}
@@ -90,17 +141,27 @@ const BarChart: React.FC<BarChartProps> = ({ data }) => {
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
             <tr className="hover:bg-gray-50">
-              <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900 font-medium">응답수 (명)</td>
+              <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900 font-medium">
+                응답수 (명)
+              </td>
               {data.map((item) => (
-                <td key={item.date} className="px-4 py-3 whitespace-nowrap text-sm text-gray-900 text-center">
+                <td
+                  key={item.date}
+                  className="px-4 py-3 whitespace-nowrap text-sm text-gray-900 text-center"
+                >
                   {item.count}
                 </td>
               ))}
             </tr>
             <tr className="hover:bg-gray-50">
-              <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900 font-medium">누적 응답수 (명)</td>
+              <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900 font-medium">
+                누적 응답수 (명)
+              </td>
               {data.map((item) => (
-                <td key={item.date} className="px-4 py-3 whitespace-nowrap text-sm text-gray-900 text-center">
+                <td
+                  key={item.date}
+                  className="px-4 py-3 whitespace-nowrap text-sm text-gray-900 text-center"
+                >
                   {item.cumulative}
                 </td>
               ))}
