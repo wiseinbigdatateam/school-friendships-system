@@ -623,10 +623,10 @@ const Dashboard: React.FC = () => {
   // dashboardData 조건문 제거 - 테스트 데이터가 정상적으로 로드됨
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="max-w-7xl pb-16 mx-auto min-h-screen bg-gray-50 px-4 sm:px-6 lg:px-8">
       {/* 페이지 제목 */}
-      <div className="bg-white border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+      <div className="bg-white rounded-lg border border-gray-200">
+        <div className="py-6">
           <div className="flex items-center justify-center space-x-6">
             <h1 className="text-3xl font-bold text-gray-900">
               {selectedProject
@@ -660,7 +660,7 @@ const Dashboard: React.FC = () => {
       </div>
 
       {/* 메인 콘텐츠 */}
-      <div className="max-w-7xl mx-auto px-4 pb-16 sm:px-6 lg:px-8 pt-6">
+      <div className="pt-6">
         <div className="flex-row gap-6">
           {/* 상단 사이드바 - 설문 프로젝트 목록 */}
           <div className="w-full mb-6">

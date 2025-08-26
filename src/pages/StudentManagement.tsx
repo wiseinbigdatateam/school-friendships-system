@@ -1216,7 +1216,7 @@ const StudentManagement: React.FC = () => {
   // 권한 확인
   if (!canAccessPage()) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="min-h-screen bg-gray-50  flex items-center justify-center">
         <div className="text-center">
           <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
             <svg
@@ -1248,7 +1248,7 @@ const StudentManagement: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
+    <div className="min-h-screen pb-16 bg-gray-50 ">
       <div className="max-w-7xl mx-auto">
         {/* 헤더 */}
         <div className="mb-8">
