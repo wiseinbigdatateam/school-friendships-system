@@ -910,21 +910,21 @@ const Dashboard: React.FC = () => {
             </div>
 
             {/* 참여 현황 리스트 */}
-            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
+            <div className="bg-white w-full rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
               <h3 className="text-lg font-semibold text-gray-900 mb-4">
                 참여 현황 리스트
               </h3>
-              <div className="overflow-x-auto">
-                <table className="w-full table-fixed divide-y divide-gray-200">
+              <div className="w-full overflow-x-auto">
+                <table className="w-full divide-y divide-gray-200">
                   <thead className="bg-gray-50">
                     <tr>
-                      <th className="w-[6%] px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <th className="min-w-[70px] max-w-[70px] px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
                         번호
                       </th>
-                      <th className="w-[8%] px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <th className="min-w-[94px] max-w-[94px] px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
                         이름
                       </th>
-                      <th className="w-[10%] px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <th className="min-w-[118px] max-w-[118px] px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
                         참여상태
                       </th>
                       {selectedProject &&
@@ -933,7 +933,7 @@ const Dashboard: React.FC = () => {
                           ?.questions?.map((question: any, index: number) => (
                             <th
                               key={question.id || index}
-                              className="w-[15%] px-3 py-3 truncate text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                              className="min-w-[176px] max-w-[176px] px-3 py-3 truncate text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
                             >
                               {question.text || `질문 ${index + 1}`}
                             </th>
