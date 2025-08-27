@@ -1,6 +1,5 @@
 import { useNavigate } from "react-router-dom";
 import LandingHeader from "../components/LandingHeader";
-import TabMenu from "../components/TabMenu";
 
 const Landing: React.FC = () => {
   const navigate = useNavigate();
@@ -16,25 +15,7 @@ const Landing: React.FC = () => {
   return (
     <div className="min-h-screen bg-white">
       {/* 헤더 */}
-      <header className="sticky top-0 z-50 h-[47px] bg-white px-[60px] py-2 text-gray-950">
-        <div className="flex items-center justify-between text-base font-medium">
-          <div className="flex gap-10">
-            <img src="/header_logo.svg" alt="와이즈온 스쿨 로고" />
-
-            <nav className="flex items-center gap-10">
-              <button className="">서비스소개</button>
-              <button className="">체험 신청하기</button>
-            </nav>
-          </div>
-
-          <button
-            onClick={handleLoginClick}
-            className="h-8 rounded-[30px] bg-sky-700 px-6 py-1.5 text-white transition-all duration-200 hover:bg-sky-900"
-          >
-            로그인
-          </button>
-        </div>
-      </header>
+      <LandingHeader />
 
       {/* 히어로 섹션 */}
       <section className="relative flex min-h-screen items-center justify-center overflow-hidden">
