@@ -1,5 +1,6 @@
 import { useNavigate } from "react-router-dom";
 import LandingHeader from "../components/LandingHeader";
+import TabMenu from "../components/TabMenu";
 
 const Landing: React.FC = () => {
   const navigate = useNavigate();
@@ -57,17 +58,8 @@ const Landing: React.FC = () => {
 
       {/* 메인 컨텐츠 */}
       <section className="w-full text-gray-950">
-        {/* 스위치 토글 */}
-        <div className="w-full bg-gray-300 py-5">
-          <div className="mx-auto flex w-[349px] gap-3 rounded-[50px] bg-white p-2">
-            <span className="cursor-pointer rounded-[30px] px-6 py-3 text-base">
-              교우관계 및 진단평가
-            </span>
-            <span className="cursor-pointer rounded-[30px] px-6 py-3 text-base">
-              AI 진단 레포트
-            </span>
-          </div>
-        </div>
+        {/* 탭 메뉴 */}
+        <TabMenu />
 
         {/* 해당 컨텐츠 */}
         <div className="mx-auto flex w-[1280px] flex-col gap-[72px] py-[72px]">
