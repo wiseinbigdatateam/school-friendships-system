@@ -16,7 +16,25 @@ const Landing: React.FC = () => {
   return (
     <div className="min-h-screen bg-white">
       {/* 헤더 */}
-      <LandingHeader />
+      <header className="sticky top-0 z-50 h-[47px] bg-white px-[60px] py-2 text-gray-950">
+        <div className="flex items-center justify-between text-base font-medium">
+          <div className="flex gap-10">
+            <img src="/header_logo.svg" alt="와이즈온 스쿨 로고" />
+
+            <nav className="flex items-center gap-10">
+              <button className="">서비스소개</button>
+              <button className="">체험 신청하기</button>
+            </nav>
+          </div>
+
+          <button
+            onClick={handleLoginClick}
+            className="h-8 rounded-[30px] bg-sky-700 px-6 py-1.5 text-white transition-all duration-200 hover:bg-sky-900"
+          >
+            로그인
+          </button>
+        </div>
+      </header>
 
       {/* 히어로 섹션 */}
       <section className="relative flex min-h-screen items-center justify-center overflow-hidden">
@@ -49,207 +67,36 @@ const Landing: React.FC = () => {
         </div>
 
         {/* 하단 배너 */}
-        <div className="absolute bottom-0 z-20 w-[1280px] bg-sky-700 py-2 text-white">
-          <p className="text-center text-base">
+        <div className="absolute bottom-0 z-20 w-[1280px] bg-sky-700 py-2 text-center text-base text-white">
+          <p className="text-lg font-medium">
             공공클라우드 선정 SaaS, 조달등록제품, 혁신조달선정
           </p>
         </div>
       </section>
 
-      {/* 메인 컨텐츠 */}
-      <section className="w-full text-gray-950">
-        {/* 탭 메뉴 */}
-        <TabMenu />
-
-        {/* 해당 컨텐츠 */}
-        <div className="mx-auto flex w-[1280px] flex-col gap-[72px] py-[72px]">
-          {/* 학생 교우관계 */}
-          <div className="flex flex-col gap-5">
-            {/* 상단 문구 */}
-            <div className="flex flex-col items-center gap-2">
-              <h2 className="text-2xl font-semibold">학생 교우관계</h2>
-              <p className="flex flex-col items-center">
-                <span className="font-semibold text-sky-700">
-                  교우관계 분석은 소셜네트워크 분석방법론(SNA)을 적용
-                </span>
-                학급 내 학생들간의 교우관계를 시각적으로 표현하고 현 상태 진단
+      {/* 푸터 */}
+      <footer className="bg-white py-16 text-gray-700">
+        {/* 중앙: 회사 정보 */}
+        <div className="mb-8 border-t border-gray-200 pt-8">
+          <div className="md:items-right flex flex-col items-start justify-between md:flex-row">
+            <div className="items-right mb-4 flex space-x-3 md:mb-0">
+              <div className="items-right justify-right flex h-12 w-12">
+                <img
+                  src="/wise-footer-logo.png"
+                  alt="WiseON Footer Logo"
+                  className="h-full w-full object-contain"
+                />
+              </div>
+            </div>
+            <div className="text-right text-sm text-gray-600">
+              <p className="text-sm text-gray-600">
+                대표이사 : 김원표, 사업자등록번호 : 113-86-13917
               </p>
-            </div>
-
-            {/* 하단 이미지 */}
-            <div className="flex justify-center gap-12 rounded-3xl border border-gray-300 pt-10">
-              <div className="flex flex-col items-center gap-2.5">
-                <p className="text-base text-indigo-500">
-                  간단한 설문방식으로 교우관계 조사
-                </p>
-
-                <div className="relative rounded-t-[50px] border-x-8 border-t-8 border-[#e7e7e7]">
-                  <img
-                    src="/landing/tab1/section1_1.svg"
-                    alt="section1 첫 번째 이미지"
-                    className="rounded-t-[50px]"
-                  />
-                  <div className="absolute top-0 flex h-full w-full flex-col items-center justify-center rounded-t-[50px] bg-black/65">
-                    <p className="py-[5px] text-xl font-bold text-white">
-                      반 친구 중 누구와
-                      <br />
-                      친하게 지내나요?
-                    </p>
-                    <div className="h-[42px] w-[213px] rounded-[4px] border border-[#595959] bg-black"></div>
-                  </div>
-                </div>
-              </div>
-
-              <img src="/landing/tab1/right_arrow.svg" alt="우측 화살표" />
-
-              <div className="flex flex-col items-center gap-2.5">
-                <p className="text-base text-indigo-500">자동으로 분석결과</p>
-                <div className="flex items-center">
-                  <img
-                    src="/landing/tab1/section1_2.svg"
-                    alt="section1 두 번째 이미지"
-                  />
-                  <img
-                    src="/landing/tab1/section1_3.svg"
-                    alt="section1 세 번째 이미지"
-                  />
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* 소외 학생 예방 및 관리방안 자동화 */}
-          <div className="flex flex-col gap-5">
-            {/* 상단 문구 */}
-            <div className="flex flex-col items-center gap-2">
-              <h2 className="text-2xl font-semibold">
-                소외 학생 예방 및 관리방안 자동화
-              </h2>
-              <p className="flex flex-col items-center">
-                <span className="font-semibold text-sky-700">
-                  매월 정기적 조사로 학생별 개인화된 상태진단 및 관리 방안
-                  자동화 제공
-                </span>
-                소외 가능성이 있는 학생에 대한 모니터링 및 예방 가능
+              <p>
+                서울특별시 강남구 언주로 309 기성빌딩 3층 (주)와이즈인컴퍼니
               </p>
-            </div>
-
-            {/* 하단 이미지 */}
-            <div className="flex justify-center gap-5 rounded-3xl border border-gray-300 p-10">
-              <div className="flex items-center gap-1">
-                <div className="font-base flex flex-col gap-2 font-semibold text-white">
-                  <span className="w-[172px] rounded-[30px] bg-amber-500 px-6 py-1 text-center">
-                    외톨이형 학생
-                  </span>
-                  <span className="w-[172px] rounded-[30px] bg-orange-500 px-6 py-1 text-center">
-                    학교 생활 불만 학생
-                  </span>
-                  <span className="w-[172px] rounded-[30px] bg-red-500 px-6 py-1 text-center">
-                    문제 사건 경험 학생
-                  </span>
-                </div>
-                <img
-                  src="/landing/tab1/section2_1.svg"
-                  alt="section2 첫 번째 이미지"
-                />
-              </div>
-
-              <img src="/landing/tab1/right_arrow.svg" alt="우측 화살표" />
-
-              <div className="flex flex-col gap-1">
-                <span className="w-[221px] rounded-[30px] bg-sky-500 px-6 py-3 text-center text-base font-semibold text-white">
-                  정기적인 개인화 학생 관리
-                </span>
-                <div className="flex flex-col items-center gap-2 rounded-xl bg-gray-100 px-6 py-10">
-                  <p className="text-xl font-semibold">김OO 학생</p>
-                  <div className="flex flex-col items-center gap-1">
-                    <img
-                      src="/landing/tab1/section2_profile.svg"
-                      alt="프로필 아이콘"
-                      className="w-12"
-                    />
-                    <ul className="flex list-inside list-disc flex-col gap-1">
-                      <li className="text-base text-red-500">
-                        최근 폭력 사건 경험
-                      </li>
-                      <li className="text-base text-red-500">
-                        급격한 정서수준 저하
-                      </li>
-                      <li className="text-base text-red-500">
-                        정상형 → 외톨이형 변화
-                      </li>
-                    </ul>
-                  </div>
-                </div>
-              </div>
-
-              <img src="/landing/tab1/right_arrow.svg" alt="우측 화살표" />
-
-              <div className="flex flex-col gap-1">
-                <span className="w-[224px] rounded-[30px] bg-sky-700 px-6 py-3 text-center text-base font-semibold text-white">
-                  AI LLM 가이드 활용
-                </span>
-                <div className="flex flex-col items-center gap-5 rounded-xl px-6 py-8">
-                  <img
-                    src="/landing/tab1/section2_ai.svg"
-                    alt="ai 아이콘"
-                    className="w-[70px]"
-                  />
-                  <ul className="flex list-inside list-disc flex-col gap-1">
-                    <li className="text-base">AI 심리 진단분석</li>
-                    <li className="text-base">맞춤형 대화 가이드 제공</li>
-                    <li className="text-base">소그룹 친구 추천</li>
-                    <p className="text-center">..</p>
-                  </ul>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* 학생 진단·평가 */}
-          <div className="flex flex-col gap-5">
-            {/* 상단 문구 */}
-            <div className="flex flex-col items-center gap-2">
-              <h2 className="text-2xl font-semibold">학생 진단·평가</h2>
-              <p className="flex flex-col items-center">
-                <span className="font-semibold text-sky-700">
-                  학교생활·정서심리진단 + 관계 네트워크분석으로 개인화된 학생
-                  관리 가이드 자동 생성
-                </span>
-                과학적 방법론에 기반한 학생관리
-              </p>
-            </div>
-
-            {/* 하단 이미지 */}
-            <div className="flex flex-col items-center gap-3 rounded-3xl border border-gray-300 p-10">
-              <div className="rounded-[30px] bg-sky-700 px-[72px] py-4 text-xl font-semibold text-white">
-                과학적 방법론과 표준화된 학생 개인별 맞춤 관리
-              </div>
-
-              <img
-                src="/landing/tab1/top_arrow.svg"
-                alt="위쪽 화살표"
-                className="w-[23px]"
-              />
-
-              <div className="flex gap-3">
-                <img
-                  src="/landing/tab1/section3_1.svg"
-                  alt="section3 첫 번째 이미지"
-                />
-                <img
-                  src="/landing/tab1/section3_2.svg"
-                  alt="section3 두 번째 이미지"
-                />
-                <img
-                  src="/landing/tab1/section3_3.svg"
-                  alt="section3 세 번째 이미지"
-                />
-                <img
-                  src="/landing/tab1/section3_4.svg"
-                  alt="section3 네 번째 이미지"
-                />
-              </div>
+              <p>wic@wiseinc.co.kr</p>
+              <p className="font-semibold">고객센터 02.558.5144</p>
             </div>
           </div>
 
