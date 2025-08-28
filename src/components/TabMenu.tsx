@@ -16,7 +16,7 @@ function TabMenu() {
           <span
             key={item.label}
             className={clsx(
-              "cursor-pointer rounded-[30px] px-6 py-3 text-base transition-all duration-200",
+              "cursor-pointer rounded-[30px] px-6 py-3 text-base duration-200 ease-in",
               tabMenu === idx && "bg-gray-950 text-white",
             )}
             onClick={() => setTabMenu(idx)}
