@@ -58,7 +58,7 @@ interface RoleRequest {
   school_id?: string | null;
   status: 'pending' | 'approved' | 'rejected';
   reason?: string | null;
-  created_at: string;
+  created_at: string | null;
   user: User;
   school?: School;
 }
@@ -1280,7 +1280,7 @@ const Admin: React.FC = () => {
                         {getStatusBadge(request.status)}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {new Date(request.created_at).toLocaleDateString()}
+                        {request.created_at ? new Date(request.created_at).toLocaleDateString() : '-'}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                         {request.status === 'pending' && (

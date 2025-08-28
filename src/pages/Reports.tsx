@@ -1234,13 +1234,63 @@ const Reports: React.FC = () => {
                       {/* 현재 상태 */}
                       <div className="bg-white p-4 rounded-lg border border-purple-100">
                         <h5 className="font-medium text-purple-900 mb-2">📍 현재 상태 분석</h5>
-                        <p className="text-sm text-gray-700">{aiReport.currentStatus}</p>
+                        {typeof aiReport.currentStatus === 'string' ? (
+                          <p className="text-sm text-gray-700">{aiReport.currentStatus}</p>
+                        ) : (
+                          <div className="space-y-2">
+                            {aiReport.currentStatus?.schoolLifeSatisfaction && (
+                              <p className="text-sm text-gray-700">
+                                <span className="font-medium">학교생활 만족도:</span> {aiReport.currentStatus.schoolLifeSatisfaction}
+                              </p>
+                            )}
+                            {aiReport.currentStatus?.relationshipWithTeacher && (
+                              <p className="text-sm text-gray-700">
+                                <span className="font-medium">교사 관계:</span> {aiReport.currentStatus.relationshipWithTeacher}
+                              </p>
+                            )}
+                            {aiReport.currentStatus?.peerRelationship && (
+                              <p className="text-sm text-gray-700">
+                                <span className="font-medium">또래 관계:</span> {aiReport.currentStatus.peerRelationship}
+                              </p>
+                            )}
+                            {aiReport.currentStatus?.networkParticipation && (
+                              <p className="text-sm text-gray-700">
+                                <span className="font-medium">네트워크 참여도:</span> {aiReport.currentStatus.networkParticipation}
+                              </p>
+                            )}
+                          </div>
+                        )}
                       </div>
 
                       {/* 위험 평가 */}
                       <div className="bg-white p-4 rounded-lg border border-purple-100">
                         <h5 className="font-medium text-purple-900 mb-2">⚠️ 위험 요소 평가</h5>
-                        <p className="text-sm text-gray-700">{aiReport.riskAssessment}</p>
+                        {typeof aiReport.riskAssessment === 'string' ? (
+                          <p className="text-sm text-gray-700">{aiReport.riskAssessment}</p>
+                        ) : (
+                          <div className="space-y-2">
+                            {aiReport.riskAssessment?.overall && (
+                              <p className="text-sm text-gray-700">
+                                <span className="font-medium">전체 평가:</span> {aiReport.riskAssessment.overall}
+                              </p>
+                            )}
+                            {aiReport.riskAssessment?.strengths && (
+                              <p className="text-sm text-gray-700">
+                                <span className="font-medium">강점:</span> {aiReport.riskAssessment.strengths}
+                              </p>
+                            )}
+                            {aiReport.riskAssessment?.concerns && (
+                              <p className="text-sm text-gray-700">
+                                <span className="font-medium">우려사항:</span> {aiReport.riskAssessment.concerns}
+                              </p>
+                            )}
+                            {aiReport.riskAssessment?.recommendations && (
+                              <p className="text-sm text-gray-700">
+                                <span className="font-medium">권장사항:</span> {aiReport.riskAssessment.recommendations}
+                              </p>
+                            )}
+                          </div>
+                        )}
                       </div>
 
                       {/* 지도 방향 */}

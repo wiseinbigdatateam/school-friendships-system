@@ -303,12 +303,12 @@ const Header: React.FC<HeaderProps> = ({ logo, navigationItems }) => {
                                   <p className="text-sm font-medium text-blue-900">{notification.title}</p>
                                   <p className="text-xs text-blue-700 mt-1">{notification.message}</p>
                                   <p className="text-xs text-blue-600 mt-1">
-                                    {new Date(notification.created_at).toLocaleString('ko-KR', {
+                                    {notification.created_at ? new Date(notification.created_at).toLocaleString('ko-KR', {
                                       month: 'short',
                                       day: 'numeric',
                                       hour: '2-digit',
                                       minute: '2-digit'
-                                    })}
+                                    }) : '-'}
                                   </p>
                                 </div>
                               </div>

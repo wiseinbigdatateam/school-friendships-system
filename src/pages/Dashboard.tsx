@@ -163,12 +163,10 @@ const Dashboard: React.FC = () => {
                 .reduce((acc: any[], response) => {
                   if (!response.submitted_at) return acc;
 
-                  const date = new Date(response.submitted_at)
-                    .toLocaleDateString("ko-KR", {
-                      month: "2-digit",
-                      day: "2-digit",
-                    })
-                    .replace(/\./g, "-");
+                  const dateObj = new Date(response.submitted_at);
+                  const month = dateObj.getMonth() + 1; // 0-based month
+                  const day = dateObj.getDate();
+                  const date = `${month}/${day}`;
 
                   const existingDate = acc.find((d) => d.date === date);
                   if (existingDate) {
@@ -195,8 +193,8 @@ const Dashboard: React.FC = () => {
                 }, [])
                 .sort((a, b) => {
                   // 날짜순으로 정렬
-                  const dateA = new Date(a.date.replace(/-/g, "/"));
-                  const dateB = new Date(b.date.replace(/-/g, "/"));
+                  const dateA = new Date(a.date);
+                  const dateB = new Date(b.date);
                   return dateA.getTime() - dateB.getTime();
                 })
             : [];
@@ -536,12 +534,10 @@ const Dashboard: React.FC = () => {
                       .reduce((acc: any[], response) => {
                         if (!response.submitted_at) return acc;
 
-                        const date = new Date(response.submitted_at)
-                          .toLocaleDateString("ko-KR", {
-                            month: "2-digit",
-                            day: "2-digit",
-                          })
-                          .replace(/\./g, "-");
+                        const dateObj = new Date(response.submitted_at);
+                        const month = dateObj.getMonth() + 1; // 0-based month
+                        const day = dateObj.getDate();
+                        const date = `${month}/${day}`;
 
                         console.log(
                           `🔍 응답 날짜 처리: ${response.submitted_at} → ${date}`
@@ -579,8 +575,8 @@ const Dashboard: React.FC = () => {
                       }, [])
                       .sort((a, b) => {
                         // 날짜순으로 정렬
-                        const dateA = new Date(a.date.replace(/-/g, "/"));
-                        const dateB = new Date(b.date.replace(/-/g, "/"));
+                        const dateA = new Date(a.date);
+                        const dateB = new Date(b.date);
                         return dateA.getTime() - dateB.getTime();
                       })
                   : [];
@@ -984,77 +980,31 @@ const Dashboard: React.FC = () => {
                                   try {
                                     const responseData =
                                       studentResponse.responses as any;
-
-                                    // 현재 설문의 카테고리 확인
-                                    const currentProject = surveyProjects.find(
-                                      (p) => p.id === selectedProject
-                                    );
-                                    const currentTemplate =
-                                      surveyTemplates.find(
-                                        (t) =>
-                                          t.id === currentProject?.template_id
-                                      );
-                                    const category =
-                                      currentTemplate?.metadata?.category;
-
-                                    if (category === "교우관계") {
-                                      // 교우관계: 학생 이름으로 표시
-                                      if (
-                                        responseData[question.id] &&
-                                        Array.isArray(responseData[question.id])
-                                      ) {
-                                        // 응답된 친구 ID들을 실제 이름으로 변환
-                                        const friendNames = responseData[
-                                          question.id
-                                        ]
-                                          .map((friendId: string) => {
-                                            const friend = students?.find(
-                                              (s: any) => s.id === friendId
-                                            );
-                                            return friend
-                                              ? friend.name
-                                              : "알 수 없음";
-                                          })
-                                          .filter(
-                                            (name: string) =>
-                                              name !== "알 수 없음"
-                                          );
-
-                                        questionResponse =
-                                          friendNames.join(", ");
-                                      } else if (responseData[question.id]) {
-                                        // 배열이 아닌 단일 값인 경우
-                                        const friendId =
-                                          responseData[question.id];
-                                        const friend = students?.find(
-                                          (s: any) => s.id === friendId
-                                        );
-                                        questionResponse = friend
-                                          ? friend.name
-                                          : "알 수 없음";
-                                      } else {
-                                        questionResponse = "응답 없음";
-                                      }
-                                    } else {
-                                      // 학교폭력, 만족도: 답변옵션으로 표시
-                                      const answerValue =
-                                        responseData[question.id];
-                                      if (answerValue) {
-                                        // question.answer_options에서 답변 텍스트 찾기
-                                        if (
-                                          question.answer_options &&
-                                          question.answer_options[answerValue]
-                                        ) {
-                                          questionResponse =
-                                            question.answer_options[
-                                              answerValue
-                                            ];
+                                    const answerValue = responseData[question.id];
+                                    
+                                    if (answerValue) {
+                                      // UUID를 이름으로 변환하는 함수
+                                      const convertUuidToName = (value: any): string => {
+                                        if (Array.isArray(value)) {
+                                          // 배열인 경우: 각 UUID를 이름으로 변환
+                                          const names = value.map((uuid: string) => {
+                                            const student = students?.find((s: any) => s.id === uuid);
+                                            return student ? student.name : uuid;
+                                          });
+                                          return names.join(", ");
+                                        } else if (typeof value === 'string') {
+                                          // 문자열인 경우: UUID인지 확인하고 이름으로 변환
+                                          const student = students?.find((s: any) => s.id === value);
+                                          return student ? student.name : value;
                                         } else {
-                                          questionResponse = `답변: ${answerValue}`;
+                                          // 기타 타입은 그대로 반환
+                                          return String(value);
                                         }
-                                      } else {
-                                        questionResponse = "응답 없음";
-                                      }
+                                      };
+                                      
+                                      questionResponse = convertUuidToName(answerValue);
+                                    } else {
+                                      questionResponse = "응답 없음";
                                     }
                                   } catch (e) {
                                     console.error("응답 데이터 파싱 오류:", e);

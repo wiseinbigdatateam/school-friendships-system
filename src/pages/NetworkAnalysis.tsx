@@ -10,6 +10,7 @@ import {
   UsersIcon
 } from '@heroicons/react/24/outline/index.js';
 import NetworkVisualization from '../components/NetworkVisualization';
+import NetworkGraph from '../components/NetworkGraph';
 import { NotificationService } from '../services/notificationService';
 
 // 선생님 정보 타입
@@ -110,7 +111,7 @@ const NetworkAnalysis: React.FC = () => {
   const [selectedSurvey, setSelectedSurvey] = useState<Survey | null>(null);
   const [students, setStudents] = useState<Student[]>([]);
   const [loading, setLoading] = useState(false);
-  const [analysisView, setAnalysisView] = useState<'overview' | 'individual' | 'network'>('overview');
+  const [analysisView, setAnalysisView] = useState<'overview' | 'individual' | 'network' | 'graph'>('overview');
   const [selectedStudentModal, setSelectedStudentModal] = useState<{
     isOpen: boolean;
     student: Student | null;
@@ -151,6 +152,149 @@ const NetworkAnalysis: React.FC = () => {
 
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [analysisError, setAnalysisError] = useState<string | null>(null);
+
+  // 통일된 네트워크 그래프 데이터 상태
+  const [unifiedGraphData, setUnifiedGraphData] = useState<any[]>([]);
+  const [unifiedMaxSelections, setUnifiedMaxSelections] = useState<number[]>([]);
+
+  // 통일된 네트워크 그래프 데이터 생성
+  useEffect(() => {
+    const generateUnifiedNetworkData = async () => {
+      if (!students || !selectedSurvey) {
+        setUnifiedGraphData([]);
+        return;
+      }
+
+      try {
+        // 1. 설문 정보와 템플릿 메타데이터 조회
+        const { data: surveyData, error: surveyError } = await supabase
+          .from('surveys')
+          .select(`
+            *,
+            survey_templates!surveys_template_id_fkey(metadata)
+          `)
+          .eq('id', selectedSurvey.id)
+          .single();
+
+        if (surveyError) throw surveyError;
+
+        // 2. 설문 응답 데이터 조회
+        const { data: responses, error: responseError } = await supabase
+          .from('survey_responses')
+          .select(`
+            *,
+            students!survey_responses_student_id_fkey(id, name)
+          `)
+          .eq('survey_id', selectedSurvey.id);
+
+        if (responseError) throw responseError;
+
+        // 3. 템플릿 메타데이터에서 max_selections 추출
+        const metadata = surveyData?.survey_templates?.metadata as any;
+        const maxSelections = metadata?.max_selections || [3, 5, 1, 1]; // 기본값
+        setUnifiedMaxSelections(maxSelections);
+
+        // 4. 통일된 네트워크 데이터 생성
+        const studentMap = new Map(students.map(s => [s.id, s]));
+        const friendshipMap = new Map<string, Set<string>>();
+
+        // 학생 초기화
+        students.forEach(student => {
+          friendshipMap.set(student.id, new Set());
+        });
+
+        // 설문 응답에서 친구 관계 추출 (통일된 로직)
+        responses.forEach(response => {
+          if (response.responses && response.student_id) {
+            const answers = typeof response.responses === 'string' 
+              ? JSON.parse(response.responses) 
+              : response.responses;
+
+            // 질문별로 max_selections 값에 따라 처리
+            Object.entries(answers).forEach(([questionKey, answer]: [string, any]) => {
+              const questionIndex = parseInt(questionKey.replace('q', '')) - 1;
+              const maxSelection = maxSelections[questionIndex] || 10;
+
+              if (Array.isArray(answer)) {
+                const limitedAnswers = answer.slice(0, maxSelection);
+                limitedAnswers.forEach((friendId: string) => {
+                  if (friendId && studentMap.has(friendId) && response.student_id) {
+                    friendshipMap.get(response.student_id)?.add(friendId);
+                    friendshipMap.get(friendId)?.add(response.student_id);
+                  }
+                });
+              } else if (typeof answer === 'string' && studentMap.has(answer) && response.student_id) {
+                if (maxSelection >= 1) {
+                  friendshipMap.get(response.student_id)?.add(answer);
+                  friendshipMap.get(answer)?.add(response.student_id);
+                }
+              }
+            });
+          }
+        });
+
+        // 5. NetworkGraph 컴포넌트용 데이터 형식으로 변환
+        const graphStudents = [];
+        for (const student of students) {
+          const friends = Array.from(friendshipMap.get(student.id) || []);
+          graphStudents.push({
+            id: student.id,
+            name: student.name,
+            friends,
+            friendCount: friends.length
+          });
+        }
+
+        setUnifiedGraphData(graphStudents);
+      } catch (error) {
+        console.error('Error in generateUnifiedNetworkData:', error);
+        setUnifiedGraphData([]);
+      }
+    };
+
+    generateUnifiedNetworkData();
+  }, [students, selectedSurvey]);
+
+  // 기존 convertToGraphData 함수 (하위 호환성을 위해 유지)
+  const convertToGraphData = useMemo(() => {
+    if (!analysisResults || !students || !selectedSurvey) return [];
+
+    const studentMap = new Map(students.map(s => [s.id, s]));
+    const graphStudents = [];
+
+    for (const student of students) {
+      const friends = [];
+      let friendCount = 0;
+
+      // 네트워크 데이터에서 해당 학생의 연결 찾기
+      if (analysisResults.edges) {
+        for (const edge of analysisResults.edges) {
+          if (edge.source === student.id) {
+            const friendId = edge.target;
+            if (studentMap.has(friendId)) {
+              friends.push(friendId);
+              friendCount++;
+            }
+          } else if (edge.target === student.id) {
+            const friendId = edge.source;
+            if (studentMap.has(friendId)) {
+              friends.push(friendId);
+              friendCount++;
+            }
+          }
+        }
+      }
+
+      graphStudents.push({
+        id: student.id,
+        name: student.name,
+        friends,
+        friendCount
+      });
+    }
+
+    return graphStudents;
+  }, [analysisResults, students, selectedSurvey]);
 
   // 연결 수를 실제 설문 응답 데이터를 기반으로 계산
   const connectionCounts = useMemo(() => {
@@ -1319,6 +1463,17 @@ const NetworkAnalysis: React.FC = () => {
                 <ChartBarIcon className="h-4 w-4 inline mr-2" />
                 네트워크 시각화
               </button>
+              <button
+                onClick={() => setAnalysisView('graph')}
+                className={`px-4 py-2 rounded-md text-sm font-medium ${
+                  analysisView === 'graph'
+                    ? 'bg-blue-600 text-white'
+                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                }`}
+              >
+                <UserGroupIcon className="h-4 w-4 inline mr-2" />
+                교우관계 그래프
+              </button>
             </div>
           </div>
         </div>
@@ -2412,6 +2567,43 @@ const NetworkAnalysis: React.FC = () => {
               </div>
             </div>
           </div>
+        </div>
+      )}
+
+           {/* 교우관계 그래프 뷰 */}
+     {analysisView === 'graph' && unifiedGraphData.length > 0 && (
+        <div className="space-y-6">
+          <div className="bg-white rounded-lg shadow">
+            <div className="px-6 py-4 border-b border-gray-200">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-xl font-bold text-gray-900">교우관계 네트워크 그래프</h3>
+                  <p className="text-sm text-gray-600 mt-1">학생들의 친구 관계를 인터랙티브 그래프로 시각화합니다</p>
+                </div>
+                <div className="text-right">
+                                   <div className="text-sm text-gray-500">총 학생 수</div>
+                 <div className="text-lg font-semibold text-blue-600">{unifiedGraphData.length}명</div>
+                 <div className="text-sm text-gray-500">평균 친구 수</div>
+                 <div className="text-lg font-semibold text-green-600">
+                   {unifiedGraphData.length > 0 ? (unifiedGraphData.reduce((sum, s) => sum + s.friendCount, 0) / unifiedGraphData.length).toFixed(1) : '0'}명
+                 </div>
+                </div>
+              </div>
+            </div>
+            
+                         <div className="p-6">
+                               <NetworkGraph students={unifiedGraphData} maxSelections={unifiedMaxSelections.length > 0 ? Math.max(...unifiedMaxSelections) : 5} />
+             </div>
+          </div>
+        </div>
+      )}
+
+      {/* 그래프 뷰에서 데이터가 없는 경우 */}
+      {analysisView === 'graph' && unifiedGraphData.length === 0 && (
+        <div className="bg-white rounded-lg shadow p-8 text-center">
+          <UserGroupIcon className="h-16 w-16 text-gray-400 mx-auto mb-4" />
+          <h3 className="text-lg font-medium text-gray-900 mb-2">교우관계 데이터가 없습니다</h3>
+          <p className="text-gray-500">네트워크 분석을 먼저 실행해주세요.</p>
         </div>
       )}
     </div>

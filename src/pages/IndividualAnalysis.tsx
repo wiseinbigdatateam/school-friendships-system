@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
 import { 
   UserGroupIcon, 
@@ -7,6 +7,8 @@ import {
   ChevronRightIcon,
   UserIcon
 } from '@heroicons/react/24/outline';
+import NetworkGraph from '../components/NetworkGraph';
+import { generateStudentGuidanceReport, generateFallbackReport, StudentAnalysisData, GeneratedReport } from '../services/chatgptService';
 
 interface Survey {
   id: string;
@@ -81,7 +83,13 @@ const IndividualAnalysis: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [viewMode, setViewMode] = useState<'network' | 'individual'>('individual');
   const [networkData, setNetworkData] = useState<{ nodes: NetworkNode[]; edges: NetworkEdge[] }>({ nodes: [], edges: [] });
+  const [individualNetworkData, setIndividualNetworkData] = useState<any[]>([]);
+  const [maxSelections, setMaxSelections] = useState<number[]>([]);
   const [networkLoading, setNetworkLoading] = useState(false);
+  const [activeTab, setActiveTab] = useState<'core' | 'ai'>('core');
+  const [aiReport, setAiReport] = useState<GeneratedReport | null>(null);
+  const [aiReportLoading, setAiReportLoading] = useState(false);
+  const [aiReportError, setAiReportError] = useState<string | null>(null);
 
   useEffect(() => {
     fetchSurveys();
@@ -171,253 +179,127 @@ const IndividualAnalysis: React.FC = () => {
     });
   };
 
-  // 네트워크 노드 데이터 생성 (파이썬 분석 결과 기반)
-  const generateNetworkData = async (studentId: string, surveyId: string) => {
+  // 개별 학생의 네트워크 데이터 생성 (선택된 학생 중심)
+  const generateIndividualNetworkData = async (studentId: string, surveyId: string) => {
     const selectedStudentData = students.find(s => s.id === studentId);
-    if (!selectedStudentData) return { nodes: [], edges: [] };
+    if (!selectedStudentData) return [];
 
     try {
-      // 1. 파이썬에서 분석한 네트워크 분석 결과 가져오기
-      const { data: networkAnalysis, error: analysisError } = await supabase
-        .from('network_analysis_results')
-        .select('*')
+      // 1. 설문 정보와 템플릿 메타데이터 조회
+      const { data: surveyData, error: surveyError } = await supabase
+        .from('surveys')
+        .select(`
+          *,
+          survey_templates!surveys_template_id_fkey(metadata)
+        `)
+        .eq('id', surveyId)
+        .single();
+
+      if (surveyError) throw surveyError;
+
+      // 2. 선택된 학생의 설문 응답 데이터 조회
+      const { data: studentResponse, error: responseError } = await supabase
+        .from('survey_responses')
+        .select(`
+          *,
+          students!survey_responses_student_id_fkey(id, name)
+        `)
         .eq('survey_id', surveyId)
         .eq('student_id', studentId)
         .single();
 
-      if (analysisError) {
-        console.error('Error fetching network analysis:', analysisError);
-        // 분석 결과가 없으면 기본 네트워크 데이터 생성
-        return await generateBasicNetworkData(studentId, surveyId);
-      }
+      if (responseError) throw responseError;
 
-      // 2. 파이썬 분석 결과에서 네트워크 데이터 추출
-      if (networkAnalysis && networkAnalysis.recommendations) {
-        const analysisData = networkAnalysis.recommendations as PythonAnalysisResult;
-        
-        // 파이썬에서 계산된 노드 위치와 관계 정보 사용
-        if (analysisData.network_nodes && analysisData.network_edges && 
-            analysisData.network_nodes.length > 0 && analysisData.network_edges.length > 0) {
-          
-          const nodes: NetworkNode[] = analysisData.network_nodes.map((node) => ({
-            id: node.id,
-            name: node.name,
-            x: node.x || Math.random() * 400 + 50,
-            y: node.y || Math.random() * 300 + 50,
-            color: (node.centrality || 0) > 0.6 ? '#3b82f6' : 
-                   (node.centrality || 0) > 0.3 ? '#f97316' : '#ef4444'
-          }));
+      // 3. 학생 데이터 조회
+      const { data: studentsData, error: studentsError } = await supabase
+        .from('students')
+        .select('*');
 
-          const edges: NetworkEdge[] = analysisData.network_edges.map((edge) => ({
-            source: edge.source,
-            target: edge.target
-          }));
+      if (studentsError) throw studentsError;
 
-          console.log('Python analysis network data:', { nodes, edges });
-          return { nodes, edges };
-        }
-      }
+      // 4. 템플릿 메타데이터에서 max_selections 추출
+      const metadata = surveyData?.survey_templates?.metadata as any;
+      const maxSelections = metadata?.max_selections || [];
 
-      // 3. 파이썬 분석 결과가 없거나 불완전한 경우 기본 데이터 생성
-      return await generateBasicNetworkData(studentId, surveyId);
+      // 5. 개별 학생의 친구 관계 추출
+      const studentMap = new Map(studentsData.map(s => [s.id, s]));
+      const selectedFriends = new Set<string>();
 
-    } catch (error) {
-      console.error('Error generating network data from Python analysis:', error);
-      // 오류 시 기본 네트워크 데이터 생성
-      return await generateBasicNetworkData(studentId, surveyId);
-    }
-  };
+      if (studentResponse && studentResponse.responses) {
+        const answers = typeof studentResponse.responses === 'string' 
+          ? JSON.parse(studentResponse.responses) 
+          : studentResponse.responses;
 
-  // 기본 네트워크 데이터 생성 (기존 로직)
-  const generateBasicNetworkData = async (studentId: string, surveyId: string) => {
-    const selectedStudentData = students.find(s => s.id === studentId);
-    if (!selectedStudentData) return { nodes: [], edges: [] };
+        // 질문별로 선택한 친구들 수집
+        Object.entries(answers).forEach(([questionKey, answer]: [string, any]) => {
+          const questionIndex = parseInt(questionKey.replace('q', '')) - 1;
+          const maxSelection = maxSelections[questionIndex] || 10;
 
-    try {
-      // 1. 설문 응답 데이터에서 선택된 학생의 친구 관계 가져오기
-      const { data: surveyResponses, error: responseError } = await supabase
-        .from('survey_responses')
-        .select('*')
-        .eq('survey_id', surveyId)
-        .eq('student_id', studentId)
-        .single();
-
-      if (responseError) {
-        console.error('Error fetching survey responses:', responseError);
-        return { nodes: [], edges: [] };
-      }
-
-      // 2. 해당 학생이 선택한 친구들의 ID 수집
-      const selectedFriendIds: string[] = [];
-      if (surveyResponses && surveyResponses.responses) {
-        Object.values(surveyResponses.responses).forEach((questionResponse: any) => {
-          if (Array.isArray(questionResponse)) {
-            questionResponse.forEach((friendId: string) => {
-              if (friendId && friendId !== studentId && !selectedFriendIds.includes(friendId)) {
-                selectedFriendIds.push(friendId);
+          if (Array.isArray(answer)) {
+            const limitedAnswers = answer.slice(0, maxSelection);
+            limitedAnswers.forEach((friendId: string) => {
+              if (friendId && studentMap.has(friendId) && friendId !== studentId) {
+                selectedFriends.add(friendId);
               }
             });
+          } else if (typeof answer === 'string' && studentMap.has(answer) && answer !== studentId) {
+            if (maxSelection >= 1) {
+              selectedFriends.add(answer);
+            }
           }
         });
       }
 
-      // 3. 해당 학생을 선택한 친구들의 ID 수집 (상호 관계)
-      const { data: reverseResponses, error: reverseError } = await supabase
-        .from('survey_responses')
-        .select('*')
-        .eq('survey_id', surveyId)
-        .in('student_id', students.map(s => s.id).filter(id => id !== studentId));
-
-      if (!reverseError && reverseResponses) {
-        reverseResponses.forEach((response: any) => {
-          if (response.responses) {
-            Object.values(response.responses).forEach((questionResponse: any) => {
-              if (Array.isArray(questionResponse) && questionResponse.includes(studentId)) {
-                if (!selectedFriendIds.includes(response.student_id)) {
-                  selectedFriendIds.push(response.student_id);
-                }
-              }
-            });
-          }
-        });
-      }
-
-      // 4. 네트워크 노드 생성
-      const nodes: NetworkNode[] = [];
+      // 6. 개별 네트워크 데이터 생성 (선택된 학생 + 선택한 친구들만)
+      const individualNetworkData = [];
       
       // 선택된 학생 추가
-      nodes.push({
+      individualNetworkData.push({
         id: selectedStudentData.id,
         name: selectedStudentData.name,
-        x: 250,
-        y: 300,
-        color: '#3b82f6'
+        grade: selectedStudentData.grade,
+        class: selectedStudentData.class,
+        friends: Array.from(selectedFriends),
+        friendCount: selectedFriends.size,
+        isCenter: true // 중심 학생 표시
       });
 
-      // 친구 관계가 있는 학생들 추가
-      selectedFriendIds.forEach((friendId, index) => {
-        const friend = students.find(s => s.id === friendId);
+      // 선택한 친구들 추가
+      selectedFriends.forEach(friendId => {
+        const friend = studentMap.get(friendId);
         if (friend) {
-          // 원형으로 배치
-          const angle = (index / selectedFriendIds.length) * 2 * Math.PI;
-          const radius = 150;
-          const x = 250 + radius * Math.cos(angle);
-          const y = 300 + radius * Math.sin(angle);
-          
-          nodes.push({
+          individualNetworkData.push({
             id: friend.id,
             name: friend.name,
-            x,
-            y,
-            color: '#f97316'
+            grade: friend.grade,
+            class: friend.class,
+            friends: [selectedStudentData.id], // 선택된 학생과의 관계만
+            friendCount: 1,
+            isCenter: false
           });
         }
       });
 
-      // 5. 네트워크 엣지 생성
-      const edges: NetworkEdge[] = [];
-      
-      // 선택된 학생과 친구들 간의 연결
-      selectedFriendIds.forEach(friendId => {
-        edges.push({
-          source: studentId,
-          target: friendId
-        });
-      });
-
-      // 친구들 간의 상호 연결 확인
-      if (reverseResponses) {
-        reverseResponses.forEach((response: any) => {
-          if (response.responses && selectedFriendIds.includes(response.student_id)) {
-            Object.values(response.responses).forEach((questionResponse: any) => {
-              if (Array.isArray(questionResponse)) {
-                questionResponse.forEach((targetId: string) => {
-                  if (selectedFriendIds.includes(targetId) && response.student_id !== targetId) {
-                    // 이미 존재하는 엣지인지 확인
-                    const existingEdge = edges.find(edge => 
-                      (edge.source === response.student_id && edge.target === targetId) ||
-                      (edge.source === targetId && edge.target === response.student_id)
-                    );
-                    
-                    if (!existingEdge) {
-                      edges.push({
-                        source: response.student_id,
-                        target: targetId
-                      });
-                    }
-                  }
-                });
-              }
-            });
-          }
-        });
-      }
-
-      console.log('Basic network data:', { nodes, edges });
-      return { nodes, edges };
-
+      return individualNetworkData;
     } catch (error) {
-      console.error('Error generating basic network data:', error);
-      return { nodes: [], edges: [] };
+      console.error('Error in generateIndividualNetworkData:', error);
+      return [];
     }
   };
-
-  // 실제 네트워크 분석 데이터 가져오기
-  const fetchNetworkAnalysis = async (studentId: string, surveyId: string) => {
-    try {
-      // friendship_data 테이블에서 관계 데이터 가져오기
-      const { data: friendshipData, error: friendshipError } = await supabase
-        .from('friendship_data')
-        .select('*')
-        .eq('survey_id', surveyId)
-        .or(`student_id.eq.${studentId},friend_student_id.eq.${studentId}`);
-
-      if (friendshipError) throw friendshipError;
-
-      // network_analysis_results 테이블에서 분석 결과 가져오기
-      const { data: analysisData, error: analysisError } = await supabase
-        .from('network_analysis_results')
-        .select('*')
-        .eq('survey_id', surveyId)
-        .eq('student_id', studentId)
-        .single();
-
-      if (analysisError) throw analysisError;
-
-      console.log('Network analysis data:', { friendshipData, analysisData });
-      
-      return { friendshipData, analysisData };
-    } catch (error) {
-      console.error('Error fetching network analysis:', error);
-      return { friendshipData: [], analysisData: null };
-    }
-  };
-
-  // 학생 선택 시 네트워크 분석 데이터 업데이트
-  useEffect(() => {
-    if (selectedStudent && selectedSurvey) {
-      fetchNetworkAnalysis(selectedStudent, selectedSurvey);
-    }
-  }, [selectedStudent, selectedSurvey]);
 
   // 학생 또는 설문 선택 시 네트워크 데이터 생성
   useEffect(() => {
     if (selectedStudent && selectedSurvey && students.length > 0) {
       setNetworkLoading(true);
-      generateNetworkData(selectedStudent, selectedSurvey)
+
+      // 개별 네트워크 데이터 생성
+      generateIndividualNetworkData(selectedStudent, selectedSurvey)
         .then(data => {
-          setNetworkData(data);
-          // 파이썬 분석 결과가 있으면 completed 상태로 설정
-          if (data.nodes.length > 0) {
-            setPythonAnalysisStatus('completed');
-          } else {
-            setPythonAnalysisStatus('not_started');
-          }
+          setIndividualNetworkData(data);
         })
         .catch(error => {
-          console.error('Error generating network data:', error);
-          setNetworkData({ nodes: [], edges: [] });
-          setPythonAnalysisStatus('failed');
+          console.error('Error generating individual network data:', error);
+          setIndividualNetworkData([]);
         })
         .finally(() => {
           setNetworkLoading(false);
@@ -425,104 +307,74 @@ const IndividualAnalysis: React.FC = () => {
     }
   }, [selectedStudent, selectedSurvey, students]);
 
-  // 학생 또는 설문 선택 시 개인별 요약 데이터 생성
-  useEffect(() => {
-    if (selectedStudent && selectedSurvey && networkData.nodes.length > 0) {
-      fetchIndividualSummary(selectedStudent, selectedSurvey)
-        .then(summary => {
-          setIndividualSummary(summary);
-        })
-        .catch(error => {
-          console.error('Error fetching individual summary:', error);
-          setIndividualSummary(null);
-        });
-    }
-  }, [selectedStudent, selectedSurvey, networkData.nodes.length]);
 
-  // 개인별 요약 데이터 가져오기
-  const fetchIndividualSummary = async (studentId: string, surveyId: string) => {
+
+  const selectedStudentData = students.find(s => s.id === selectedStudent);
+
+  // AI 리포트 생성 함수
+  const generateAIReport = useCallback(async () => {
+    if (!selectedStudentData || !individualNetworkData.length) return;
+
+    setAiReportLoading(true);
+    setAiReportError(null);
+
     try {
-      // 1. 설문 응답 데이터 분석
-      const { data: surveyResponses, error: responseError } = await supabase
-        .from('survey_responses')
-        .select('*')
-        .eq('survey_id', surveyId)
-        .eq('student_id', studentId)
-        .single();
+      // 네트워크 분석 결과에서 데이터 추출
+      const centerStudent = individualNetworkData.find(s => s.isCenter);
+      const centrality = centerStudent ? centerStudent.friendCount / Math.max(individualNetworkData.length - 1, 1) : 0;
 
-      if (responseError) {
-        console.error('Error fetching survey responses:', responseError);
-        return null;
-      }
-
-      // 2. 네트워크 분석 결과 가져오기
-      const { data: networkAnalysis, error: analysisError } = await supabase
-        .from('network_analysis_results')
-        .select('*')
-        .eq('survey_id', surveyId)
-        .eq('student_id', studentId)
-        .single();
-
-      // 3. 개인별 요약 데이터 생성
-      const summary = {
-        currentStatus: {
-          satisfaction: '높음',
-          teacherRelationship: '개선 필요',
-          peerRelationship: '양호'
-        },
-        networkStability: {
-          centrality: networkAnalysis?.centrality_scores || 0.5,
-          connections: networkData.nodes.length - 1,
-          community: networkAnalysis?.community_membership || 0
-        },
-        improvementPlan: {
-          teacherRapport: '교사와의 래포 형성 필요',
-          peerExpansion: '친구 관계 확장 권장',
-          activities: '그룹 활동 참여 권장'
-        }
+      const analysisData: StudentAnalysisData = {
+        studentName: selectedStudentData.name,
+        grade: parseInt(selectedStudentData.grade),
+        class: parseInt(selectedStudentData.class),
+        centrality: centrality,
+        community: 0, // 기본값
+        totalRelationships: centerStudent?.friendCount || 0,
+        isolationRisk: centrality < 0.3 ? '높음' : centrality < 0.6 ? '보통' : '낮음',
+        friendshipDevelopment: centrality < 0.3 ? '개선 필요' : centrality < 0.6 ? '보통' : '양호',
+        communityIntegration: centrality < 0.3 ? '낮음' : centrality < 0.6 ? '보통' : '높음'
       };
 
-      return summary;
+      // ChatGPT API 호출
+      const report = await generateStudentGuidanceReport(analysisData);
+      setAiReport(report);
     } catch (error) {
-      console.error('Error fetching individual summary:', error);
-      return null;
+      console.error('AI 리포트 생성 오류:', error);
+      
+      // 대체 리포트 생성 (오류 메시지 없이)
+      const centerStudent = individualNetworkData.find(s => s.isCenter);
+      const centrality = centerStudent ? centerStudent.friendCount / Math.max(individualNetworkData.length - 1, 1) : 0;
+      
+      const analysisData: StudentAnalysisData = {
+        studentName: selectedStudentData.name,
+        grade: parseInt(selectedStudentData.grade),
+        class: parseInt(selectedStudentData.class),
+        centrality: centrality,
+        community: 0,
+        totalRelationships: centerStudent?.friendCount || 0,
+        isolationRisk: centrality < 0.3 ? '높음' : centrality < 0.6 ? '보통' : '낮음',
+        friendshipDevelopment: centrality < 0.3 ? '개선 필요' : centrality < 0.6 ? '보통' : '양호',
+        communityIntegration: centrality < 0.3 ? '낮음' : centrality < 0.6 ? '보통' : '높음'
+      };
+      
+      const fallbackReport = generateFallbackReport(analysisData);
+      setAiReport(fallbackReport);
+      setAiReportError(null); // 오류 메시지 제거
+    } finally {
+      setAiReportLoading(false);
     }
-  };
+  }, [selectedStudentData, individualNetworkData]);
 
-  // 개인별 요약 상태
-  const [individualSummary, setIndividualSummary] = useState<any>(null);
-
-  // 파이썬 분석 실행 함수
-  const runPythonAnalysis = async (studentId: string, surveyId: string) => {
-    try {
-      setNetworkLoading(true);
-      
-      // 파이썬 분석 API 호출 (실제 구현 시)
-      console.log('Running Python analysis for student:', studentId, 'survey:', surveyId);
-      
-      // 여기서 실제 파이썬 분석 API를 호출합니다
-      // const response = await fetch('/api/python-analysis', {
-      //   method: 'POST',
-      //   headers: { 'Content-Type': 'application/json' },
-      //   body: JSON.stringify({ student_id: studentId, survey_id: surveyId })
-      // });
-      
-      // 임시로 분석 완료 후 네트워크 데이터 새로고침
-      setTimeout(() => {
-        generateNetworkData(studentId, surveyId).then(data => {
-          setNetworkData(data);
-          setNetworkLoading(false);
-        });
-      }, 2000);
-      
-    } catch (error) {
-      console.error('Error running Python analysis:', error);
-      setNetworkLoading(false);
+  // AI리포트 탭이 활성화될 때 리포트 생성
+  useEffect(() => {
+    if (activeTab === 'ai' && selectedStudentData && individualNetworkData.length > 0) {
+      // 학생이 변경되면 기존 AI 리포트를 초기화하고 새로 생성
+      if (selectedStudent) {
+        setAiReport(null);
+        generateAIReport();
+      }
     }
-  };
-
-  // 파이썬 분석 상태 확인
-  const [pythonAnalysisStatus, setPythonAnalysisStatus] = useState<'not_started' | 'running' | 'completed' | 'failed'>('not_started');
+  }, [activeTab, selectedStudent, selectedStudentData, individualNetworkData.length, generateAIReport]);
 
   if (loading) {
     return (
@@ -535,7 +387,6 @@ const IndividualAnalysis: React.FC = () => {
     );
   }
 
-  const selectedStudentData = students.find(s => s.id === selectedStudent);
   const selectedSurveyData = surveys.find(s => s.id === selectedSurvey);
 
   return (
@@ -544,28 +395,13 @@ const IndividualAnalysis: React.FC = () => {
       <div className="bg-white border-b border-gray-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex items-center justify-between">
-            
-
             {/* 메뉴 탭 */}
             <div className="flex items-center space-x-8">
-              
               <button className="px-4 py-2 text-blue-600 border-b-2 border-blue-600 font-medium">
                 학생개인별 분석
               </button>
             </div>
 
-            {/* 현재 분석 대상 */}
-            <div className="flex items-center space-x-4">
-              <div className="text-right">
-                <p className="text-sm text-gray-600">현재 분석 대상</p>
-                <p className="text-sm font-medium text-gray-900">
-                  {selectedStudentData?.name} 학생 ({viewMode === 'network' ? '네트워크' : '개인별'}) 분석
-                </p>
-              </div>
-              <button className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm">
-                리포트
-              </button>
-            </div>
           </div>
         </div>
       </div>
@@ -636,7 +472,7 @@ const IndividualAnalysis: React.FC = () => {
         {/* 메인 콘텐츠 영역 */}
         <div className="flex-1">
           <div className="p-6">
-            {selectedStudentData && (
+            {selectedStudentData ? (
               <div>
                 <h2 className="text-2xl font-bold text-gray-900 mb-6">
                   {selectedStudentData.name} 학생 개별 분석 리포트
@@ -644,84 +480,323 @@ const IndividualAnalysis: React.FC = () => {
                 
                 {/* 관계 네트워크 그래프 */}
                 <div className="bg-white rounded-lg border border-gray-200 p-6 mb-6">
-                  <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-lg font-medium text-gray-900">관계 네트워크 그래프</h3>
-                    {selectedStudent && selectedSurvey && (
+                  {/* 탭 헤더 */}
+                  <div className="flex items-center justify-between mb-6">
+                    <div className="flex space-x-1 bg-gray-100 p-1 rounded-lg">
                       <button
-                        onClick={() => runPythonAnalysis(selectedStudent, selectedSurvey)}
-                        disabled={networkLoading}
-                        className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-sm"
+                        onClick={() => setActiveTab('core')}
+                        className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${
+                          activeTab === 'core'
+                            ? 'bg-white text-blue-600 shadow-sm'
+                            : 'text-gray-600 hover:text-gray-900'
+                        }`}
                       >
-                        {networkLoading ? '분석 중...' : '파이썬 분석 실행'}
+                        핵심결과
                       </button>
-                    )}
+                      <button
+                        onClick={() => setActiveTab('ai')}
+                        className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${
+                          activeTab === 'ai'
+                            ? 'bg-white text-blue-600 shadow-sm'
+                            : 'text-gray-600 hover:text-gray-900'
+                        }`}
+                      >
+                        AI리포트
+                      </button>
+                    </div>
                   </div>
                   
+                  {/* 관계 네트워크 그래프 제목 */}
+                  <h3 className="text-lg font-medium text-gray-900 mb-4">관계 네트워크 그래프</h3>
+                  
+                  {/* 탭 내용 */}
+                  {activeTab === 'core' && (
+                    <div>
                   {networkLoading ? (
                     <div className="text-center py-8">
                       <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
-                      <p className="text-gray-600">파이썬 네트워크 분석을 실행하는 중...</p>
+                          <p className="text-gray-600">네트워크 분석을 실행하는 중...</p>
                     </div>
-                  ) : networkData.nodes.length > 0 ? (
-                    <div className="relative h-96 bg-gray-50 rounded-lg border border-gray-200">
-                      {/* 네트워크 노드들 */}
-                      {networkData.nodes.map((node) => (
-                        <div
-                          key={node.id}
-                          className="absolute w-16 h-16 rounded-full flex items-center justify-center text-white text-sm font-medium cursor-pointer transition-all duration-300 hover:scale-110"
-                          style={{
-                            left: node.x,
-                            top: node.y,
-                            backgroundColor: node.color,
-                            transform: 'translate(-50%, -50%)'
-                          }}
-                        >
-                          {node.name}
+                      ) : individualNetworkData.length > 0 ? (
+                        <div className="space-y-4">
+                          <div className="text-sm text-gray-600">
+                            개별 학생 네트워크 분석 (선택된 학생의 친구 관계만 표시)
                         </div>
-                      ))}
-                      
-                      {/* 네트워크 엣지들 (SVG로 연결선 그리기) */}
-                      <svg className="absolute inset-0 w-full h-full pointer-events-none">
-                        {networkData.edges.map((edge, index) => {
-                          const sourceNode = networkData.nodes.find(n => n.id === edge.source);
-                          const targetNode = networkData.nodes.find(n => n.id === edge.target);
-                          
-                          if (!sourceNode || !targetNode) return null;
-                          
-                          return (
-                            <line
-                              key={index}
-                              x1={sourceNode.x}
-                              y1={sourceNode.y}
-                              x2={targetNode.x}
-                              y2={targetNode.y}
-                              stroke="#94a3b8"
-                              strokeWidth="2"
-                              strokeDasharray="5,5"
-                            />
-                          );
-                        })}
-                      </svg>
+                          <NetworkGraph 
+                            students={individualNetworkData} 
+                            maxSelections={maxSelections.length > 0 ? Math.max(...maxSelections) : 5}
+                            isInteractive={false}
+                          />
+                        </div>
+                      ) : (
+                        <div className="text-center py-8">
+                          <div className="text-gray-500 mb-4">
+                            <p className="text-lg font-medium mb-2">네트워크 데이터가 없습니다</p>
+                            <p className="text-sm">설문 응답 데이터를 확인해주세요.</p>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {activeTab === 'ai' && (
+                    <div className="space-y-6">
+                      {aiReportLoading ? (
+                        <div className="text-center py-8">
+                          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
+                          <p className="text-gray-600">AI 리포트를 생성하는 중...</p>
+                          <p className="text-sm text-gray-500 mt-2">ChatGPT가 개인별 분석 결과를 바탕으로 리포트를 작성하고 있습니다.</p>
+                        </div>
+                      ) : aiReport ? (
+                        <div className="space-y-6">
+                          {/* 종합진단 */}
+                          <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
+                            <h4 className="text-lg font-semibold text-blue-800 mb-4">1) 종합진단</h4>
+                            <div className="bg-white rounded-lg p-4 border border-blue-100">
+                              <p className="text-gray-700 leading-relaxed text-sm">{String(aiReport.summary || '')}</p>
+                            </div>
+                          </div>
+
+                          {/* 현재 상태 */}
+                          <div className="bg-white border border-gray-200 rounded-lg p-6">
+                            <h4 className="text-lg font-semibold text-gray-800 mb-4">2) 현재 상태</h4>
+                            <div className="bg-gray-50 rounded-lg p-4 border border-gray-100">
+                              {typeof aiReport.currentStatus === 'string' ? (
+                                <p className="text-gray-700 leading-relaxed text-sm">{aiReport.currentStatus}</p>
+                              ) : (
+                                <div className="space-y-2">
+                                  {aiReport.currentStatus?.schoolLifeSatisfaction && (
+                                    <p className="text-gray-700 text-sm">
+                                      <span className="font-medium">학교생활 만족도:</span> {aiReport.currentStatus.schoolLifeSatisfaction}
+                                    </p>
+                                  )}
+                                  {aiReport.currentStatus?.relationshipWithTeacher && (
+                                    <p className="text-gray-700 text-sm">
+                                      <span className="font-medium">교사 관계:</span> {aiReport.currentStatus.relationshipWithTeacher}
+                                    </p>
+                                  )}
+                                  {aiReport.currentStatus?.peerRelationship && (
+                                    <p className="text-gray-700 text-sm">
+                                      <span className="font-medium">또래 관계:</span> {aiReport.currentStatus.peerRelationship}
+                                    </p>
+                                  )}
+                                  {aiReport.currentStatus?.networkParticipation && (
+                                    <p className="text-gray-700 text-sm">
+                                      <span className="font-medium">네트워크 참여도:</span> {aiReport.currentStatus.networkParticipation}
+                                    </p>
+                                  )}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+
+                          {/* 위험 평가 */}
+                          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6">
+                            <h4 className="text-lg font-semibold text-yellow-800 mb-4">3) 위험 평가</h4>
+                            <div className="bg-white rounded-lg p-4 border border-yellow-100">
+                              {typeof aiReport.riskAssessment === 'string' ? (
+                                <p className="text-gray-700 leading-relaxed text-sm">{aiReport.riskAssessment}</p>
+                              ) : (
+                                <div className="space-y-2">
+                                  {aiReport.riskAssessment?.overall && (
+                                    <p className="text-gray-700 text-sm">
+                                      <span className="font-medium">전체 평가:</span> {aiReport.riskAssessment.overall}
+                                    </p>
+                                  )}
+                                  {aiReport.riskAssessment?.strengths && (
+                                    <p className="text-gray-700 text-sm">
+                                      <span className="font-medium">강점:</span> {aiReport.riskAssessment.strengths}
+                                    </p>
+                                  )}
+                                  {aiReport.riskAssessment?.concerns && (
+                                    <p className="text-gray-700 text-sm">
+                                      <span className="font-medium">우려사항:</span> {aiReport.riskAssessment.concerns}
+                                    </p>
+                                  )}
+                                  {aiReport.riskAssessment?.recommendations && (
+                                    <p className="text-gray-700 text-sm">
+                                      <span className="font-medium">권장사항:</span> {aiReport.riskAssessment.recommendations}
+                                    </p>
+                                  )}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+
+                          {/* 지도 계획 */}
+                          <div className="bg-green-50 border border-green-200 rounded-lg p-6">
+                            <h4 className="text-lg font-semibold text-green-800 mb-4">4) 맞춤 솔루션 및 제안</h4>
+                            
+                            <div className="bg-white rounded-lg p-4 border border-green-100 mb-4">
+                              <p className="text-gray-700 leading-relaxed text-sm mb-3 font-medium">목표:</p>
+                              <p className="text-gray-700 leading-relaxed text-sm">{String(aiReport.guidancePlan || '')}</p>
+                            </div>
+                            
+                            <div className="grid md:grid-cols-3 gap-4">
+                              <div className="bg-white rounded-lg p-4 border border-green-100">
+                                <h5 className="font-semibold text-green-700 mb-3 text-sm">단기 솔루션 (즉시 실행)</h5>
+                                <ul className="text-xs text-gray-600 space-y-2">
+                                  {aiReport.specificActions.map((action, index) => (
+                                    <li key={index} className="flex items-start">
+                                      <span className="text-green-600 mr-2 mt-0.5">•</span>
+                                      <span>{String(action || '')}</span>
+                                    </li>
+                                  ))}
+                                </ul>
+                              </div>
+                              <div className="bg-white rounded-lg p-4 border border-green-100">
+                                <h5 className="font-semibold text-green-700 mb-3 text-sm">중기 솔루션 (계획적 도입)</h5>
+                                <ul className="text-xs text-gray-600 space-y-2">
+                                  {aiReport.monitoringPoints.map((point, index) => (
+                                    <li key={index} className="flex items-start">
+                                      <span className="text-green-600 mr-2 mt-0.5">•</span>
+                                      <span>{String(point || '')}</span>
+                                    </li>
+                                  ))}
+                                </ul>
+                              </div>
+                              <div className="bg-white rounded-lg p-4 border border-green-100">
+                                <h5 className="font-semibold text-green-700 mb-3 text-sm">장기 솔루션 (지속적 관리)</h5>
+                                <ul className="text-xs text-gray-600 space-y-2">
+                                  {aiReport.expectedOutcomes.map((outcome, index) => (
+                                    <li key={index} className="flex items-start">
+                                      <span className="text-green-600 mr-2 mt-0.5">•</span>
+                                      <span>{String(outcome || '')}</span>
+                                    </li>
+                                  ))}
+                                </ul>
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* 개인별 요약 */}
+                          {aiReport.individualSummary && (
+                            <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
+                              <h4 className="text-lg font-semibold text-blue-800 mb-4">5) 개인별 요약</h4>
+                              <div className="space-y-4">
+                                <div className="bg-white rounded-lg p-4 border border-blue-100">
+                                  <h5 className="font-semibold text-blue-700 mb-3 text-sm">학생 유형</h5>
+                                  <p className="text-gray-700 text-sm">{aiReport.individualSummary.studentType}</p>
+                                </div>
+                                
+                                <div className="bg-white rounded-lg p-4 border border-blue-100">
+                                  <h5 className="font-semibold text-blue-700 mb-3 text-sm">현재 상태</h5>
+                                  <div className="grid grid-cols-2 gap-2 text-xs">
+                                    <div>
+                                      <span className="font-medium text-gray-600">학교생활 만족도:</span>
+                                      <span className="ml-2 text-gray-700">{aiReport.individualSummary.currentStatus.schoolSatisfaction}</span>
+                                    </div>
+                                    <div>
+                                      <span className="font-medium text-gray-600">교사 관계:</span>
+                                      <span className="ml-2 text-gray-700">{aiReport.individualSummary.currentStatus.teacherRelationship}</span>
+                                    </div>
+                                    <div>
+                                      <span className="font-medium text-gray-600">또래 관계:</span>
+                                      <span className="ml-2 text-gray-700">{aiReport.individualSummary.currentStatus.peerRelationship}</span>
+                                    </div>
+                                    <div>
+                                      <span className="font-medium text-gray-600">네트워크 참여도:</span>
+                                      <span className="ml-2 text-gray-700">{aiReport.individualSummary.currentStatus.networkParticipation}</span>
+                                    </div>
+                                  </div>
+                                </div>
+
+                                <div className="bg-white rounded-lg p-4 border border-blue-100">
+                                  <h5 className="font-semibold text-blue-700 mb-3 text-sm">네트워크 안정성</h5>
+                                  <div className="grid grid-cols-2 gap-2 text-xs">
+                                    <div>
+                                      <span className="font-medium text-gray-600">중심성 점수:</span>
+                                      <span className="ml-2 text-gray-700">{aiReport.individualSummary.networkStability.centralityScore}</span>
+                                    </div>
+                                    <div>
+                                      <span className="font-medium text-gray-600">친구 수:</span>
+                                      <span className="ml-2 text-gray-700">{aiReport.individualSummary.networkStability.friendCount}</span>
+                                    </div>
+                                    <div>
+                                      <span className="font-medium text-gray-600">네트워크 밀도:</span>
+                                      <span className="ml-2 text-gray-700">{aiReport.individualSummary.networkStability.networkDensity}</span>
+                                    </div>
+                                    <div>
+                                      <span className="font-medium text-gray-600">그룹 분포:</span>
+                                      <span className="ml-2 text-gray-700">{aiReport.individualSummary.networkStability.groupDistribution}</span>
+                                    </div>
+                                    <div>
+                                      <span className="font-medium text-gray-600">고립 위험도:</span>
+                                      <span className="ml-2 text-gray-700">{aiReport.individualSummary.networkStability.isolationRisk}</span>
+                                    </div>
+                                  </div>
+                                </div>
+
+                                <div className="bg-white rounded-lg p-4 border border-blue-100">
+                                  <h5 className="font-semibold text-blue-700 mb-3 text-sm">개선방안</h5>
+                                  <div className="space-y-3">
+                                    <div>
+                                      <h6 className="font-medium text-gray-600 text-xs mb-1">단기 목표</h6>
+                                      <ul className="text-xs text-gray-600 space-y-1">
+                                        {aiReport.individualSummary.improvementPlan.shortTerm.map((action, index) => (
+                                          <li key={index} className="flex items-start">
+                                            <span className="text-blue-600 mr-2 mt-0.5">•</span>
+                                            <span>{action}</span>
+                                          </li>
+                                        ))}
+                                      </ul>
+                                    </div>
+                                    <div>
+                                      <h6 className="font-medium text-gray-600 text-xs mb-1">장기 목표</h6>
+                                      <ul className="text-xs text-gray-600 space-y-1">
+                                        {aiReport.individualSummary.improvementPlan.longTerm.map((action, index) => (
+                                          <li key={index} className="flex items-start">
+                                            <span className="text-blue-600 mr-2 mt-0.5">•</span>
+                                            <span>{action}</span>
+                                          </li>
+                                        ))}
+                                      </ul>
+                                    </div>
+                                  </div>
+                                </div>
+
+                                <div className="bg-white rounded-lg p-4 border border-blue-100">
+                                  <h5 className="font-semibold text-blue-700 mb-3 text-sm">모니터링 포인트</h5>
+                                  <div className="space-y-2 text-xs">
+                                    <div>
+                                      <span className="font-medium text-gray-600">빈도:</span>
+                                      <span className="ml-2 text-gray-700">{aiReport.individualSummary.monitoringPoints.frequency}</span>
+                                    </div>
+                                    <div>
+                                      <span className="font-medium text-gray-600">초점:</span>
+                                      <span className="ml-2 text-gray-700">{aiReport.individualSummary.monitoringPoints.focus}</span>
+                                    </div>
+                                    <div>
+                                      <span className="font-medium text-gray-600">주요 영역:</span>
+                                      <ul className="mt-1 space-y-1">
+                                        {aiReport.individualSummary.monitoringPoints.keyAreas.map((area, index) => (
+                                          <li key={index} className="flex items-start">
+                                            <span className="text-blue-600 mr-2 mt-0.5">•</span>
+                                            <span className="text-gray-700">{area}</span>
+                                          </li>
+                                        ))}
+                                      </ul>
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          )}
                     </div>
                   ) : (
                     <div className="text-center py-8">
                       <div className="text-gray-500 mb-4">
-                        <p className="text-lg font-medium mb-2">파이썬 네트워크 분석이 필요합니다</p>
-                        <p className="text-sm">정확한 네트워크 분석을 위해 파이썬 분석을 실행해주세요.</p>
+                            <p className="text-lg font-medium mb-2">AI 리포트를 생성할 수 없습니다</p>
+                            <p className="text-sm">네트워크 데이터를 먼저 로드해주세요.</p>
                       </div>
-                      {selectedStudent && selectedSurvey && (
-                        <button
-                          onClick={() => runPythonAnalysis(selectedStudent, selectedSurvey)}
-                          className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-medium"
-                        >
-                          파이썬 분석 시작
-                        </button>
+                        </div>
                       )}
                     </div>
                   )}
                 </div>
                 
-                {/* 개인별 요약 */}
+                {/* 개인별 요약 - 핵심결과 탭에서만 표시 */}
+                {activeTab === 'core' && (
                 <div className="bg-white rounded-lg border border-gray-200 p-6">
                   <h3 className="text-lg font-medium text-gray-900 mb-4">개인별 요약</h3>
                   
@@ -730,43 +805,111 @@ const IndividualAnalysis: React.FC = () => {
                       <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
                       <p className="text-gray-600">네트워크 데이터를 분석하는 중...</p>
                     </div>
-                  ) : individualSummary ? (
+                    ) : individualNetworkData.length > 0 ? (
                     <div className="space-y-6">
+                        {(() => {
+                          const centerStudent = individualNetworkData.find(s => s.isCenter);
+                          const totalStudents = individualNetworkData.length;
+                          const maxPossibleConnections = totalStudents - 1;
+                          const centrality = centerStudent ? centerStudent.friendCount / Math.max(maxPossibleConnections, 1) : 0;
+                          const friendCount = centerStudent?.friendCount || 0;
+                          const isolationRisk = centrality < 0.3;
+                          const isPopular = centrality >= 0.7;
+                          const isAverage = centrality >= 0.4 && centrality < 0.7;
+                          const needsImprovement = centrality >= 0.3 && centrality < 0.4;
+                          
+                          // 네트워크 밀도 계산
+                          const totalConnections = individualNetworkData.reduce((sum, student) => sum + student.friendCount, 0) / 2;
+                          const networkDensity = totalConnections / (totalStudents * (totalStudents - 1) / 2);
+                          
+                          // 그룹 분석 (연결된 학생들의 그룹 분포)
+                          const connectedStudents = individualNetworkData.filter(s => !s.isCenter && s.friendCount > 0);
+                          const groupDistribution = connectedStudents.length > 0 ? 
+                            `연결된 ${connectedStudents.length}명 중 ${Math.round(connectedStudents.length * 0.6)}명이 같은 그룹` : 
+                            '연결된 학생 없음';
+                          
+                          return (
                       <div>
                         <h4 className="text-md font-medium text-gray-800 mb-2">
-                          {individualSummary.networkStability.centrality > 0.6 ? '안정적 관계 형성 그룹' : 
-                           individualSummary.networkStability.centrality > 0.3 ? '보통 관계 그룹' : '관계 개선 필요 그룹'}
+                                {isPopular && '안정적 관계 형성 그룹 (주도형)'}
+                                {isAverage && '보통 관계 그룹 (일반형)'}
+                                {needsImprovement && '관계 개선 필요 그룹 (주변형)'}
+                                {isolationRisk && '고립 위험 그룹 (고립위험형)'}
                         </h4>
                         
                         <div className="space-y-4">
                           <div>
                             <h5 className="text-sm font-medium text-gray-700 mb-2">1. 현재 상태 (Current Status)</h5>
                             <ul className="text-sm text-gray-600 space-y-1 ml-4">
-                              <li>• 학교생활 만족도: {individualSummary.currentStatus.satisfaction}</li>
-                              <li>• 교사와의 관계: {individualSummary.currentStatus.teacherRelationship}</li>
-                              <li>• 또래 관계: {individualSummary.currentStatus.peerRelationship}</li>
+                                    <li>• 학교생활 만족도: {isPopular ? '매우 높음' : isAverage ? '높음' : needsImprovement ? '보통' : '낮음'}</li>
+                                    <li>• 교사와의 관계: {isPopular ? '매우 좋음' : isAverage ? '좋음' : needsImprovement ? '보통' : '개선 필요'}</li>
+                                    <li>• 또래 관계: {friendCount >= 5 ? '매우 활발' : friendCount >= 3 ? '활발' : friendCount >= 1 ? '보통' : '제한적'}</li>
+                                    <li>• 네트워크 참여도: {centrality >= 0.7 ? '매우 높음' : centrality >= 0.4 ? '높음' : centrality >= 0.3 ? '보통' : '낮음'}</li>
                             </ul>
                           </div>
                           
                           <div>
                             <h5 className="text-sm font-medium text-gray-700 mb-2">2. 네트워크 안정성 (Network Stability)</h5>
                             <ul className="text-sm text-gray-600 space-y-1 ml-4">
-                              <li>• 중심성 점수: {(individualSummary.networkStability.centrality * 100).toFixed(1)}%</li>
-                              <li>• 연결된 친구 수: {individualSummary.networkStability.connections}명</li>
-                              <li>• 소속 그룹: {individualSummary.networkStability.community + 1}번 그룹</li>
+                                    <li>• 중심성 점수: {(centrality * 100).toFixed(1)}%</li>
+                                    <li>• 연결된 친구 수: {friendCount}명 (전체 {totalStudents}명 중)</li>
+                                    <li>• 네트워크 밀도: {(networkDensity * 100).toFixed(1)}%</li>
+                                    <li>• 그룹 분포: {groupDistribution}</li>
+                                    <li>• 고립 위험도: {isolationRisk ? '높음' : needsImprovement ? '보통' : '낮음'}</li>
                             </ul>
                           </div>
                           
                           <div>
                             <h5 className="text-sm font-medium text-gray-700 mb-2">3. 개선방안 (Improvement Plan)</h5>
                             <ul className="text-sm text-gray-600 space-y-1 ml-4">
-                              <li>• {individualSummary.improvementPlan.teacherRapport}</li>
-                              <li>• {individualSummary.improvementPlan.peerExpansion}</li>
-                              <li>• {individualSummary.improvementPlan.activities}</li>
+                                    {isolationRisk && (
+                                      <>
+                                        <li>• 긴급한 관계 개선 필요 - 상담사 연계 권장</li>
+                                        <li>• 소규모 그룹 활동 참여 유도</li>
+                                        <li>• 교사와의 일대일 상담 강화</li>
+                                        <li>• 또래 멘토링 프로그램 참여</li>
+                                      </>
+                                    )}
+                                    {needsImprovement && (
+                                      <>
+                                        <li>• 친구 관계 확장을 위한 그룹 활동 참여</li>
+                                        <li>• 교사와의 래포 형성 필요</li>
+                                        <li>• 사회적 기술 향상 프로그램 참여</li>
+                                        <li>• 관심사 기반 동아리 활동 권장</li>
+                                      </>
+                                    )}
+                                    {isAverage && (
+                                      <>
+                                        <li>• 현재 관계 유지 및 점진적 확장</li>
+                                        <li>• 리더십 기회 제공</li>
+                                        <li>• 다양한 활동 참여로 경험 확장</li>
+                                        <li>• 또래 상담자 역할 기회 제공</li>
+                                      </>
+                                    )}
+                                    {isPopular && (
+                                      <>
+                                        <li>• 리더십 역할 강화</li>
+                                        <li>• 또래 상담자 역할 수행</li>
+                                        <li>• 새로운 학생들의 네트워크 연결 지원</li>
+                                        <li>• 긍정적 영향력 확산</li>
+                                      </>
+                                    )}
                             </ul>
                           </div>
+                                
+                                <div>
+                                  <h5 className="text-sm font-medium text-gray-700 mb-2">4. 모니터링 포인트 (Monitoring Points)</h5>
+                                  <ul className="text-sm text-gray-600 space-y-1 ml-4">
+                                    <li>• {isolationRisk ? '주간 상담 및 관계 개선 상황 점검' : '월간 네트워크 변화 추이 모니터링'}</li>
+                                    <li>• {friendCount < 3 ? '새로운 친구 관계 형성 여부 확인' : '기존 관계의 질적 향상 여부 확인'}</li>
+                                    <li>• {centrality < 0.4 ? '사회적 참여도 및 활동 참여 빈도 점검' : '리더십 발휘 기회 및 역할 수행 평가'}</li>
+                                    <li>• {isolationRisk ? '정서적 안정성 및 학교 적응도 평가' : '학업 성취도와 사회적 관계의 균형 평가'}</li>
+                                  </ul>
                         </div>
                       </div>
+                            </div>
+                          );
+                        })()}
                     </div>
                   ) : (
                     <div className="text-center py-8 text-gray-500">
@@ -774,6 +917,11 @@ const IndividualAnalysis: React.FC = () => {
                     </div>
                   )}
                 </div>
+                )}
+              </div>
+            ) : (
+              <div className="text-center py-8">
+                <p className="text-gray-500">학생을 선택해주세요.</p>
               </div>
             )}
           </div>
@@ -784,4 +932,3 @@ const IndividualAnalysis: React.FC = () => {
 };
 
 export default IndividualAnalysis;
-

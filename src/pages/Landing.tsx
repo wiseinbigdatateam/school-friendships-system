@@ -1,9 +1,10 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import ContactModal from '../components/ContactModal';
 
 const Landing: React.FC = () => {
   const navigate = useNavigate();
-
+  const [isContactModalOpen, setIsContactModalOpen] = useState(false);
 
   const handleLoginClick = () => {
     navigate('/login');
@@ -14,7 +15,7 @@ const Landing: React.FC = () => {
   };
 
   const handleContactClick = () => {
-    navigate('/contact');
+    setIsContactModalOpen(true);
   };
 
 
@@ -32,7 +33,7 @@ const Landing: React.FC = () => {
               <button className="hover:text-blue-300 transition-colors">서비스소개</button>
               <button className="hover:text-blue-300 transition-colors">헬프센터</button>
               <button className="hover:text-blue-300 transition-colors">매뉴얼</button>
-              <button className="hover:text-blue-300 transition-colors">문의하기</button>
+              <button onClick={handleContactClick} className="hover:text-blue-300 transition-colors">문의하기</button>
             </nav>
             <button
               onClick={handleLoginClick}
@@ -362,7 +363,7 @@ const Landing: React.FC = () => {
             <div>
               <h4 className="text-lg font-semibold mb-4 text-gray-800">문의하기</h4>
               <ul className="space-y-2 text-gray-600">
-                <li><a href="#" className="hover:text-blue-600 transition-colors">문의하기</a></li>
+                <li><button onClick={handleContactClick} className="hover:text-blue-600 transition-colors">문의하기</button></li>
               </ul>
             </div>
           </div>
@@ -422,6 +423,12 @@ const Landing: React.FC = () => {
           </div>
         </div>
       </footer>
+
+      {/* Contact Modal */}
+      <ContactModal 
+        isOpen={isContactModalOpen} 
+        onClose={() => setIsContactModalOpen(false)} 
+      />
     </div>
   );
 };

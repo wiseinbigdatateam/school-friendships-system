@@ -7,60 +7,115 @@ export type Json =
   | Json[]
 
 export type Database = {
-  // Allows to automatically instanciate createClient with right options
+  // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
     PostgrestVersion: "12.2.12 (cd3cf9e)"
   }
   public: {
     Tables: {
-      role_requests: {
+      ai_reports: {
         Row: {
+          created_at: string | null
+          current_status: string
+          expected_outcomes: Json
+          guidance_plan: string
           id: string
-          user_id: string
-          requested_role: string
-          school_id: string | null
-          status: string
-          reason: string | null
-          created_at: string
-          updated_at: string
+          monitoring_points: Json
+          risk_assessment: string
+          specific_actions: Json
+          student_id: string
+          summary: string
+          survey_id: string | null
+          teacher_id: string
+          updated_at: string | null
         }
         Insert: {
+          created_at?: string | null
+          current_status: string
+          expected_outcomes: Json
+          guidance_plan: string
           id?: string
-          user_id: string
-          requested_role: string
-          school_id?: string | null
-          status?: string
-          reason?: string | null
-          created_at?: string
-          updated_at?: string
+          monitoring_points: Json
+          risk_assessment: string
+          specific_actions: Json
+          student_id: string
+          summary: string
+          survey_id?: string | null
+          teacher_id: string
+          updated_at?: string | null
         }
         Update: {
+          created_at?: string | null
+          current_status?: string
+          expected_outcomes?: Json
+          guidance_plan?: string
           id?: string
-          user_id?: string
-          requested_role?: string
-          school_id?: string | null
-          status?: string
-          reason?: string | null
-          created_at?: string
-          updated_at?: string
+          monitoring_points?: Json
+          risk_assessment?: string
+          specific_actions?: Json
+          student_id?: string
+          summary?: string
+          survey_id?: string | null
+          teacher_id?: string
+          updated_at?: string | null
         }
         Relationships: [
           {
-            foreignKeyName: "role_requests_user_id_fkey"
-            columns: ["user_id"]
+            foreignKeyName: "ai_reports_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ai_reports_survey_id_fkey"
+            columns: ["survey_id"]
+            isOneToOne: false
+            referencedRelation: "surveys"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ai_reports_teacher_id_fkey"
+            columns: ["teacher_id"]
             isOneToOne: false
             referencedRelation: "users"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "role_requests_school_id_fkey"
-            columns: ["school_id"]
-            isOneToOne: false
-            referencedRelation: "schools"
-            referencedColumns: ["id"]
-          }
         ]
+      }
+      contact_inquiries: {
+        Row: {
+          created_at: string | null
+          email: string
+          id: string
+          message: string
+          name: string
+          phone: string | null
+          status: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          email: string
+          id?: string
+          message: string
+          name: string
+          phone?: string | null
+          status?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          email?: string
+          id?: string
+          message?: string
+          name?: string
+          phone?: string | null
+          status?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
       }
       data_transfer_requests: {
         Row: {
@@ -348,6 +403,50 @@ export type Database = {
           },
         ]
       }
+      notifications: {
+        Row: {
+          category: string | null
+          created_at: string | null
+          id: string
+          is_read: boolean | null
+          message: string
+          title: string
+          type: string | null
+          updated_at: string | null
+          user_id: string | null
+        }
+        Insert: {
+          category?: string | null
+          created_at?: string | null
+          id?: string
+          is_read?: boolean | null
+          message: string
+          title: string
+          type?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          category?: string | null
+          created_at?: string | null
+          id?: string
+          is_read?: boolean | null
+          message?: string
+          title?: string
+          type?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notifications_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       parent_consents: {
         Row: {
           consent_date: string | null
@@ -397,6 +496,57 @@ export type Database = {
             columns: ["student_id"]
             isOneToOne: false
             referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      role_requests: {
+        Row: {
+          approval_notes: string | null
+          created_at: string | null
+          id: string
+          reason: string | null
+          requested_role: string
+          school_id: string | null
+          status: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          approval_notes?: string | null
+          created_at?: string | null
+          id?: string
+          reason?: string | null
+          requested_role: string
+          school_id?: string | null
+          status?: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          approval_notes?: string | null
+          created_at?: string | null
+          id?: string
+          reason?: string | null
+          requested_role?: string
+          school_id?: string | null
+          status?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "role_requests_school_id_fkey"
+            columns: ["school_id"]
+            isOneToOne: false
+            referencedRelation: "schools"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "role_requests_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
             referencedColumns: ["id"]
           },
         ]
@@ -613,6 +763,7 @@ export type Database = {
           description: string | null
           id: string
           is_active: boolean | null
+          max_selections: number | null
           metadata: Json | null
           name: string
           questions: Json
@@ -624,6 +775,7 @@ export type Database = {
           description?: string | null
           id?: string
           is_active?: boolean | null
+          max_selections?: number | null
           metadata?: Json | null
           name: string
           questions: Json
@@ -635,6 +787,7 @@ export type Database = {
           description?: string | null
           id?: string
           is_active?: boolean | null
+          max_selections?: number | null
           metadata?: Json | null
           name?: string
           questions?: Json
@@ -777,50 +930,6 @@ export type Database = {
           },
         ]
       }
-      notifications: {
-        Row: {
-          id: string
-          user_id: string
-          title: string
-          message: string
-          type: string
-          is_read: boolean
-          category: string
-          created_at: string
-          updated_at: string
-        }
-        Insert: {
-          id?: string
-          user_id: string
-          title: string
-          message: string
-          type?: string
-          is_read?: boolean
-          category?: string
-          created_at?: string
-          updated_at?: string
-        }
-        Update: {
-          id?: string
-          user_id?: string
-          title?: string
-          message?: string
-          type?: string
-          is_read?: boolean
-          category?: string
-          created_at?: string
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "notifications_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          }
-        ]
-      }
       users: {
         Row: {
           class_number: string | null
@@ -835,6 +944,7 @@ export type Database = {
           is_active: boolean | null
           last_login: string | null
           name: string
+          password_hash: string | null
           permissions: Json | null
           role: string
           school_id: string | null
@@ -853,6 +963,7 @@ export type Database = {
           is_active?: boolean | null
           last_login?: string | null
           name: string
+          password_hash?: string | null
           permissions?: Json | null
           role: string
           school_id?: string | null
@@ -871,6 +982,7 @@ export type Database = {
           is_active?: boolean | null
           last_login?: string | null
           name?: string
+          password_hash?: string | null
           permissions?: Json | null
           role?: string
           school_id?: string | null
