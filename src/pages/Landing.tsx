@@ -1,6 +1,7 @@
 import { useNavigate } from "react-router-dom";
 import LandingHeader from "../components/LandingHeader";
 import TabMenu from "../components/TabMenu";
+import SectionTitle from "../components/SectionTitle";
 
 const Landing: React.FC = () => {
   const navigate = useNavigate();
@@ -65,16 +66,14 @@ const Landing: React.FC = () => {
         <div className="mx-auto flex w-[1280px] flex-col gap-[72px] py-[72px]">
           {/* 학생 교우관계 */}
           <div className="flex flex-col gap-5">
-            {/* 상단 문구 */}
-            <div className="flex flex-col items-center gap-2">
-              <h2 className="text-2xl font-semibold">학생 교우관계</h2>
-              <p className="flex flex-col items-center">
-                <span className="font-semibold text-sky-700">
-                  교우관계 분석은 소셜네트워크 분석방법론(SNA)을 적용
-                </span>
-                학급 내 학생들간의 교우관계를 시각적으로 표현하고 현 상태 진단
-              </p>
-            </div>
+            <SectionTitle
+              title="학생 교우관계"
+              desc={{
+                point: "교우관계 분석은 소셜네트워크 분석방법론(SNA)을 적용",
+                basic:
+                  "학급 내 학생들간의 교우관계를 시각적으로 표현하고 현 상태 진단",
+              }}
+            />
 
             {/* 하단 이미지 */}
             <div className="flex justify-center gap-12 rounded-3xl border border-gray-300 pt-10">
@@ -120,19 +119,14 @@ const Landing: React.FC = () => {
 
           {/* 소외 학생 예방 및 관리방안 자동화 */}
           <div className="flex flex-col gap-5">
-            {/* 상단 문구 */}
-            <div className="flex flex-col items-center gap-2">
-              <h2 className="text-2xl font-semibold">
-                소외 학생 예방 및 관리방안 자동화
-              </h2>
-              <p className="flex flex-col items-center">
-                <span className="font-semibold text-sky-700">
-                  매월 정기적 조사로 학생별 개인화된 상태진단 및 관리 방안
-                  자동화 제공
-                </span>
-                소외 가능성이 있는 학생에 대한 모니터링 및 예방 가능
-              </p>
-            </div>
+            <SectionTitle
+              title="소외 학생 예방 및 관리방안 자동화"
+              desc={{
+                point:
+                  "매월 정기적 조사로 학생별 개인화된 상태진단 및 관리 방안 자동화 제공",
+                basic: "소외 가능성이 있는 학생에 대한 모니터링 및 예방 가능",
+              }}
+            />
 
             {/* 하단 이미지 */}
             <div className="flex justify-center gap-5 rounded-3xl border border-gray-300 p-10">
@@ -208,17 +202,14 @@ const Landing: React.FC = () => {
 
           {/* 학생 진단·평가 */}
           <div className="flex flex-col gap-5">
-            {/* 상단 문구 */}
-            <div className="flex flex-col items-center gap-2">
-              <h2 className="text-2xl font-semibold">학생 진단·평가</h2>
-              <p className="flex flex-col items-center">
-                <span className="font-semibold text-sky-700">
-                  학교생활·정서심리진단 + 관계 네트워크분석으로 개인화된 학생
-                  관리 가이드 자동 생성
-                </span>
-                과학적 방법론에 기반한 학생관리
-              </p>
-            </div>
+            <SectionTitle
+              title="학생 진단·평가"
+              desc={{
+                point:
+                  "학교생활·정서심리진단 + 관계 네트워크분석으로 개인화된 학생 관리 가이드 자동 생성",
+                basic: "과학적 방법론에 기반한 학생관리",
+              }}
+            />
 
             {/* 하단 이미지 */}
             <div className="flex flex-col items-center gap-3 rounded-3xl border border-gray-300 p-10">
@@ -253,18 +244,20 @@ const Landing: React.FC = () => {
             </div>
           </div>
 
+          {/* 학생 진단·평가 활용방안 */}
+          <div className="flex flex-col gap-5">
+            <SectionTitle title="학생 진단·평가 활용방안" />
+          </div>
+
           {/* 교권보호 효과 */}
           <div className="flex flex-col gap-5">
-            {/* 상단 문구 */}
-            <div className="flex flex-col items-center gap-2">
-              <h2 className="text-2xl font-semibold">교권보호 효과</h2>
-              <p className="flex flex-col items-center">
-                <span className="font-semibold text-sky-700">
-                  교권보호 직접 지원 지능
-                </span>
-                교사를 지키는 데이터 기반 방패
-              </p>
-            </div>
+            <SectionTitle
+              title="교권보호 효과"
+              desc={{
+                point: "교권보호 직접 지원 지능",
+                basic: "교사를 지키는 데이터 기반 방패",
+              }}
+            />
 
             {/* 하단 이미지 */}
             <div className="flex items-center gap-8 border-y border-gray-300 p-10">
