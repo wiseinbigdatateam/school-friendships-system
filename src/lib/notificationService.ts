@@ -2,14 +2,14 @@ import { supabase } from './supabase';
 
 export interface Notification {
   id: string;
-  user_id: string;
+  user_id: string | null;
   title: string;
   message: string;
   type: 'info' | 'success' | 'warning' | 'error';
-  is_read: boolean;
-  category: string;
-  created_at: string;
-  updated_at: string;
+  is_read: boolean | null;
+  category: string | null;
+  created_at: string | null;
+  updated_at: string | null;
 }
 
 // 알림 생성

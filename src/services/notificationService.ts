@@ -2,14 +2,14 @@ import { supabase } from '../lib/supabase';
 
 export interface Notification {
   id: string;
-  user_id: string;
+  user_id: string | null;
   title: string;
   message: string;
   type: 'info' | 'success' | 'warning' | 'error';
-  category: string;
-  is_read: boolean;
-  created_at: string;
-  updated_at: string;
+  category: string | null;
+  is_read: boolean | null;
+  created_at: string | null;
+  updated_at: string | null;
 }
 
 export interface CreateNotificationData {

@@ -1,5 +1,32 @@
-import React, { useState, useEffect } from "react";
-import { supabase } from "../lib/supabase";
+import React, { useState, useEffect } from 'react';
+import { supabase } from '../lib/supabase';
+import {
+  Chart as ChartJS,
+  CategoryScale,
+  LinearScale,
+  BarElement,
+  Title,
+  Tooltip,
+  Legend,
+  ArcElement,
+  PointElement,
+  LineElement,
+  Filler
+} from 'chart.js';
+import { Bar, Doughnut, Line } from 'react-chartjs-2';
+
+ChartJS.register(
+  CategoryScale,
+  LinearScale,
+  BarElement,
+  Title,
+  Tooltip,
+  Legend,
+  ArcElement,
+  PointElement,
+  LineElement,
+  Filler
+);
 
 interface SurveyData {
   id: string;
@@ -30,14 +57,10 @@ const ClassSurvey: React.FC = () => {
   // 상태를 한글로 변환하는 함수
   const getStatusLabel = (status: string): string => {
     switch (status) {
-      case "active":
-        return "진행중";
-      case "completed":
-        return "완료";
-      // case 'draft':
-      //   return '작성중';
-      // case 'archived':
-      //   return '보관';
+      case 'active':
+        return '진행중';
+      case 'completed':
+        return '완료';
       default:
         return status;
     }
@@ -46,17 +69,189 @@ const ClassSurvey: React.FC = () => {
   // 상태에 따른 스타일 클래스 반환
   const getStatusStyle = (status: string): string => {
     switch (status) {
-      case "completed":
-        return "bg-green-100 text-green-800";
-      case "active":
-        return "bg-blue-100 text-blue-800";
-      // case 'draft':
-      //   return 'bg-gray-100 text-gray-800';
-      // case 'archived':
-      //   return 'bg-yellow-100 text-yellow-800';
+      case 'completed':
+        return 'bg-green-100 text-green-800';
+      case 'active':
+        return 'bg-blue-100 text-blue-800';
       default:
         return "bg-gray-100 text-gray-800";
     }
+  };
+
+  // Chart.js 옵션들
+  const barChartOptions = {
+    responsive: true,
+    plugins: {
+      legend: {
+        position: 'top' as const,
+      },
+      title: {
+        display: true,
+        text: '응답 분포',
+        font: {
+          size: 16,
+          weight: 'bold' as const
+        }
+      },
+    },
+    scales: {
+      y: {
+        beginAtZero: true,
+        ticks: {
+          stepSize: 1,
+          callback: function(value: any) {
+            return value + '명';
+          }
+        }
+      }
+    }
+  };
+
+  const doughnutChartOptions = {
+    responsive: true,
+    plugins: {
+      legend: {
+        position: 'bottom' as const,
+      },
+      title: {
+        display: true,
+        text: '응답 비율',
+        font: {
+          size: 14,
+          weight: 'bold' as const
+        }
+      },
+    }
+  };
+
+  const lineChartOptions = {
+    responsive: true,
+    plugins: {
+      legend: {
+        position: 'top' as const,
+      },
+      title: {
+        display: true,
+        text: '문항별 응답 추이',
+        font: {
+          size: 16,
+          weight: 'bold' as const
+        }
+      },
+    },
+    scales: {
+      y: {
+        beginAtZero: true,
+        ticks: {
+          stepSize: 1,
+          callback: function(value: any) {
+            return value + '명';
+          }
+        }
+      }
+    }
+  };
+
+  // 차트 데이터 생성 함수들
+  const createBarChartData = (data: ChartData) => ({
+    labels: ['예', '아니오'],
+    datasets: [
+      {
+        label: '응답자 수',
+        data: [data.yes_count, data.no_count],
+        backgroundColor: [
+          'rgba(59, 130, 246, 0.8)',
+          'rgba(30, 64, 175, 0.8)'
+        ],
+        borderColor: [
+          'rgba(59, 130, 246, 1)',
+          'rgba(30, 64, 175, 1)'
+        ],
+        borderWidth: 2,
+        borderRadius: 8,
+        borderSkipped: false,
+      }
+    ]
+  });
+
+  const createDoughnutChartData = (data: ChartData) => ({
+    labels: ['예', '아니오'],
+    datasets: [
+      {
+        data: [data.yes_count, data.no_count],
+        backgroundColor: [
+          'rgba(59, 130, 246, 0.8)',
+          'rgba(30, 64, 175, 0.8)'
+        ],
+        borderColor: [
+          'rgba(59, 130, 246, 1)',
+          'rgba(30, 64, 175, 1)'
+        ],
+        borderWidth: 2,
+        hoverOffset: 4,
+      }
+    ]
+  });
+
+  const createLineChartData = () => {
+    const labels = chartData.map((_, index) => `문항 ${(index + 1).toString().padStart(2, '0')}`);
+    
+    return {
+      labels,
+      datasets: [
+        {
+          label: '예 답변',
+          data: chartData.map(data => data.yes_count),
+          borderColor: 'rgba(59, 130, 246, 1)',
+          backgroundColor: 'rgba(59, 130, 246, 0.1)',
+          borderWidth: 3,
+          fill: true,
+          tension: 0.4,
+          pointBackgroundColor: 'rgba(59, 130, 246, 1)',
+          pointBorderColor: '#fff',
+          pointBorderWidth: 2,
+          pointRadius: 6,
+        },
+        {
+          label: '아니오 답변',
+          data: chartData.map(data => data.no_count),
+          borderColor: 'rgba(30, 64, 175, 1)',
+          backgroundColor: 'rgba(30, 64, 175, 0.1)',
+          borderWidth: 3,
+          fill: true,
+          tension: 0.4,
+          pointBackgroundColor: 'rgba(30, 64, 175, 1)',
+          pointBorderColor: '#fff',
+          pointBorderWidth: 2,
+          pointRadius: 6,
+        }
+      ]
+    };
+  };
+
+  // 전체 응답 요약 차트 데이터
+  const createSummaryChartData = () => {
+    const totalYes = chartData.reduce((sum, data) => sum + data.yes_count, 0);
+    const totalNo = chartData.reduce((sum, data) => sum + data.no_count, 0);
+    
+    return {
+      labels: ['전체 예 답변', '전체 아니오 답변'],
+      datasets: [
+        {
+          data: [totalYes, totalNo],
+          backgroundColor: [
+            'rgba(34, 197, 94, 0.8)',
+            'rgba(239, 68, 68, 0.8)'
+          ],
+          borderColor: [
+            'rgba(34, 197, 94, 1)',
+            'rgba(239, 68, 68, 1)'
+          ],
+          borderWidth: 2,
+          hoverOffset: 4,
+        }
+      ]
+    };
   };
 
   useEffect(() => {
@@ -441,7 +636,7 @@ const ClassSurvey: React.FC = () => {
                     : "bg-gray-100 text-gray-700 hover:bg-gray-200"
                 }`}
               >
-                그래프만 보기
+                Chart.js 차트 보기
               </button>
             </div>
           </div>
@@ -453,91 +648,72 @@ const ClassSurvey: React.FC = () => {
             <div>
               <h2 className="text-2xl font-bold text-gray-900 mb-6">
                 {surveys.find((s) => s.id === selectedSurvey)?.title}
-              </h2>
-
-              {viewMode === "graphs" ? (
-                <div className="grid grid-cols-2 gap-6">
-                  {chartData.map((data, index) => (
-                    <div
-                      key={index}
-                      className="bg-white rounded-lg border border-gray-200 p-6"
-                    >
-                      <h3 className="text-lg font-medium text-gray-900 mb-6">
-                        문항 {(index + 1).toString().padStart(2, "0")}.{" "}
-                        {data.question}
-                      </h3>
-
-                      {/* 차트 제목 */}
-                      <div className="mb-4">
-                        <h4 className="text-sm font-medium text-gray-700 mb-3">
-                          응답 분포
-                        </h4>
-                      </div>
-
-                      {/* 세로 막대 차트 */}
-                      <div className="flex items-end space-x-6 h-48 border border-gray-200 rounded-lg p-4 bg-gray-50">
-                        <div className="flex flex-col items-center">
-                          <div
-                            className="w-12 bg-blue-500 rounded-t transition-all duration-300"
-                            style={{
-                              height: `${Math.max(
-                                (data.yes_count /
-                                  Math.max(data.yes_count + data.no_count, 1)) *
-                                  180,
-                                30
-                              )}px`,
-                              minHeight: "30px",
-                            }}
-                          ></div>
-                          <span className="text-sm text-gray-600 mt-2">예</span>
-                          <span className="text-lg font-semibold text-blue-600">
-                            {data.yes_count}
-                          </span>
+              </h2>              
+              {viewMode === 'graphs' ? (
+                <div className="space-y-8">
+                  {/* 전체 요약 차트 */}
+                  {chartData.length > 0 && (
+                    <div className="bg-white rounded-lg border border-gray-200 p-6">
+                      <h3 className="text-xl font-semibold text-gray-900 mb-6">전체 응답 요약</h3>
+                      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        <div>
+                          <h4 className="text-lg font-medium text-gray-800 mb-4">전체 응답 분포</h4>
+                          <div className="h-64">
+                            <Doughnut data={createSummaryChartData()} options={doughnutChartOptions} />
+                          </div>
                         </div>
-
-                        <div className="flex flex-col items-center">
-                          <div
-                            className="w-12 bg-blue-700 rounded-t transition-all duration-300"
-                            style={{
-                              height: `${Math.max(
-                                (data.no_count /
-                                  Math.max(data.yes_count + data.no_count, 1)) *
-                                  180,
-                                30
-                              )}px`,
-                              minHeight: "30px",
-                            }}
-                          ></div>
-                          <span className="text-sm text-gray-600 mt-2">
-                            아니오
-                          </span>
-                          <span className="text-lg font-semibold text-blue-700">
-                            {data.no_count}
-                          </span>
-                        </div>
-                      </div>
-
-                      {/* 디버깅 정보 */}
-                      <div className="mt-2 text-xs text-gray-500">
-                        <p>
-                          차트 데이터: 예 {data.yes_count}명, 아니오{" "}
-                          {data.no_count}명
-                        </p>
-                      </div>
-
-                      {/* 범례 */}
-                      <div className="mt-4 flex items-center space-x-4 text-sm">
-                        <div className="flex items-center space-x-2">
-                          <div className="w-3 h-3 bg-blue-500 rounded"></div>
-                          <span className="text-gray-600">예</span>
-                        </div>
-                        <div className="flex items-center space-x-2">
-                          <div className="w-3 h-3 bg-blue-700 rounded"></div>
-                          <span className="text-gray-600">아니오</span>
+                        <div>
+                          <h4 className="text-lg font-medium text-gray-800 mb-4">문항별 응답 추이</h4>
+                          <div className="h-64">
+                            <Line data={createLineChartData()} options={lineChartOptions} />
+                          </div>
                         </div>
                       </div>
                     </div>
-                  ))}
+                  )}
+
+                  {/* 개별 문항 차트들 */}
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    {chartData.map((data, index) => (
+                      <div key={index} className="bg-white rounded-lg border border-gray-200 p-6">
+                        <h3 className="text-lg font-medium text-gray-900 mb-6">
+                          문항 {(index + 1).toString().padStart(2, '0')}. {data.question}
+                        </h3>
+                        
+                        <div className="space-y-6">
+                          {/* 막대 차트 */}
+                          <div>
+                            <h4 className="text-sm font-medium text-gray-700 mb-3">응답 분포 (막대 차트)</h4>
+                            <div className="h-48">
+                              <Bar data={createBarChartData(data)} options={barChartOptions} />
+                            </div>
+                          </div>
+                          
+                          {/* 도넛 차트 */}
+                          <div>
+                            <h4 className="text-sm font-medium text-gray-700 mb-3">응답 비율 (도넛 차트)</h4>
+                            <div className="h-48">
+                              <Doughnut data={createDoughnutChartData(data)} options={doughnutChartOptions} />
+                            </div>
+                          </div>
+                          
+                          {/* 응답 현황 요약 */}
+                          <div className="bg-gray-50 rounded-lg p-4">
+                            <div className="grid grid-cols-2 gap-4 text-center">
+                              <div>
+                                <div className="text-2xl font-bold text-blue-600">{data.yes_count}</div>
+                                <div className="text-sm text-gray-600">예 답변</div>
+                              </div>
+                              <div>
+                                <div className="text-2xl font-bold text-blue-800">{data.no_count}</div>
+                                <div className="text-sm text-gray-600">아니오 답변</div>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               ) : (
                 <div className="space-y-8">
@@ -552,82 +728,23 @@ const ClassSurvey: React.FC = () => {
                       </h3>
 
                       <div className="flex gap-8">
-                        {/* 왼쪽: 차트 */}
+                        {/* 왼쪽: Chart.js 차트들 */}
                         <div className="flex-1">
-                          <div className="mb-4">
-                            <h4 className="text-sm font-medium text-gray-700 mb-3">
-                              응답 분포
-                            </h4>
-                          </div>
-
-                          {/* 세로 막대 차트 */}
-                          <div className="flex items-end space-x-6 h-48 border border-gray-200 rounded-lg p-4 bg-gray-50">
-                            <div className="flex flex-col items-center">
-                              <div
-                                className="w-12 bg-blue-500 rounded-t transition-all duration-300"
-                                style={{
-                                  height: `${Math.max(
-                                    (data.yes_count /
-                                      Math.max(
-                                        data.yes_count + data.no_count,
-                                        1
-                                      )) *
-                                      180,
-                                    30
-                                  )}px`,
-                                  minHeight: "30px",
-                                }}
-                              ></div>
-                              <span className="text-sm text-gray-600 mt-2">
-                                예
-                              </span>
-                              <span className="text-lg font-semibold text-blue-600">
-                                {data.yes_count}
-                              </span>
+                          <div className="space-y-6">
+                            {/* 막대 차트 */}
+                            <div>
+                              <h4 className="text-sm font-medium text-gray-700 mb-3">응답 분포 (막대 차트)</h4>
+                              <div className="h-48">
+                                <Bar data={createBarChartData(data)} options={barChartOptions} />
+                              </div>
                             </div>
-
-                            <div className="flex flex-col items-center">
-                              <div
-                                className="w-12 bg-blue-700 rounded-t transition-all duration-300"
-                                style={{
-                                  height: `${Math.max(
-                                    (data.no_count /
-                                      Math.max(
-                                        data.yes_count + data.no_count,
-                                        1
-                                      )) *
-                                      180,
-                                    30
-                                  )}px`,
-                                  minHeight: "30px",
-                                }}
-                              ></div>
-                              <span className="text-sm text-gray-600 mt-2">
-                                아니오
-                              </span>
-                              <span className="text-lg font-semibold text-blue-700">
-                                {data.no_count}
-                              </span>
-                            </div>
-                          </div>
-
-                          {/* 디버깅 정보 */}
-                          <div className="mt-2 text-xs text-gray-500">
-                            <p>
-                              차트 데이터: 예 {data.yes_count}명, 아니오{" "}
-                              {data.no_count}명
-                            </p>
-                          </div>
-
-                          {/* 범례 */}
-                          <div className="mt-4 flex items-center space-x-4 text-sm">
-                            <div className="flex items-center space-x-2">
-                              <div className="w-3 h-3 bg-blue-500 rounded"></div>
-                              <span className="text-gray-600">예</span>
-                            </div>
-                            <div className="flex items-center space-x-2">
-                              <div className="w-3 h-3 bg-blue-700 rounded"></div>
-                              <span className="text-gray-600">아니오</span>
+                            
+                            {/* 도넛 차트 */}
+                            <div>
+                              <h4 className="text-sm font-medium text-gray-700 mb-3">응답 비율 (도넛 차트)</h4>
+                              <div className="h-48">
+                                <Doughnut data={createDoughnutChartData(data)} options={doughnutChartOptions} />
+                              </div>
                             </div>
                           </div>
                         </div>
