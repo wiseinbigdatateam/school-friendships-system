@@ -1,10 +1,18 @@
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 
+import ContactModal from "./ContactModal";
+
 function LandingHeader() {
+  const [isContactModalOpen, setIsContactModalOpen] = useState(false);
   const navigate = useNavigate();
 
   const handleLoginClick = () => {
     navigate("/login");
+  };
+
+  const handleContactClick = () => {
+    setIsContactModalOpen(true);
   };
 
   return (
@@ -15,7 +23,9 @@ function LandingHeader() {
 
           <nav className="flex items-center gap-10">
             <button className="">서비스소개</button>
-            <button className="">체험 신청하기</button>
+            <button className="" onClick={handleContactClick}>
+              체험 신청하기
+            </button>
           </nav>
         </div>
 

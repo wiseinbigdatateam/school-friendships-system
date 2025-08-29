@@ -1,10 +1,8 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import clsx from "clsx";
 
 import LandingHeader from "../components/LandingHeader";
 import TabMenu from "../components/TabMenu";
-import SectionTitle from "../components/SectionTitle";
 import PeerRelationShipsAndDiagnosticAssessment from "../components/TabContent/PeerRelationShipsAndDiagnosticAssessment";
 import AiDiagnosisReport from "../components/TabContent/ AiDiagnosisReport";
 
@@ -93,12 +91,6 @@ const Landing: React.FC = () => {
           </p>
         </div>
       </footer>
-
-      {/* Contact Modal */}
-      <ContactModal 
-        isOpen={isContactModalOpen} 
-        onClose={() => setIsContactModalOpen(false)} 
-      />
     </div>
   );
 };
