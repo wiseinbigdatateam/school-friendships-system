@@ -78,8 +78,8 @@ interface PythonAnalysisResult {
 const IndividualAnalysis: React.FC = () => {
   const [surveys, setSurveys] = useState<Survey[]>([]);
   const [students, setStudents] = useState<Student[]>([]);
-  const [selectedSurvey, setSelectedSurvey] = useState<string>("");
-  const [selectedStudent, setSelectedStudent] = useState<string>("");
+  const [selectedSurvey, setSelectedSurvey] = useState<string>('');
+  const [selectedStudent, setSelectedStudent] = useState<string>('');
   const [loading, setLoading] = useState(true);
   const [viewMode, setViewMode] = useState<'network' | 'individual'>('individual');
   const [networkData, setNetworkData] = useState<{ nodes: NetworkNode[]; edges: NetworkEdge[] }>({ nodes: [], edges: [] });
@@ -100,12 +100,12 @@ const IndividualAnalysis: React.FC = () => {
     try {
       // 먼저 설문 템플릿에서 카테고리가 "교우관계"인 것만 찾기
       const { data: templates, error: templateError } = await supabase
-        .from("survey_templates")
-        .select("id, name, metadata")
-        .eq("is_active", true);
+        .from('survey_templates')
+        .select('id, name, metadata')
+        .eq('is_active', true);
 
       if (templateError) {
-        console.error("Template error:", templateError);
+        console.error('Template error:', templateError);
         throw templateError;
       }
 
@@ -113,26 +113,26 @@ const IndividualAnalysis: React.FC = () => {
       const friendshipTemplateIds = templates
         .filter((template: any) => {
           const metadata = template.metadata;
-          return metadata && metadata.category === "교우관계";
+          return metadata && metadata.category === '교우관계';
         })
         .map((template: any) => template.id);
 
       if (friendshipTemplateIds.length === 0) {
-        console.log("No friendship surveys found");
+        console.log('No friendship surveys found');
         setSurveys([]);
         return;
       }
 
       // 해당 템플릿을 사용하는 설문들 가져오기
       const { data, error } = await supabase
-        .from("surveys")
-        .select("*")
-        .in("template_id", friendshipTemplateIds)
-        .eq("status", "completed")
-        .order("created_at", { ascending: false });
+        .from('surveys')
+        .select('*')
+        .in('template_id', friendshipTemplateIds)
+        .eq('status', 'completed')
+        .order('created_at', { ascending: false });
 
       if (error) {
-        console.error("Survey error:", error);
+        console.error('Survey error:', error);
         throw error;
       }
 
@@ -143,39 +143,39 @@ const IndividualAnalysis: React.FC = () => {
         setSurveys([]);
       }
     } catch (error) {
-      console.error("Error fetching surveys:", error);
+      console.error('Error fetching surveys:', error);
     }
   };
 
   const fetchStudents = async () => {
     try {
       const { data, error } = await supabase
-        .from("students")
-        .select("*")
-        .eq("grade", "1")
-        .eq("class", "1")
-        .order("student_number", { ascending: true });
+        .from('students')
+        .select('*')
+        .eq('grade', '1')
+        .eq('class', '1')
+        .order('student_number', { ascending: true });
 
       if (error) throw error;
-
+      
       if (data && data.length > 0) {
         setStudents(data);
         setSelectedStudent(data[0].id);
       }
     } catch (error) {
-      console.error("Error fetching students:", error);
+      console.error('Error fetching students:', error);
     } finally {
       setLoading(false);
     }
   };
 
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString("ko-KR", {
-      year: "numeric",
-      month: "2-digit",
-      day: "2-digit",
-      hour: "2-digit",
-      minute: "2-digit",
+    return new Date(dateString).toLocaleDateString('ko-KR', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit'
     });
   };
 
@@ -247,11 +247,12 @@ const IndividualAnalysis: React.FC = () => {
               selectedFriends.add(answer);
             }
           }
-        );
+        });
       }
 
       // 6. 개별 네트워크 데이터 생성 (선택된 학생 + 선택한 친구들만)
       const individualNetworkData = [];
+      
       // 선택된 학생 추가
       individualNetworkData.push({
         id: selectedStudentData.id,
@@ -306,6 +307,8 @@ const IndividualAnalysis: React.FC = () => {
     }
   }, [selectedStudent, selectedSurvey, students]);
 
+
+
   const selectedStudentData = students.find(s => s.id === selectedStudent);
 
   // AI 리포트 생성 함수
@@ -336,7 +339,8 @@ const IndividualAnalysis: React.FC = () => {
       const report = await generateStudentGuidanceReport(analysisData);
       setAiReport(report);
     } catch (error) {
-      console.error('AI 리포트 생성 오류:', error);   
+      console.error('AI 리포트 생성 오류:', error);
+      
       // 대체 리포트 생성 (오류 메시지 없이)
       const centerStudent = individualNetworkData.find(s => s.isCenter);
       const centrality = centerStudent ? centerStudent.friendCount / Math.max(individualNetworkData.length - 1, 1) : 0;
@@ -386,10 +390,10 @@ const IndividualAnalysis: React.FC = () => {
   const selectedSurveyData = surveys.find(s => s.id === selectedSurvey);
 
   return (
-    <div className="max-w-7xl mx-auto min-h-screen pb-16 bg-gray-50">
+    <div className="min-h-screen bg-gray-50">
       {/* 상단 내비게이션 바 */}
-      <div className="bg-white rounded-t-lg">
-        <div className="w-full  px-4 sm:px-6 lg:px-8 py-4">
+      <div className="bg-white border-b border-gray-200">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex items-center justify-between">
             {/* 메뉴 탭 */}
             <div className="flex items-center space-x-8">
@@ -397,36 +401,35 @@ const IndividualAnalysis: React.FC = () => {
                 학생개인별 분석
               </button>
             </div>
+
           </div>
         </div>
       </div>
 
-      <div className="flex-col">
+      <div className="flex">
         {/* 왼쪽 사이드바 */}
-        <div className="w-full mb-6 bg-white rounded-b-lg border border-gray-200">
+        <div className="w-80 bg-white border-r border-gray-200 min-h-screen">
           <div className="p-6">
             <h2 className="text-lg font-semibold text-gray-900 mb-4">
               분석 대상 리스트 총 {surveys.length}개
             </h2>
-
-            <div className="flex gap-2 w-full h-fit overflow-x-auto">
+            
+            <div className="space-y-3">
               {surveys.map((survey) => (
                 <div
                   key={survey.id}
-                  className={`p-4 min-w-72 h-36 rounded-lg border cursor-pointer transition-colors ${
+                  className={`p-4 rounded-lg border cursor-pointer transition-colors ${
                     selectedSurvey === survey.id
-                      ? "border-blue-500 bg-blue-50"
-                      : "border-gray-200 hover:border-gray-300"
+                      ? 'border-blue-500 bg-blue-50'
+                      : 'border-gray-200 hover:border-gray-300'
                   }`}
                   onClick={() => setSelectedSurvey(survey.id)}
                 >
-                  <h3 className="font-medium text-gray-900 mb-2">
-                    {survey.title}
-                  </h3>
+                  <h3 className="font-medium text-gray-900 mb-2">{survey.title}</h3>
                   <div className="text-sm text-gray-600 space-y-1">
                     <p>템플릿형: 교우관계</p>
                     <p>평가인원: 20명</p>
-                    <p>날짜: {formatDate(survey.created_at || "")}</p>
+                    <p>날짜: {formatDate(survey.created_at || '')}</p>
                   </div>
                 </div>
               ))}
@@ -434,39 +437,37 @@ const IndividualAnalysis: React.FC = () => {
           </div>
         </div>
 
-        {/* 메인 컨텐츠  */}
-        <div className="flex w-full gap-6">
-          {/* 사이드 학생 목록 */}
-          <div className="w-1/6 bg-white rounded-lg border border-gray-200 min-h-screen">
-            <div className="p-4">
-              <h2 className="text-lg font-semibold text-gray-900 mb-4">
-                1학년 1반 총 {students.length}개
-              </h2>
-
-              <div className="space-y-1">
-                {students.map((student, index) => (
-                  <div
-                    key={student.id}
-                    className={`p-2 rounded-lg cursor-pointer transition-colors ${
-                      selectedStudent === student.id
-                        ? "bg-blue-100 text-blue-900"
-                        : "hover:bg-gray-50"
-                    }`}
-                    onClick={() => setSelectedStudent(student.id)}
-                  >
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm font-medium truncate">
-                        {index + 1}번) {student.name}
-                      </span>
-                      {selectedStudent === student.id && (
-                        <ChevronRightIcon className="h-4 w-4 text-blue-600 flex-shrink-0" />
-                      )}
-                    </div>
+        {/* 중간 학생 목록 */}
+        <div className="w-36 bg-white border-r border-gray-200 min-h-screen">
+          <div className="p-4">
+            <h2 className="text-lg font-semibold text-gray-900 mb-4">
+              1학년 1반 총 {students.length}개
+            </h2>
+            
+            <div className="space-y-1">
+              {students.map((student, index) => (
+                <div
+                  key={student.id}
+                  className={`p-2 rounded-lg cursor-pointer transition-colors ${
+                    selectedStudent === student.id
+                      ? 'bg-blue-100 text-blue-900'
+                      : 'hover:bg-gray-50'
+                  }`}
+                  onClick={() => setSelectedStudent(student.id)}
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-medium truncate">
+                      {index + 1}번) {student.name}
+                    </span>
+                    {selectedStudent === student.id && (
+                      <ChevronRightIcon className="h-4 w-4 text-blue-600 flex-shrink-0" />
+                    )}
                   </div>
-                ))}
-              </div>
+                </div>
+              ))}
             </div>
           </div>
+        </div>
 
         {/* 메인 콘텐츠 영역 */}
         <div className="flex-1">
