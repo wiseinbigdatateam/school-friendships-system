@@ -86,20 +86,24 @@ const SurveyTemplates: React.FC = () => {
         }
 
         // 데이터베이스 데이터를 SurveyTemplate 인터페이스에 맞게 변환
-        const convertedTemplates: SurveyTemplate[] = templatesData?.map(template => ({
-          id: template.id,
-          title: template.name,
-          description: template.description || '',
-          purpose: (template.metadata as any)?.purpose || 'custom',
-          category: (template.metadata as any)?.category || '기타',
-          questions: Array.isArray(template.questions) ? (template.questions as string[]) : [],
-          maxSelections: (template.metadata as any)?.maxSelections || [1],
-          estimatedTime: (template.metadata as any)?.estimatedTime || 5,
-          targetGrades: (template.metadata as any)?.targetGrades || ['1', '2', '3', '4', '5', '6'],
-          useCount: (template.metadata as any)?.useCount || 0,
-          createdAt: template.created_at || new Date().toISOString(),
-          isDefault: (template.metadata as any)?.isDefault || false
-        })) || [];
+        const convertedTemplates: SurveyTemplate[] = templatesData?.map(template => {
+          const maxSelections = (template.metadata as any)?.maxSelections || [1];
+          console.log(`템플릿 "${template.name}" maxSelections:`, maxSelections);
+          return {
+            id: template.id,
+            title: template.name,
+            description: template.description || '',
+            purpose: (template.metadata as any)?.purpose || 'custom',
+            category: (template.metadata as any)?.category || '기타',
+            questions: Array.isArray(template.questions) ? (template.questions as string[]) : [],
+            maxSelections: maxSelections,
+            estimatedTime: (template.metadata as any)?.estimatedTime || 5,
+            targetGrades: (template.metadata as any)?.targetGrades || ['1', '2', '3', '4', '5', '6'],
+            useCount: (template.metadata as any)?.useCount || 0,
+            createdAt: template.created_at || new Date().toISOString(),
+            isDefault: (template.metadata as any)?.isDefault || false
+          };
+        }) || [];
 
         // 교우관계 조사를 먼저 오도록 정렬
         const sortedTemplates = convertedTemplates.sort((a, b) => {
@@ -181,13 +185,17 @@ const SurveyTemplates: React.FC = () => {
         start_date: surveyConfig.startDate,
         end_date: surveyConfig.endDate,
         status: 'draft',
-        questions: selectedTemplate.questions.map((question, index) => ({
-          id: `q${index + 1}`,
-          text: question,
-          type: 'multiple_choice',
-          required: true,
-          max_selections: selectedTemplate.maxSelections[index] || 1
-        }))
+        questions: selectedTemplate.questions.map((question, index) => {
+          const maxSelections = selectedTemplate.maxSelections[index] || 1;
+          console.log(`질문 ${index + 1} maxSelections:`, maxSelections);
+          return {
+            id: `q${index + 1}`,
+            text: question,
+            type: 'multiple_choice',
+            required: true,
+            max_selections: maxSelections
+          };
+        })
       };
 
       console.log('생성할 설문 데이터:', newSurvey);
@@ -328,6 +336,20 @@ const SurveyTemplates: React.FC = () => {
               <span>🎯 {template.targetGrades.join(', ')}학년</span>
               <span>📈 {template.useCount}회 사용</span>
             </div>
+            
+            {/* 교우관계 설문인 경우 maxSelections 정보 표시 */}
+            {template.category === '교우관계' && template.maxSelections && (
+              <div className="mt-2 p-2 bg-blue-50 rounded border border-blue-200">
+                <p className="text-xs text-blue-800 font-medium mb-1">📝 질문별 최대 선택 가능 인원:</p>
+                <div className="flex flex-wrap gap-1">
+                  {template.maxSelections.map((max, index) => (
+                    <span key={index} className="inline-block px-2 py-1 bg-blue-100 text-blue-700 text-xs rounded">
+                      {index + 1}번: {max}명
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </div>

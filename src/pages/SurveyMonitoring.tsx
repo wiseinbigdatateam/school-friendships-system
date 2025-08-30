@@ -30,7 +30,7 @@ const SurveyMonitoring: React.FC = () => {
   const { surveyId } = useParams();
   const navigate = useNavigate();
   const [monitoringData, setMonitoringData] = useState<SurveyMonitoringData | null>(null);
-  const [selectedStudents, setSelectedStudents] = useState<string[]>([]);
+  // const [selectedStudents, setSelectedStudents] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [autoRefresh, setAutoRefresh] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -156,35 +156,35 @@ const SurveyMonitoring: React.FC = () => {
     }
   };
 
-  const handleStudentSelect = (studentId: string, checked: boolean) => {
-    if (checked) {
-      setSelectedStudents(prev => [...prev, studentId]);
-    } else {
-      setSelectedStudents(prev => prev.filter(id => id !== studentId));
-    }
-  };
+  // const handleStudentSelect = (studentId: string, checked: boolean) => {
+  //   if (checked) {
+  //     setSelectedStudents(prev => [...prev, studentId]);
+  //   } else {
+  //     setSelectedStudents(prev => prev.filter(id => id !== studentId));
+  //   }
+  // };
 
-  const handleSelectAll = (responded: boolean) => {
-    const targetStudents = monitoringData?.students.filter(s => s.hasResponded === responded) || [];
-    setSelectedStudents(targetStudents.map(s => s.id));
-  };
+  // const handleSelectAll = (responded: boolean) => {
+  //   const targetStudents = monitoringData?.students.filter(s => s.hasResponded === responded) || [];
+  //   setSelectedStudents(targetStudents.map(s => s.id));
+  // };
 
-  const handleSendReminder = () => {
-    if (selectedStudents.length === 0) {
-      alert('독려 메시지를 보낼 학생을 선택해주세요.');
-      return;
-    }
+  // const handleSendReminder = () => {
+  //   if (selectedStudents.length === 0) {
+  //     alert('독려 메시지를 보낼 학생을 선택해주세요.');
+  //     return;
+  //   }
 
-    const selectedNames = monitoringData?.students
-      .filter(s => selectedStudents.includes(s.id))
-      .map(s => s.name) || [];
+  //   const selectedNames = monitoringData?.students
+  //     .filter(s => selectedStudents.includes(s.id))
+  //     .map(s => s.name) || [];
 
-    if (window.confirm(`선택된 ${selectedStudents.length}명의 학생에게 독려 메시지를 발송하시겠습니까?\n\n${selectedNames.join(', ')}`)) {
-      // TODO: 실제 독려 메시지 발송
-      alert('독려 메시지가 발송되었습니다!');
-      setSelectedStudents([]);
-    }
-  };
+  //   if (window.confirm(`선택된 ${selectedStudents.length}명의 학생에게 독려 메시지를 발송하시겠습니까?\n\n${selectedNames.join(', ')}`)) {
+  //     // TODO: 실제 독려 메시지 발송
+  //     alert('독려 메시지가 발송되었습니다!');
+  //     setSelectedStudents([]);
+  //   }
+  // };
 
   const handleExportData = () => {
     if (!monitoringData) return;
@@ -358,24 +358,24 @@ const SurveyMonitoring: React.FC = () => {
                 <h3 className="text-lg font-semibold text-gray-900">
                   응답 완료 ({respondedStudents.length}명)
                 </h3>
-                <button
+                {/* <button
                   onClick={() => handleSelectAll(true)}
                   className="text-sm text-blue-600 hover:text-blue-700"
                 >
                   전체 선택
-                </button>
+                </button> */}
               </div>
             </div>
             <div className="p-6">
               <div className="space-y-3 max-h-96 overflow-y-auto">
                 {respondedStudents.map(student => (
                   <div key={student.id} className="flex items-center space-x-3">
-                    <input
+                    {/* <input
                       type="checkbox"
                       checked={selectedStudents.includes(student.id)}
                       onChange={(e) => handleStudentSelect(student.id, e.target.checked)}
                       className="h-4 w-4 text-blue-600 rounded"
-                    />
+                    /> */}
                     <div className="flex-1">
                       <div className="flex items-center justify-between">
                         <p className="font-medium text-gray-900">
@@ -402,24 +402,24 @@ const SurveyMonitoring: React.FC = () => {
                 <h3 className="text-lg font-semibold text-gray-900">
                   미응답 ({notRespondedStudents.length}명)
                 </h3>
-                <button
+                {/* <button
                   onClick={() => handleSelectAll(false)}
                   className="text-sm text-blue-600 hover:text-blue-700"
                 >
                   전체 선택
-                </button>
+                </button> */}
               </div>
             </div>
             <div className="p-6">
               <div className="space-y-3 max-h-96 overflow-y-auto">
                 {notRespondedStudents.map(student => (
                   <div key={student.id} className="flex items-center space-x-3">
-                    <input
+                    {/* <input
                       type="checkbox"
                       checked={selectedStudents.includes(student.id)}
                       onChange={(e) => handleStudentSelect(student.id, e.target.checked)}
                       className="h-4 w-4 text-blue-600 rounded"
-                    />
+                    /> */}
                     <div className="flex-1">
                       <div className="flex items-center justify-between">
                         <p className="font-medium text-gray-900">
@@ -439,7 +439,7 @@ const SurveyMonitoring: React.FC = () => {
         </div>
 
         {/* 독려 메시지 버튼 */}
-        {selectedStudents.length > 0 && (
+        {/* {selectedStudents.length > 0 && (
           <div className="fixed bottom-6 right-6">
             <button
               onClick={handleSendReminder}
@@ -448,7 +448,7 @@ const SurveyMonitoring: React.FC = () => {
               선택된 {selectedStudents.length}명에게 독려 메시지 보내기
             </button>
           </div>
-        )}
+        )} */}
       </div>
     </div>
   );

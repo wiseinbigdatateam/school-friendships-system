@@ -26,6 +26,7 @@ interface SurveyTemplate {
   metadata: {
     category: string;
     answer_options?: any;
+    maxSelections?: number[];
   };
 }
 
@@ -69,7 +70,7 @@ const SurveyResponse: React.FC = () => {
           // 설문 데이터에 이미 max_selections이 포함되어 있음
           setSurvey(surveyData);
           
-          // 1-1. 설문 템플릿 정보 로드 (카테고리와 답변옵션 확인용)
+          // 1-1. 설문 템플릿 정보 로드 (카테고리, 답변옵션, maxSelections 확인용)
           if (surveyData.template_id) {
             try {
               const { data: templateData, error: templateError } = await supabase
@@ -85,6 +86,7 @@ const SurveyResponse: React.FC = () => {
                   metadata: templateData.metadata as any
                 });
                 console.log('설문 템플릿 정보:', templateData);
+                console.log('템플릿 metadata maxSelections:', (templateData.metadata as any)?.maxSelections);
               }
             } catch (error) {
               console.error('템플릿 정보 로드 실패:', error);
@@ -203,6 +205,7 @@ const SurveyResponse: React.FC = () => {
         setSelectedStudent(matchedStudent);
         setCurrentStep('survey');
         setVerificationError(null);
+        setSearchTerm(''); // 설문 단계로 이동할 때 검색어 초기화
       } catch (error) {
         console.error('응답 확인 중 오류:', error);
         setVerificationError('응답 상태를 확인할 수 없습니다. 다시 시도해주세요.');
@@ -449,16 +452,36 @@ const SurveyResponse: React.FC = () => {
                       <>
                         <p className="text-sm text-gray-600 mb-3">
                           질문에 해당하는 친구들을 선택해주세요
-                          {(question.max_selections && question.max_selections > 1) || 
-                           (question.maxSelections && question.maxSelections > 1) ? (
-                            <span className="text-blue-600 font-medium">
-                              {' '}(최대 {question.max_selections || question.maxSelections}명 선택 가능)
-                            </span>
-                          ) : (
-                            <span className="text-gray-500 font-medium">
-                              {' '}(1명 선택)
-                            </span>
-                          )}
+                          {(() => {
+                            // surveys 테이블의 questions에서 max_selections 값을 우선적으로 가져오기
+                            let maxSelections = 1; // 기본값
+                            
+                            // 먼저 question.max_selections 확인 (surveys 테이블의 데이터)
+                            if (question.max_selections !== undefined && question.max_selections !== null) {
+                              maxSelections = question.max_selections;
+                            } else if (question.maxSelections !== undefined && question.maxSelections !== null) {
+                              maxSelections = question.maxSelections;
+                            } else if (surveyTemplate?.metadata?.maxSelections && 
+                                Array.isArray(surveyTemplate.metadata.maxSelections) && 
+                                surveyTemplate.metadata.maxSelections[index] !== undefined) {
+                              maxSelections = surveyTemplate.metadata.maxSelections[index];
+                            }
+                            
+                            // 숫자가 아닌 경우 기본값 사용
+                            if (typeof maxSelections !== 'number' || isNaN(maxSelections)) {
+                              maxSelections = 1;
+                            }
+                            
+                            return maxSelections > 1 ? (
+                              <span className="text-blue-600 font-medium">
+                                {' '}(최대 {maxSelections}명 선택 가능)
+                              </span>
+                            ) : (
+                              <span className="text-gray-500 font-medium">
+                                {' '}(1명 선택)
+                              </span>
+                            );
+                          })()}
                         </p>
                         
                         {/* 학생 검색 */}
@@ -466,28 +489,53 @@ const SurveyResponse: React.FC = () => {
                           <input
                             type="text"
                             placeholder="친구 이름으로 검색..."
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
                             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                            onChange={(e) => {
-                              // 검색 기능은 향후 구현 예정
-                            }}
                           />
                         </div>
                         
+                        {/* 선택된 친구들 표시 */}
+                        {responses[question.id] && responses[question.id].length > 0 && (
+                          <div className="mb-3 p-2 bg-blue-50 border border-blue-200 rounded-lg">
+                            <p className="text-xs text-blue-800 font-medium mb-1">선택된 친구들:</p>
+                            <div className="flex flex-wrap gap-1">
+                              {responses[question.id].map((studentId: string) => {
+                                const student = students.find(s => s.id === studentId);
+                                return student ? (
+                                  <span key={studentId} className="inline-block px-2 py-1 bg-blue-100 text-blue-700 text-xs rounded">
+                                    {student.name}
+                                  </span>
+                                ) : null;
+                              })}
+                            </div>
+                          </div>
+                        )}
+                        
                         {/* 학생 선택 목록 */}
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-64 overflow-y-auto border border-gray-200 rounded-lg p-3">
+                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2 max-h-80 overflow-y-auto border border-gray-200 rounded-lg p-3">
                           {students
                             .filter(student => student.id !== selectedStudent.id) // 자기 자신 제외
+                            .filter(student => 
+                              searchTerm === '' || 
+                              student.name.toLowerCase().includes(searchTerm.toLowerCase())
+                            ) // 검색 필터링
                             .map(student => {
                               const currentValues = responses[question.id] || [];
                               const isSelected = currentValues.includes(student.id);
                               
-                              // max_selections 값을 더 정확하게 가져오기
+                              // surveys 테이블의 questions에서 max_selections 값을 우선적으로 가져오기
                               let maxSelections = 1; // 기본값
                               
+                              // 먼저 question.max_selections 확인 (surveys 테이블의 데이터)
                               if (question.max_selections !== undefined && question.max_selections !== null) {
                                 maxSelections = question.max_selections;
                               } else if (question.maxSelections !== undefined && question.maxSelections !== null) {
                                 maxSelections = question.maxSelections;
+                              } else if (surveyTemplate?.metadata?.maxSelections && 
+                                  Array.isArray(surveyTemplate.metadata.maxSelections) && 
+                                  surveyTemplate.metadata.maxSelections[index] !== undefined) {
+                                maxSelections = surveyTemplate.metadata.maxSelections[index];
                               }
                               
                               // 숫자가 아닌 경우 기본값 사용
@@ -500,7 +548,7 @@ const SurveyResponse: React.FC = () => {
                               return (
                                 <label
                                   key={student.id}
-                                  className={`flex items-center p-3 border rounded-lg cursor-pointer transition-colors ${
+                                  className={`flex items-center p-2 border rounded-lg cursor-pointer transition-colors ${
                                     isSelected 
                                       ? 'bg-blue-50 border-blue-300' 
                                       : isDisabled
@@ -522,11 +570,10 @@ const SurveyResponse: React.FC = () => {
                                         handleResponseChange(question.id, currentValues.filter((id: string) => id !== student.id));
                                       }
                                     }}
-                                    className="mr-3 h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded disabled:opacity-50"
+                                    className="mr-2 h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded disabled:opacity-50"
                                   />
-                                  <div className="flex-1">
-                                    <p className="font-medium text-gray-900">{student.name}</p>
-                                    <p className="text-sm text-gray-500">{student.grade}학년 {student.class}반</p>
+                                  <div className="flex-1 min-w-0">
+                                    <p className="font-medium text-gray-900 text-sm truncate">{student.name}</p>
                                   </div>
                                 </label>
                               );
