@@ -18,7 +18,7 @@ function LandingHeader() {
   return (
     <header className="sticky top-0 z-50 h-[47px] bg-white py-2 text-gray-950 md:px-2 lg:px-6 xl:px-[60px]">
       <div className="flex items-center justify-between font-medium">
-        <img src="/header_logo.svg" alt="와이즈온 스쿨 로고" />
+        <img src="/landing/header_logo.svg" alt="와이즈온 스쿨 로고" />
 
         <div className="flex gap-3 lg:gap-10">
           <nav className="flex items-center gap-10">
