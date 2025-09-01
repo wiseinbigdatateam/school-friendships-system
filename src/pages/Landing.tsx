@@ -51,7 +51,7 @@ const Landing: React.FC = () => {
       </section>
 
       {/* 메인 컨텐츠 */}
-      <section className="w-full text-gray-950">
+      <section className="text-gray-950">
         {/* 탭 메뉴 */}
         <TabMenu value={tabMenu} onChange={setTabMenu} />
 

@@ -10,12 +10,12 @@ function UsagePlanContent({ selectedItemId }: { selectedItemId: string }) {
   return (
     <div className="flex w-1/2 flex-col">
       <div className="flex w-full text-base" key={selectedItem.id}>
-        <span className="h-10 w-[110px] rounded-[36px] border border-dashed border-gray-300 bg-gray-50 px-5 py-2">
+        <span className="hidden h-10 w-[110px] rounded-[36px] border border-dashed border-gray-300 bg-gray-50 px-5 py-2 xl:block">
           설문 문항1
         </span>
         <span
           className={clsx(
-            "h-10 w-[474px] rounded-[36px] border border-dashed border-gray-300 bg-gray-50 py-2 text-center",
+            "h-10 w-full rounded-[36px] border border-dashed border-gray-300 bg-gray-50 py-2 text-center xl:w-[474px]",
             selectedItem.id === "학교 폭력조사" ? "px-3" : "px-[72px]",
           )}
         >
