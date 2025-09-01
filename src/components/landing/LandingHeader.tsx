@@ -16,7 +16,7 @@ function LandingHeader() {
   };
 
   return (
-    <header className="sticky top-0 z-50 h-[47px] bg-white py-2 text-gray-950 md:px-2 lg:px-6 xl:px-[60px]">
+    <header className="sticky top-0 z-50 h-[47px] bg-white px-2 py-2 text-gray-950 lg:px-6 xl:px-[60px]">
       <div className="flex items-center justify-between font-medium">
         <img src="/landing/header_logo.svg" alt="와이즈온 스쿨 로고" />
 
