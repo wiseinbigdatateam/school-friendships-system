@@ -43,7 +43,7 @@ const Landing: React.FC = () => {
           </p>
           <button
             onClick={handleSolutionClick}
-            className="w-[191px] rounded-[50px] bg-sky-500 px-8 py-4 text-xl font-semibold text-white transition-all duration-200 hover:bg-sky-700"
+            className="w-[191px] rounded-[50px] bg-sky-700 px-8 py-4 text-xl font-semibold text-white transition-all duration-200 hover:bg-sky-500"
           >
             솔루션 체험하기
           </button>
