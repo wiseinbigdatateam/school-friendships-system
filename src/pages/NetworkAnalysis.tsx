@@ -1095,116 +1095,7 @@ const NetworkAnalysis: React.FC = () => {
         </p>
         </div>
 
-      {/* 저장된 분석 리스트 섹션 */}
-      <div className="bg-white rounded-lg shadow mb-6">
-        <div className="px-6 py-4 border-b border-gray-200">
-          <div className="flex items-center justify-between">
-            <div>
-              <h3 className="text-lg font-medium text-gray-900">저장된 분석 결과</h3>
-              <p className="text-sm text-gray-600">이전에 수행한 네트워크 분석 결과를 확인할 수 있습니다.</p>
-            </div>
-            <button
-              onClick={fetchSavedAnalysisList}
-              className="px-3 py-2 text-sm bg-blue-100 text-blue-700 rounded-md hover:bg-blue-200 transition-colors"
-            >
-              새로고침
-            </button>
-          </div>
-        </div>
-        
-        <div className="p-6">
-          {savedAnalysisList.length > 0 ? (
-            <div className="space-y-4">
-              <div className="text-sm text-gray-600 mb-4">
-                총 <span className="font-semibold text-blue-600">{savedAnalysisList.length}개</span>의 분석 결과가 저장되어 있습니다.
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {savedAnalysisList.map((analysis) => (
-                  <div
-                    key={analysis.id}
-                    className="p-4 border border-gray-200 rounded-lg hover:border-blue-300 transition-colors relative group"
-                  >
-                    {/* 삭제 버튼 */}
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleDeleteAnalysis(analysis.id, analysis.survey_id);
-                      }}
-                      className="absolute top-2 right-2 w-6 h-6 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center hover:bg-red-600"
-                      title="분석 결과 삭제"
-                    >
-                      <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                      </svg>
-                    </button>
 
-                    {/* 분석 결과 카드 본문 */}
-                    <div
-                      className="cursor-pointer"
-                      onClick={async () => {
-                        try {
-                          setLoading(true);
-                          const savedResults = await loadSavedNetworkAnalysis(analysis.survey_id);
-                          if (savedResults) {
-                            setAnalysisResults(savedResults);
-                            // 해당 설문도 선택 상태로 설정
-                            const survey = surveys.find(s => s.id === analysis.survey_id);
-                            if (survey) {
-                              setSelectedSurvey(survey);
-                            }
-                            toast.success('저장된 분석 결과를 불러왔습니다!');
-                          } else {
-                            toast.error('분석 결과를 불러올 수 없습니다.');
-                          }
-                        } catch (error) {
-                          console.error('🔍 저장된 분석 결과 불러오기 오류:', error);
-                          toast.error('분석 결과를 불러오는 중 오류가 발생했습니다.');
-                        } finally {
-                          setLoading(false);
-                        }
-                      }}
-                    >
-                    <div className="flex items-center justify-between mb-3">
-                      <h4 className="font-medium text-gray-900 truncate pr-8">{analysis.survey_title}</h4>
-                      <span className="px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                        완료
-                      </span>
-                    </div>
-                    
-                    <div className="space-y-2 text-sm text-gray-600">
-                      <div className="flex justify-between">
-                        <span>분석일:</span>
-                        <span className="font-medium">
-                          {new Date(analysis.calculated_at).toLocaleDateString()}
-                        </span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span>학생 수:</span>
-                        <span className="font-medium">{analysis.total_students}명</span>
-                        <span>관계 수:</span>
-                        <span className="font-medium">{analysis.total_relationships}개</span>
-                      </div>
-                    </div>
-                    
-                    <div className="mt-3 pt-3 border-t border-gray-100">
-                      <div className="text-xs text-blue-600 text-center">
-                        클릭하여 결과 보기
-                      </div>
-                    </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          ) : (
-            <div className="text-center py-8 text-gray-500">
-              <ChartBarIcon className="h-12 w-12 mx-auto mb-4 text-gray-400" />
-              <p className="text-lg font-medium mb-2">저장된 분석 결과가 없습니다</p>
-              <p className="text-sm">네트워크 분석을 실행하면 결과가 여기에 저장됩니다.</p>
-            </div>
-          )}
-        </div>
-      </div>
 
       {/* 설문 선택 섹션 */}
       <div className="bg-white rounded-lg shadow mb-6">
@@ -1441,17 +1332,7 @@ const NetworkAnalysis: React.FC = () => {
                 <EyeIcon className="h-4 w-4 inline mr-2" />
                 전체 현황
               </button>
-              <button
-                onClick={() => setAnalysisView('individual')}
-                className={`px-4 py-2 rounded-md text-sm font-medium ${
-                  analysisView === 'individual'
-                    ? 'bg-blue-600 text-white'
-                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                }`}
-              >
-                <UsersIcon className="h-4 w-4 inline mr-2" />
-                개별 관계 분석
-              </button>
+
               <button
                 onClick={() => setAnalysisView('network')}
                 className={`px-4 py-2 rounded-md text-sm font-medium ${
@@ -1463,17 +1344,7 @@ const NetworkAnalysis: React.FC = () => {
                 <ChartBarIcon className="h-4 w-4 inline mr-2" />
                 네트워크 시각화
               </button>
-              <button
-                onClick={() => setAnalysisView('graph')}
-                className={`px-4 py-2 rounded-md text-sm font-medium ${
-                  analysisView === 'graph'
-                    ? 'bg-blue-600 text-white'
-                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                }`}
-              >
-                <UserGroupIcon className="h-4 w-4 inline mr-2" />
-                교우관계 그래프
-              </button>
+
             </div>
           </div>
         </div>

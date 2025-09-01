@@ -39,13 +39,12 @@ interface NetworkVisualizationProps {
 const NetworkVisualization: React.FC<NetworkVisualizationProps> = ({
   data,
   period,
-  width = 600,
-  height = 400,
+  width = 800,
+  height = 600,
   onNodeClick
 }) => {
   const svgRef = useRef<SVGSVGElement>(null);
   const [selectedNode, setSelectedNode] = useState<NetworkNode | null>(null);
-  const [hoveredNode, setHoveredNode] = useState<NetworkNode | null>(null);
 
   useEffect(() => {
     if (!data || !data.nodes || !data.edges || !svgRef.current) return;
@@ -56,123 +55,114 @@ const NetworkVisualization: React.FC<NetworkVisualizationProps> = ({
     const svg = d3.select(svgRef.current);
     const g = svg.append("g");
 
-    // 시뮬레이션 설정 (처음의 자연스러운 배치)
-    const simulation = d3.forceSimulation(data.nodes as any)
-      .force("link", d3.forceLink(data.edges).id((d: any) => d.id).distance(80))
-      .force("charge", d3.forceManyBody().strength(-400))
-      .force("center", d3.forceCenter(width / 2, height / 2))
-      .force("collision", d3.forceCollide().radius(35))
-      .force("x", d3.forceX(width / 2).strength(0.1))
-      .force("y", d3.forceY(height / 2).strength(0.1));
-
-    // 교우관계 유형별 색상 매핑 (기본 버전)
+    // 심플한 색상 팔레트
     const colorScale = d3.scaleOrdinal<string, string>()
       .domain(["외톨이형", "소수 친구 학생", "평균적인 학생", "친구 많은 학생", "사교 스타"])
-      .range(["#ff6b6b", "#ffd93d", "#6bcf7f", "#4ecdc4", "#45b7d1"]);
+      .range(["#ef4444", "#f59e0b", "#10b981", "#06b6d4", "#8b5cf6"]);
 
-    // 노드 크기 스케일 (기본 버전)
-    const maxConnections = d3.max(data.nodes, d => d.connection_count) || 0;
+    // 노드 크기 스케일 (중심성 기반)
     const sizeScale = d3.scaleLinear()
-      .domain([0, maxConnections])
-      .range([12, 28]);
+      .domain([0, d3.max(data.nodes, d => d.centrality) || 1])
+      .range([12, 25]);
 
-    // 엣지 그리기 (기본 버전)
+    // 엣지 두께 스케일
+    const edgeWidthScale = d3.scaleLinear()
+      .domain([0, d3.max(data.edges, d => d.weight) || 1])
+      .range([1, 3]);
+
+    // 시뮬레이션 설정
+    const simulation = d3.forceSimulation(data.nodes as any)
+      .force("link", d3.forceLink(data.edges).id((d: any) => d.id).distance(80))
+      .force("charge", d3.forceManyBody().strength(-300))
+      .force("center", d3.forceCenter(width / 2, height / 2))
+      .force("collision", d3.forceCollide().radius((d: any) => sizeScale(d.centrality) + 8));
+
+    // 엣지 그리기
     const links = g.append("g")
+      .attr("class", "links")
       .selectAll("line")
       .data(data.edges)
       .enter().append("line")
-      .attr("stroke", "#666")
+      .attr("stroke", "#94a3b8")
       .attr("stroke-opacity", 0.4)
-      .attr("stroke-width", d => Math.max(1, Math.sqrt(d.weight || 1) * 1.5))
+      .attr("stroke-width", d => edgeWidthScale(d.weight))
       .style("stroke-linecap", "round");
 
-    // 노드 그리기 (기본 버전)
+    // 노드 그리기
     const nodes = g.append("g")
+      .attr("class", "nodes")
       .selectAll("circle")
       .data(data.nodes)
       .enter().append("circle")
-      .attr("r", d => sizeScale(d.connection_count))
+      .attr("r", d => sizeScale(d.centrality))
       .attr("fill", d => colorScale(d.friendship_type))
-      .attr("stroke", "#fff")
-      .attr("stroke-width", 3)
+      .attr("stroke", "#ffffff")
+      .attr("stroke-width", 2)
       .style("cursor", "pointer")
-      .style("filter", "drop-shadow(0 2px 4px rgba(0,0,0,0.2))")
+      .style("filter", "drop-shadow(0 2px 4px rgba(0,0,0,0.1))")
       .on("click", (event, d) => {
         setSelectedNode(d);
         onNodeClick?.(d);
       })
-      .on("mouseenter", (event, d) => {
-        setHoveredNode(d);
-        d3.select(event.currentTarget)
+      .on("mouseenter", function(event, d) {
+        d3.select(this)
           .transition()
           .duration(200)
-          .attr("r", sizeScale(d.connection_count) + 3)
-          .style("filter", "drop-shadow(0 4px 8px rgba(0,0,0,0.3))");
+          .attr("r", sizeScale(d.centrality) + 3)
+          .style("filter", "drop-shadow(0 4px 8px rgba(0,0,0,0.2))");
+        
+        // 연결된 엣지 하이라이트
+        links
+          .transition()
+          .duration(200)
+          .attr("stroke-opacity", (link: any) => 
+            link.source.id === d.id || link.target.id === d.id ? 0.8 : 0.2
+          );
       })
-      .on("mouseleave", (event, d) => {
-        setHoveredNode(null);
-        d3.select(event.currentTarget)
+      .on("mouseleave", function(event, d) {
+        d3.select(this)
           .transition()
           .duration(200)
-          .attr("r", sizeScale(d.connection_count))
-          .style("filter", "drop-shadow(0 2px 4px rgba(0,0,0,0.2))");
+          .attr("r", sizeScale(d.centrality))
+          .style("filter", "drop-shadow(0 2px 4px rgba(0,0,0,0.1))");
+        
+        // 엣지 원래 상태로 복원
+        links
+          .transition()
+          .duration(200)
+          .attr("stroke-opacity", 0.4);
       });
 
-    // 노드 라벨 (이름 + 색깔 원)
+    // 노드 라벨
     const labels = g.append("g")
-      .selectAll("g")
+      .attr("class", "labels")
+      .selectAll("text")
       .data(data.nodes)
-      .enter().append("g");
-
-    // 디버깅: 데이터 확인
-    console.log('🔍 네트워크 시각화 데이터:', {
-      nodes: data.nodes,
-      edges: data.edges,
-      nodeColors: data.nodes.map(n => ({ name: n.name, centrality: n.centrality, color: colorScale(n.friendship_type) }))
-    });
-
-    // 색깔 원 삭제 (더 깔끔한 디자인)
-    // labels.append("circle")
-    //   .attr("r", 10)
-    //   .attr("fill", (d: any) => {
-    //     const color = colorScale(d.friendship_type);
-    //     console.log('🔍 색깔 원 생성:', { name: d.name, type: d.friendship_type, color });
-    //     return color;
-    //   })
-    //   .attr("stroke", "#fff")
-    //   .attr("stroke-width", 2)
-    //   .attr("cx", -30)
-    //   .attr("cy", 0)
-    //   .style("opacity", 0.95)
-    //   .style("filter", "drop-shadow(0 1px 2px rgba(0,0,0,0.3))");
-
-    // 이름 텍스트 추가 (기본 버전)
-    labels.append("text")
+      .enter().append("text")
       .text(d => d.name)
-      .attr("font-size", "13px")
+      .attr("font-size", "11px")
       .attr("font-weight", "500")
       .attr("text-anchor", "middle")
       .attr("dy", "0.35em")
-      .attr("fill", "#2d3748")
+      .attr("fill", "#374151")
       .style("pointer-events", "none")
       .style("text-shadow", "0 1px 2px rgba(255,255,255,0.8)");
 
-    // 툴팁 생성 (기본 버전)
+    // 심플한 툴팁
     const tooltip = d3.select("body").append("div")
       .attr("class", "network-tooltip")
       .style("position", "absolute")
-      .style("background", "rgba(45, 55, 72, 0.95)")
+      .style("background", "rgba(31, 41, 55, 0.9)")
       .style("color", "white")
-      .style("padding", "12px 16px")
-      .style("border-radius", "8px")
-      .style("font-size", "13px")
+      .style("padding", "8px 12px")
+      .style("border-radius", "6px")
+      .style("font-size", "12px")
       .style("font-weight", "500")
       .style("pointer-events", "none")
       .style("z-index", "1000")
       .style("opacity", 0)
       .style("box-shadow", "0 4px 12px rgba(0,0,0,0.3)")
-      .style("border", "1px solid rgba(255,255,255,0.1)")
-      .style("backdrop-filter", "blur(8px)");
+      .style("border", "1px solid rgba(255,255,255,0.1)");
 
     function showTooltip(event: any, d: NetworkNode) {
       tooltip.transition()
@@ -181,10 +171,9 @@ const NetworkVisualization: React.FC<NetworkVisualizationProps> = ({
       
       tooltip.html(`
         <strong>${d.name}</strong><br/>
-        학년: ${d.grade}학년 ${d.class}반<br/>
-        교우관계 유형: ${d.friendship_type}<br/>
-        연결 수: ${d.connection_count}명<br/>
-        중심성: ${d.centrality.toFixed(3)}
+        ${d.grade}학년 ${d.class}반<br/>
+        ${d.friendship_type}<br/>
+        연결: ${d.connection_count}명
       `)
         .style("left", (event.pageX + 10) + "px")
         .style("top", (event.pageY - 10) + "px");
@@ -192,59 +181,16 @@ const NetworkVisualization: React.FC<NetworkVisualizationProps> = ({
 
     function hideTooltip() {
       tooltip.transition()
-        .duration(500)
+        .duration(200)
         .style("opacity", 0);
     }
 
-    // 시뮬레이션 기반의 동적 업데이트 (처음과 동일)
-    simulation.on("tick", () => {
-      links
-        .attr("x1", (d: any) => d.source.x)
-        .attr("y1", (d: any) => d.source.y)
-        .attr("x2", (d: any) => d.target.x)
-        .attr("y2", (d: any) => d.target.y);
+    // 노드에 툴팁 이벤트 추가
+    nodes
+      .on("mouseenter", showTooltip)
+      .on("mouseleave", hideTooltip);
 
-      nodes
-        .attr("cx", (d: any) => d.x)
-        .attr("cy", (d: any) => d.y);
-
-      labels
-        .attr("transform", (d: any) => `translate(${d.x}, ${d.y})`);
-    });
-
-    // 고정된 위치 그리기 제거 (시뮬레이션 기반으로 복원)
-    // links
-    //   .attr("x1", (d: any) => d.source.x)
-    //   .attr("y1", (d: any) => d.source.y)
-    //   .attr("x2", (d: any) => d.target.x)
-    //   .attr("y2", (d: any) => d.target.y);
-
-    // nodes
-    //   .attr("cx", (d: any) => d.x)
-    //   .attr("cy", (d: any) => d.y);
-
-    // labels
-    //   .attr("transform", (d: any) => `translate(${d.x}, ${d.y})`);
-
-    // 줌 기능 제거 (확대/축소 비활성화)
-    // const zoom = d3.zoom()
-    //   .scaleExtent([0.5, 3]) // 줌 범위 제한
-    //   .on("zoom", (event) => {
-    //     g.attr("transform", event.transform);
-    //   });
-
-    // svg.call(zoom as any);
-    
-    // 더블클릭 줌 리셋 기능도 제거
-    // svg.on("dblclick.zoom", null);
-    // svg.on("dblclick", () => {
-    //   svg.transition().duration(750).call(
-    //     zoom.transform as any,
-    //     d3.zoomIdentity
-    //   );
-    // });
-
-    // 드래그 기능 복원 (처음과 동일한 상호작용)
+    // 드래그 기능
     nodes.call(d3.drag<any, NetworkNode>()
       .on("start", (event, d) => {
         if (!event.active) simulation.alphaTarget(0.3).restart();
@@ -261,9 +207,26 @@ const NetworkVisualization: React.FC<NetworkVisualizationProps> = ({
         d.fy = null;
       }) as any);
 
+    // 시뮬레이션 업데이트
+    simulation.on("tick", () => {
+      links
+        .attr("x1", (d: any) => d.source.x)
+        .attr("y1", (d: any) => d.source.y)
+        .attr("x2", (d: any) => d.target.x)
+        .attr("y2", (d: any) => d.target.y);
+
+      nodes
+        .attr("cx", (d: any) => d.x)
+        .attr("cy", (d: any) => d.y);
+
+      labels
+        .attr("x", (d: any) => d.x)
+        .attr("y", (d: any) => d.y);
+    });
+
     // 클린업
     return () => {
-      simulation.stop(); // 시뮬레이션 제거로 인한 클린업 변경
+      simulation.stop();
       tooltip.remove();
     };
   }, [data, period, width, height, onNodeClick]);
@@ -271,18 +234,20 @@ const NetworkVisualization: React.FC<NetworkVisualizationProps> = ({
   return (
     <div className="network-visualization">
       <div className="mb-4">
-        <h3 className="text-lg font-semibold text-gray-800">{period} 교우관계 네트워크</h3>
-        <div className="flex flex-wrap gap-2 mt-2">
+        <h3 className="text-lg font-semibold text-gray-800 mb-3">{period} 교우관계 네트워크</h3>
+        
+        {/* 심플한 범례 */}
+        <div className="flex flex-wrap gap-3 mb-4">
           {["외톨이형", "소수 친구 학생", "평균적인 학생", "친구 많은 학생", "사교 스타"].map(type => (
             <div key={type} className="flex items-center gap-2">
               <div 
                 className="w-3 h-3 rounded-full"
                 style={{
                   backgroundColor: 
-                    type === "외톨이형" ? "#ff6b6b" :
-                    type === "소수 친구 학생" ? "#ffd93d" :
-                    type === "평균적인 학생" ? "#6bcf7f" :
-                    type === "친구 많은 학생" ? "#4ecdc4" : "#45b7d1"
+                    type === "외톨이형" ? "#ef4444" :
+                    type === "소수 친구 학생" ? "#f59e0b" :
+                    type === "평균적인 학생" ? "#10b981" :
+                    type === "친구 많은 학생" ? "#06b6d4" : "#8b5cf6"
                 }}
               />
               <span className="text-sm text-gray-600">{type}</span>
@@ -291,7 +256,7 @@ const NetworkVisualization: React.FC<NetworkVisualizationProps> = ({
         </div>
       </div>
       
-      <div className="border border-gray-200 rounded-lg overflow-hidden">
+      <div className="border border-gray-200 rounded-lg overflow-hidden bg-white">
         <svg
           ref={svgRef}
           width={width}
@@ -302,25 +267,34 @@ const NetworkVisualization: React.FC<NetworkVisualizationProps> = ({
 
       {selectedNode && (
         <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-          <h4 className="font-semibold text-blue-800 mb-2">선택된 학생 정보</h4>
-          <div className="grid grid-cols-2 gap-4 text-sm">
+          <div className="flex items-center justify-between mb-3">
+            <h4 className="font-semibold text-blue-800">선택된 학생 정보</h4>
+            <button 
+              onClick={() => setSelectedNode(null)}
+              className="text-blue-600 hover:text-blue-800 text-sm"
+            >
+              닫기
+            </button>
+          </div>
+          
+          <div className="grid grid-cols-2 gap-3 text-sm">
             <div>
-              <span className="font-medium">이름:</span> {selectedNode.name}
+              <span className="font-medium text-gray-600">이름:</span> {selectedNode.name}
             </div>
             <div>
-              <span className="font-medium">학년/반:</span> {selectedNode.grade}학년 {selectedNode.class}반
+              <span className="font-medium text-gray-600">학년/반:</span> {selectedNode.grade}학년 {selectedNode.class}반
             </div>
             <div>
-              <span className="font-medium">교우관계 유형:</span> {selectedNode.friendship_type}
+              <span className="font-medium text-gray-600">유형:</span> {selectedNode.friendship_type}
             </div>
             <div>
-              <span className="font-medium">연결 수:</span> {selectedNode.connection_count}명
+              <span className="font-medium text-gray-600">연결 수:</span> {selectedNode.connection_count}명
             </div>
             <div>
-              <span className="font-medium">중심성:</span> {selectedNode.centrality.toFixed(3)}
+              <span className="font-medium text-gray-600">중심성:</span> {(selectedNode.centrality * 100).toFixed(1)}%
             </div>
             <div>
-              <span className="font-medium">커뮤니티:</span> {selectedNode.community}
+              <span className="font-medium text-gray-600">커뮤니티:</span> {selectedNode.community + 1}번 그룹
             </div>
           </div>
         </div>
