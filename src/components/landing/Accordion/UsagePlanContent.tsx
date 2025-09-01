@@ -22,7 +22,14 @@ function UsagePlanContent({ selectedItemId }: { selectedItemId: string }) {
           {selectedItem.question}
         </span>
       </div>
-      <div className="flex h-[344px] items-center gap-1">
+      <div
+        className={clsx(
+          "flex h-[344px] items-center",
+          selectedItem.id === "교우관계분석"
+            ? "justify-center gap-[30px]"
+            : "gap-1",
+        )}
+      >
         <img
           src={selectedItem.img1}
           alt={`${selectedItem.id} 첫 번째 이미지`}

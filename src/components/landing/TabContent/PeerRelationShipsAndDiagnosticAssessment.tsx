@@ -206,7 +206,7 @@ function PeerRelationShipsAndDiagnosticAssessment() {
             <ul className="flex list-inside list-disc flex-col gap-3 text-base marker:text-sky-700">
               <li>
                 <span className="mr-1 font-semibold text-sky-700">
-                  심리적 보호
+                  민원 방어
                 </span>
                 : 데이터 기반 지도 근거 확보
               </li>
