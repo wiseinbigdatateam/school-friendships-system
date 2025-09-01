@@ -3,9 +3,9 @@ import AccordionSection from "../Accordion/AccordionSection";
 
 function PeerRelationShipsAndDiagnosticAssessment() {
   return (
-    <div className="mx-auto flex w-[1280px] flex-col gap-[72px] py-[72px]">
+    <div className="mx-auto flex w-[1280px] flex-col gap-[72px] py-12 max-xl:w-full max-xl:px-6 max-md:gap-12 xl:py-[72px]">
       {/* 학생 교우관계 */}
-      <div className="flex flex-col gap-5">
+      <div className="flex flex-col gap-5 max-md:gap-4">
         <SectionTitle
           title="학생 교우관계"
           desc={{
@@ -58,7 +58,7 @@ function PeerRelationShipsAndDiagnosticAssessment() {
       </div>
 
       {/* 소외 학생 예방 및 관리방안 자동화 */}
-      <div className="flex flex-col gap-5">
+      <div className="flex flex-col gap-5 max-md:gap-4">
         <SectionTitle
           title="소외 학생 예방 및 관리방안 자동화"
           desc={{
@@ -140,7 +140,7 @@ function PeerRelationShipsAndDiagnosticAssessment() {
       </div>
 
       {/* 학생 진단·평가 */}
-      <div className="flex flex-col gap-5">
+      <div className="flex flex-col gap-5 max-md:gap-4">
         <SectionTitle
           title="학생 진단·평가"
           desc={{
@@ -184,13 +184,13 @@ function PeerRelationShipsAndDiagnosticAssessment() {
       </div>
 
       {/* 학생 진단·평가 활용방안 */}
-      <div className="flex flex-col gap-5">
+      <div className="flex flex-col gap-5 max-md:gap-4">
         <SectionTitle title="학생 진단·평가 활용방안" />
         <AccordionSection tabMenu={0} />
       </div>
 
       {/* 교권보호 효과 */}
-      <div className="flex flex-col gap-5">
+      <div className="flex flex-col gap-5 max-md:gap-4">
         <SectionTitle
           title="교권보호 효과"
           desc={{

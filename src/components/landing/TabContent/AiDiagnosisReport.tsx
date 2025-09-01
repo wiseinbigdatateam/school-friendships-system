@@ -4,9 +4,9 @@ import WhiteCard from "../WhiteCard";
 
 function AiDiagnosisReport() {
   return (
-    <div className="mx-auto flex w-[1280px] flex-col gap-[72px] py-[72px]">
+    <div className="mx-auto flex w-[1280px] flex-col gap-[72px] py-[72px] max-xl:w-full max-xl:px-6">
       {/* LLM 자동 가이드 지원 */}
-      <div className="flex flex-col gap-5">
+      <div className="flex flex-col gap-5 max-md:gap-4">
         <SectionTitle
           title="LLM 자동 가이드 지원"
           desc={{
@@ -18,7 +18,7 @@ function AiDiagnosisReport() {
       </div>
 
       {/* ~학생의 LLM 레포트 */}
-      <div className="flex flex-col gap-5">
+      <div className="flex flex-col gap-5 max-md:gap-4">
         <SectionTitle title="김OO 학생의 LLM 레포트" />
 
         <div className="flex flex-col">
