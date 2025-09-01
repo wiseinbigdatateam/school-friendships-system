@@ -1,10 +1,10 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 
-import LandingHeader from "../components/LandingHeader";
-import TabMenu from "../components/TabMenu";
-import PeerRelationShipsAndDiagnosticAssessment from "../components/TabContent/PeerRelationShipsAndDiagnosticAssessment";
-import AiDiagnosisReport from "../components/TabContent/ AiDiagnosisReport";
+import LandingHeader from "../components/landing/LandingHeader";
+import TabMenu from "../components/landing/TabMenu";
+import PeerRelationShipsAndDiagnosticAssessment from "../components/landing/TabContent/PeerRelationShipsAndDiagnosticAssessment";
+import AiDiagnosisReport from "../components/landing/TabContent/AiDiagnosisReport";
 
 const Landing: React.FC = () => {
   const [tabMenu, setTabMenu] = useState(0);
