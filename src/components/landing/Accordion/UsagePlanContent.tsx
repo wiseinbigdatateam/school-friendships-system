@@ -1,5 +1,5 @@
 import clsx from "clsx";
-import { accordionData } from "../../data/accordionData";
+import { accordionData } from "../../../data/accordionData";
 
 function UsagePlanContent({ selectedItemId }: { selectedItemId: string }) {
   const selectedItem = accordionData.usagePlan.find(

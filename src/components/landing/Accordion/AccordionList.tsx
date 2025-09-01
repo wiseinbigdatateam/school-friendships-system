@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import clsx from "clsx";
-import { accordionData, type AccordionItem } from "../../data/accordionData";
+import { accordionData, type AccordionItem } from "../../../data/accordionData";
 
 type AccordionListProps = {
   tabMenu: number;

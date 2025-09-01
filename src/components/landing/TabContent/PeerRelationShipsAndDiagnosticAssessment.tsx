@@ -1,4 +1,4 @@
-import SectionTitle from "../SectionTitle";
+import SectionTitle from "../../SectionTitle";
 import AccordionSection from "../Accordion/AccordionSection";
 
 function PeerRelationShipsAndDiagnosticAssessment() {

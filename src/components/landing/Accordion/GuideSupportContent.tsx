@@ -1,4 +1,4 @@
-import { accordionData } from "../../data/accordionData";
+import { accordionData } from "../../../data/accordionData";
 
 function GuideSupportContent({ selectedItemId }: { selectedItemId: string }) {
   return (
