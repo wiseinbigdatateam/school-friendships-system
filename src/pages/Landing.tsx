@@ -20,20 +20,20 @@ const Landing: React.FC = () => {
       <LandingHeader />
 
       {/* 히어로 섹션 */}
-      <section className="relative flex min-h-screen items-center justify-center overflow-hidden">
+      <section className="relative flex h-[700px] items-center justify-center overflow-hidden">
         {/* 배경 이미지  */}
         <div
-          className="absolute inset-0 z-0 bg-cover bg-center bg-no-repeat"
+          className="absolute top-0 z-0 h-[700px] w-full bg-cover bg-center bg-no-repeat"
           style={{
             backgroundImage: `url('/mask_bg.png')`,
           }}
         ></div>
 
         {/* 어두운 오버레이로 텍스트 가독성 향상 */}
-        <div className="absolute inset-0 z-10 bg-black/40"></div>
+        <div className="absolute inset-0 z-10 h-[700px] w-full bg-black/40"></div>
 
         <div className="z-20 mx-auto flex w-full flex-col items-center gap-3 px-4 text-center text-white">
-          <h1 className="leading-[120% text-5xl font-bold max-md:text-4xl">
+          <h1 className="text-5xl font-bold leading-[120%] max-md:text-4xl">
             학생 진단·평가
             <br />
             AI 플랫폼

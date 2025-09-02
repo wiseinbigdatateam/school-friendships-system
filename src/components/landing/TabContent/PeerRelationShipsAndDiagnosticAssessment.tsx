@@ -37,13 +37,13 @@ function PeerRelationShipsAndDiagnosticAssessment() {
         />
 
         {/* 하단 이미지 */}
-        <div className="relative flex gap-6 rounded-3xl border border-gray-300 py-7 max-md:flex-col md:gap-12 md:px-10 md:pt-7 lg:h-fit lg:justify-center lg:pt-10">
+        <div className="relative flex gap-6 overflow-hidden rounded-3xl border border-gray-300 py-7 max-md:flex-col md:h-[323px] md:justify-center md:gap-12 md:px-10 md:py-0 md:pt-7 lg:pt-10">
           <div className="flex flex-col items-center gap-2.5 lg:h-[350px]">
             <p className="text-base text-indigo-500">
               간단한 설문방식으로 교우관계 조사
             </p>
 
-            <div className="relative bottom-0 h-[240px] overflow-hidden rounded-t-[58px] border-x-8 border-t-8 border-[#e7e7e7] md:h-[250px] lg:absolute lg:h-fit lg:max-w-[282px]">
+            <div className="relative bottom-0 h-[240px] overflow-hidden rounded-t-[58px] border-x-8 border-t-8 border-[#e7e7e7] md:h-[250px] lg:absolute lg:max-w-[282px]">
               <img
                 src="/landing/tab1/section1_1.svg"
                 alt="section1 첫 번째 이미지"
@@ -63,7 +63,7 @@ function PeerRelationShipsAndDiagnosticAssessment() {
           <img
             src="/landing/right_arrow.svg"
             alt="우측 화살표"
-            className="self-center max-md:w-[18px] max-md:rotate-90 md:translate-x-4"
+            className="self-center max-md:w-[18px] max-md:rotate-90 lg:translate-x-4"
           />
 
           <div className="flex flex-col items-center gap-2.5">
@@ -246,7 +246,7 @@ function PeerRelationShipsAndDiagnosticAssessment() {
             <img
               src="/landing/tab1/section3_4.svg"
               alt="section3 네 번째 이미지"
-              className="hidden xl:block"
+              className="hidden h-[389px] xl:block"
             />
           </div>
         </div>
@@ -289,7 +289,7 @@ function PeerRelationShipsAndDiagnosticAssessment() {
               ))}
             </ul>
 
-            <div className="flex flex-col gap-3 rounded-xl border border-dashed border-gray-400 p-3">
+            <div className="flex flex-col rounded-xl border border-dashed border-gray-400 p-3">
               {teachersRights.effects.map((item) => (
                 <div className="flex items-center gap-2 text-sm max-md:flex-col max-md:items-start max-md:gap-1">
                   <span className="min-w-[146px] rounded-[4px] border border-[#e7e7e7] px-3 py-1 text-center text-red-500">
