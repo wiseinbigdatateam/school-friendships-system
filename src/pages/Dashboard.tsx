@@ -619,10 +619,10 @@ const Dashboard: React.FC = () => {
   // dashboardData 조건문 제거 - 테스트 데이터가 정상적으로 로드됨
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="max-w-7xl pb-16 mx-auto min-h-screen bg-gray-50 px-4 sm:px-6 lg:px-8">
       {/* 페이지 제목 */}
-      <div className="bg-white border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+      <div className="bg-white rounded-lg border border-gray-200">
+        <div className="py-6">
           <div className="flex items-center justify-center space-x-6">
             <h1 className="text-3xl font-bold text-gray-900">
               {selectedProject
@@ -656,7 +656,7 @@ const Dashboard: React.FC = () => {
       </div>
 
       {/* 메인 콘텐츠 */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+      <div className="pt-6">
         <div className="flex-row gap-6">
           {/* 상단 사이드바 - 설문 프로젝트 목록 */}
           <div className="w-full mb-6">
@@ -664,7 +664,7 @@ const Dashboard: React.FC = () => {
               <h3 className="text-lg font-semibold text-gray-900 mb-4">
                 설문 프로젝트 총 {surveyProjects.length}개
               </h3>
-              <div className="flex gap-2 w-full h-fit overflow-x-scroll">
+              <div className="flex gap-2 w-full h-fit overflow-x-auto">
                 {surveyProjects.map((project) => (
                   <div
                     key={project.id}
@@ -722,7 +722,7 @@ const Dashboard: React.FC = () => {
               <div className="grid grid-cols-4 gap-8">
                 {/* 설문 참여 예상 학생 수 */}
                 <div className="flex flex-col items-center">
-                  <div className="text-4xl font-bold text-blue-600 mb-2">
+                  <div className="text-4xl font-bold text-[#3F80EA] mb-2">
                     {participationData.totalStudents}
                   </div>
                   <div className="text-sm text-gray-600 text-center leading-tight">
@@ -906,21 +906,21 @@ const Dashboard: React.FC = () => {
             </div>
 
             {/* 참여 현황 리스트 */}
-            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
+            <div className="bg-white w-full rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
               <h3 className="text-lg font-semibold text-gray-900 mb-4">
                 참여 현황 리스트
               </h3>
-              <div className="overflow-x-auto">
-                <table className="w-full table-fixed divide-y divide-gray-200">
+              <div className="w-full overflow-x-auto">
+                <table className="w-full divide-y divide-gray-200">
                   <thead className="bg-gray-50">
                     <tr>
-                      <th className="w-[6%] px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <th className="min-w-[70px] max-w-[70px] px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
                         번호
                       </th>
-                      <th className="w-[8%] px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <th className="min-w-[94px] max-w-[94px] px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
                         이름
                       </th>
-                      <th className="w-[10%] px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <th className="min-w-[118px] max-w-[118px] px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
                         참여상태
                       </th>
                       {selectedProject &&
@@ -929,7 +929,7 @@ const Dashboard: React.FC = () => {
                           ?.questions?.map((question: any, index: number) => (
                             <th
                               key={question.id || index}
-                              className="w-[15%] px-3 py-3 truncate text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                              className="min-w-[176px] max-w-[176px] px-3 py-3 truncate text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
                             >
                               {question.text || `질문 ${index + 1}`}
                             </th>
