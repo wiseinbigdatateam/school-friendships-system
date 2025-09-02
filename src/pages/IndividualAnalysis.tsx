@@ -393,23 +393,9 @@ const IndividualAnalysis: React.FC = () => {
 
   return (
     <div className="mx-auto min-h-screen max-w-7xl bg-gray-50 px-4 pb-16 sm:px-6 lg:px-8">
-      {/* 상단 내비게이션 바 */}
-      <div className="rounded-t-lg bg-white">
-        <div className="w-full px-4 py-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between">
-            {/* 메뉴 탭 */}
-            <div className="flex items-center space-x-8">
-              <button className="border-b-2 border-blue-600 px-4 py-2 font-medium text-blue-600">
-                학생개인별 분석
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-
       <div className="flex-col">
-        {/* 왼쪽 사이드바 */}
-        <div className="mb-6 w-full rounded-b-lg border border-gray-200 bg-white">
+        {/* 상단 바 */}
+        <div className="mb-6 w-full rounded-lg border border-gray-200 bg-white">
           <div className="p-6">
             <h2 className="mb-4 text-lg font-semibold text-gray-900">
               분석 대상 리스트 총 {surveys.length}개
@@ -479,12 +465,10 @@ const IndividualAnalysis: React.FC = () => {
             <div className="pt-6">
               {selectedStudentData ? (
                 <div>
-                  <h2 className="mb-6 text-2xl font-bold text-gray-900">
-                    {selectedStudentData.name} 학생 개별 분석 리포트
-                  </h2>
-
-                  {/* 관계 네트워크 그래프 */}
-                  <div className="mb-6 rounded-lg border border-gray-200 bg-white p-6">
+                  <div className="flex justify-between">
+                    <h2 className="text-2xl font-bold text-gray-900">
+                      {selectedStudentData.name} 학생 개별 분석 리포트
+                    </h2>
                     {/* 탭 헤더 */}
                     <div className="mb-6 flex items-center justify-between">
                       <div className="flex space-x-1 rounded-lg bg-gray-100 p-1">
@@ -510,7 +494,10 @@ const IndividualAnalysis: React.FC = () => {
                         </button>
                       </div>
                     </div>
+                  </div>
 
+                  {/* 관계 네트워크 그래프 */}
+                  <div className="mb-6 rounded-lg border border-gray-200 bg-white p-6">
                     {/* 관계 네트워크 그래프 제목 */}
                     <h3 className="mb-4 text-lg font-medium text-gray-900">
                       관계 네트워크 그래프

@@ -1250,7 +1250,7 @@ const StudentManagement: React.FC = () => {
   return (
     <div className="mx-auto min-h-screen max-w-7xl bg-gray-50 px-4 pb-16 sm:px-6 lg:px-8">
       {/* 헤더 */}
-      <div className="mb-8">
+      <div className="mb-4">
         <div className="flex items-center justify-between">
           <div>
             <h1 className="mb-2 text-3xl font-bold text-gray-900">학생 관리</h1>
@@ -1300,7 +1300,7 @@ const StudentManagement: React.FC = () => {
       {teacherInfo &&
         (teacherInfo.role === "homeroom_teacher" ||
           teacherInfo.role === "grade_teacher") && (
-          <div className="mb-6 rounded-lg border border-blue-200 bg-blue-50 p-4">
+          <div className="mb-4 rounded-lg border border-blue-200 bg-blue-50 p-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-3">
                 <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gray-300">
@@ -1325,7 +1325,7 @@ const StudentManagement: React.FC = () => {
         )}
 
       {/* 검색 및 필터 */}
-      <div className="mb-6 rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
+      <div className="mb-4 rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
         {/* 필터 및 통계 정보 */}
         <div className="mb-4 rounded-lg bg-gray-50 p-3 text-sm text-gray-600">
           <div className="flex flex-wrap gap-4">
@@ -1396,7 +1396,7 @@ const StudentManagement: React.FC = () => {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
+        <div className="grid grid-cols-1 gap-3 md:grid-cols-4">
           {/* 검색 */}
           <div className="relative">
             <input
@@ -1463,7 +1463,7 @@ const StudentManagement: React.FC = () => {
             onChange={(e) => setRiskFilter(e.target.value)}
             className="rounded-lg border border-gray-300 px-4 py-2 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-blue-500"
           >
-            <option value="all">모든 위험도</option>
+            <option value="all">전체</option>
             <option value="high">주의 필요</option>
             <option value="medium">관찰 중</option>
             <option value="low">안정</option>
@@ -1472,7 +1472,7 @@ const StudentManagement: React.FC = () => {
       </div>
 
       {/* 정렬 옵션 */}
-      <div className="mb-6 rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
+      <div className="mb-4 rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
         <div className="flex items-center justify-between">
           <h3 className="text-sm font-medium text-gray-700">정렬 기준</h3>
           <div className="flex space-x-2">
@@ -1541,7 +1541,7 @@ const StudentManagement: React.FC = () => {
       )}
 
       {/* 학생 목록 */}
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-4">
+      <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-4">
         {sortedStudents.length === 0 ? (
           <div className="col-span-full rounded-lg border border-gray-200 bg-white p-12 text-center">
             <svg
@@ -1645,144 +1645,13 @@ const StudentManagement: React.FC = () => {
 
             {/* 모달 내용 */}
             <div className="space-y-6 p-6">
-              {/* 기본 정보 */}
-              <div>
-                <h3 className="mb-4 text-lg font-semibold text-gray-900">
-                  기본 정보
-                </h3>
-                <div className="grid grid-cols-2 gap-4 text-sm">
-                  <div>
-                    <span className="text-gray-600">학생 번호:</span>
-                    <span className="ml-2 font-medium text-blue-600 text-gray-900">
-                      {parseInt(selectedStudent.student_number)}번
-                    </span>
-                  </div>
-                  <div>
-                    <span className="text-gray-600">성별:</span>
-                    <span className="ml-2 text-gray-900">
-                      {getGenderLabel(selectedStudent.gender)}
-                    </span>
-                  </div>
-                  <div>
-                    <span className="text-gray-600">교육 ID:</span>
-                    <span className="ml-2 text-gray-900">
-                      {selectedStudent.lifelong_education_id}
-                    </span>
-                  </div>
-                  <div>
-                    <span className="text-gray-600">입학일:</span>
-                    <span className="ml-2 text-gray-900">
-                      {new Date(
-                        selectedStudent.enrolled_at,
-                      ).toLocaleDateString()}
-                    </span>
-                  </div>
-                  <div>
-                    <span className="text-gray-600">학급:</span>
-                    <span className="ml-2 text-gray-900">
-                      {selectedStudent.grade}학년 {selectedStudent.class}반
-                    </span>
-                  </div>
-                  <div>
-                    <span className="text-gray-600">생년월일:</span>
-                    <span className="ml-2 text-gray-900">
-                      {selectedStudent.birth_date}
-                    </span>
-                  </div>
-                </div>
-              </div>
-
-              {/* 학부모 연락처 */}
-              <div>
-                <h3 className="mb-4 text-lg font-semibold text-gray-900">
-                  학부모 연락처
-                </h3>
-                {selectedStudent.parent_contact &&
-                typeof selectedStudent.parent_contact === "object" ? (
-                  <div className="grid grid-cols-2 gap-4 text-sm">
-                    <div>
-                      <span className="text-gray-600">어머니:</span>
-                      <span className="ml-2 text-gray-900">
-                        {(() => {
-                          try {
-                            const value = (
-                              selectedStudent.parent_contact as any
-                            )?.mother_name;
-                            return value !== undefined && value !== null
-                              ? value
-                              : "정보 없음";
-                          } catch (error) {
-                            console.error("어머니 이름 파싱 오류:", error);
-                            return "정보 없음";
-                          }
-                        })()}
-                      </span>
-                      {(() => {
-                        try {
-                          const phone = (selectedStudent.parent_contact as any)
-                            ?.mother_phone;
-                          return phone &&
-                            phone !== undefined &&
-                            phone !== null ? (
-                            <span className="ml-2 text-gray-600">
-                              ({phone})
-                            </span>
-                          ) : null;
-                        } catch (error) {
-                          console.error("어머니 전화번호 파싱 오류:", error);
-                          return null;
-                        }
-                      })()}
-                    </div>
-                    <div>
-                      <span className="text-gray-600">아버지:</span>
-                      <span className="ml-2 text-gray-900">
-                        {(() => {
-                          try {
-                            const value = (
-                              selectedStudent.parent_contact as any
-                            )?.father_name;
-                            return value !== undefined && value !== null
-                              ? value
-                              : "정보 없음";
-                          } catch (error) {
-                            console.error("아버지 이름 파싱 오류:", error);
-                            return "정보 없음";
-                          }
-                        })()}
-                      </span>
-                      {(() => {
-                        try {
-                          const phone = (selectedStudent.parent_contact as any)
-                            ?.father_phone;
-                          return phone &&
-                            phone !== undefined &&
-                            phone !== null ? (
-                            <span className="ml-2 text-gray-600">
-                              ({phone})
-                            </span>
-                          ) : null;
-                        } catch (error) {
-                          console.error("아버지 전화번호 파싱 오류:", error);
-                          return null;
-                        }
-                      })()}
-                    </div>
-                  </div>
-                ) : (
-                  <p className="text-gray-500">
-                    등록된 학부모 연락처가 없습니다.
-                  </p>
-                )}
-              </div>
-
               {/* 교우관계 분석 */}
               {selectedStudent.network_metrics &&
                 typeof selectedStudent.network_metrics === "object" &&
                 selectedStudent.network_metrics !== null && (
                   <div>
                     <h3 className="mb-4 text-lg font-semibold text-gray-900">
-                      교우관계 분석
+                      • 교우관계 분석
                     </h3>
                     <div className="space-y-4">
                       <div>
@@ -1870,7 +1739,7 @@ const StudentManagement: React.FC = () => {
               {/* 교사 메모 */}
               <div>
                 <h3 className="mb-4 text-lg font-semibold text-gray-900">
-                  교사 메모
+                  • 교사 메모
                 </h3>
                 {selectedStudent.teacher_memos &&
                 Array.isArray(selectedStudent.teacher_memos) &&
@@ -1911,6 +1780,136 @@ const StudentManagement: React.FC = () => {
                   </div>
                 ) : (
                   <p className="text-gray-500">등록된 메모가 없습니다.</p>
+                )}
+              </div>
+              {/* 기본 정보 */}
+              <div>
+                <h3 className="mb-4 text-lg font-semibold text-gray-900">
+                  • 기본 정보
+                </h3>
+                <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div>
+                    <span className="text-gray-600">학생 번호:</span>
+                    <span className="ml-2 font-medium text-blue-600 text-gray-900">
+                      {parseInt(selectedStudent.student_number)}번
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-gray-600">성별:</span>
+                    <span className="ml-2 text-gray-900">
+                      {getGenderLabel(selectedStudent.gender)}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-gray-600">교육 ID:</span>
+                    <span className="ml-2 text-gray-900">
+                      {selectedStudent.lifelong_education_id}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-gray-600">입학일:</span>
+                    <span className="ml-2 text-gray-900">
+                      {new Date(
+                        selectedStudent.enrolled_at,
+                      ).toLocaleDateString()}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-gray-600">학급:</span>
+                    <span className="ml-2 text-gray-900">
+                      {selectedStudent.grade}학년 {selectedStudent.class}반
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-gray-600">생년월일:</span>
+                    <span className="ml-2 text-gray-900">
+                      {selectedStudent.birth_date}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* 학부모 연락처 */}
+              <div>
+                <h3 className="mb-4 text-lg font-semibold text-gray-900">
+                  • 학부모 연락처
+                </h3>
+                {selectedStudent.parent_contact &&
+                typeof selectedStudent.parent_contact === "object" ? (
+                  <div className="grid grid-cols-2 gap-4 text-sm">
+                    <div>
+                      <span className="text-gray-600">어머니:</span>
+                      <span className="ml-2 text-gray-900">
+                        {(() => {
+                          try {
+                            const value = (
+                              selectedStudent.parent_contact as any
+                            )?.mother_name;
+                            return value !== undefined && value !== null
+                              ? value
+                              : "정보 없음";
+                          } catch (error) {
+                            console.error("어머니 이름 파싱 오류:", error);
+                            return "정보 없음";
+                          }
+                        })()}
+                      </span>
+                      {(() => {
+                        try {
+                          const phone = (selectedStudent.parent_contact as any)
+                            ?.mother_phone;
+                          return phone &&
+                            phone !== undefined &&
+                            phone !== null ? (
+                            <span className="ml-2 text-gray-600">
+                              ({phone})
+                            </span>
+                          ) : null;
+                        } catch (error) {
+                          console.error("어머니 전화번호 파싱 오류:", error);
+                          return null;
+                        }
+                      })()}
+                    </div>
+                    <div>
+                      <span className="text-gray-600">아버지:</span>
+                      <span className="ml-2 text-gray-900">
+                        {(() => {
+                          try {
+                            const value = (
+                              selectedStudent.parent_contact as any
+                            )?.father_name;
+                            return value !== undefined && value !== null
+                              ? value
+                              : "정보 없음";
+                          } catch (error) {
+                            console.error("아버지 이름 파싱 오류:", error);
+                            return "정보 없음";
+                          }
+                        })()}
+                      </span>
+                      {(() => {
+                        try {
+                          const phone = (selectedStudent.parent_contact as any)
+                            ?.father_phone;
+                          return phone &&
+                            phone !== undefined &&
+                            phone !== null ? (
+                            <span className="ml-2 text-gray-600">
+                              ({phone})
+                            </span>
+                          ) : null;
+                        } catch (error) {
+                          console.error("아버지 전화번호 파싱 오류:", error);
+                          return null;
+                        }
+                      })()}
+                    </div>
+                  </div>
+                ) : (
+                  <p className="text-gray-500">
+                    등록된 학부모 연락처가 없습니다.
+                  </p>
                 )}
               </div>
             </div>
@@ -1963,7 +1962,7 @@ const StudentManagement: React.FC = () => {
                 </button>
                 <button
                   onClick={handleSaveMemo}
-                  className="rounded-md bg-blue-600 px-4 py-2 text-white transition-colors hover:bg-blue-700"
+                  className="rounded-md bg-[#3F80EA] px-4 py-2 text-white transition-colors hover:bg-blue-600"
                 >
                   저장
                 </button>

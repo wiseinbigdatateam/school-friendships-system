@@ -1118,8 +1118,8 @@ const NetworkAnalysis: React.FC = () => {
   }
 
   return (
-    <div className="lg:px-8mx-auto mx-auto min-h-screen max-w-7xl bg-gray-50 px-4 py-8 pb-16 sm:px-6">
-      <div className="mb-8">
+    <div className="mx-auto min-h-screen max-w-7xl bg-gray-50 px-4 pb-16 sm:px-6 lg:px-8">
+      <div className="mb-6">
         <h1 className="mb-2 text-3xl font-bold text-gray-900">
           교우관계 네트워크 분석
         </h1>
@@ -1136,7 +1136,7 @@ const NetworkAnalysis: React.FC = () => {
       </div>
 
       {/* 저장된 분석 리스트 섹션 */}
-      <div className="mb-6 rounded-lg bg-white shadow">
+      <div className="mb-4 rounded-lg bg-white shadow">
         <div className="border-b border-gray-200 px-6 py-4">
           <div className="flex items-center justify-between">
             <div>
@@ -1286,7 +1286,7 @@ const NetworkAnalysis: React.FC = () => {
       </div>
 
       {/* 설문 선택 섹션 */}
-      <div className="mb-6 rounded-lg bg-white shadow">
+      <div className="mb-4 rounded-lg bg-white shadow">
         <div className="border-b border-gray-200 px-6 py-4">
           <div className="flex items-center justify-between">
             <div>
@@ -1448,7 +1448,7 @@ const NetworkAnalysis: React.FC = () => {
 
       {/* 네트워크 분석 실행 버튼 */}
       {selectedSurvey && (
-        <div className="mb-6 rounded-lg bg-white shadow">
+        <div className="mb-4 rounded-lg bg-white shadow">
           <div className="p-6 text-center">
             <button
               onClick={handleRunNetworkAnalysis}
@@ -1549,7 +1549,7 @@ const NetworkAnalysis: React.FC = () => {
 
       {/* 분석 결과가 있을 때만 뷰 선택 탭 표시 */}
       {analysisResults && (
-        <div className="mb-6 rounded-lg bg-white shadow">
+        <div className="mb-4 rounded-lg bg-white shadow">
           <div className="border-b border-gray-200 px-6 py-4">
             <div className="flex space-x-2">
               <button
@@ -1603,7 +1603,7 @@ const NetworkAnalysis: React.FC = () => {
 
       {/* 전체 현황 뷰 */}
       {analysisView === "overview" && analysisResults && (
-        <div className="space-y-6">
+        <div className="space-y-4">
           {/* 네트워크 메트릭 */}
           <div className="rounded-lg bg-white shadow">
             <div className="border-b border-gray-200 px-6 py-4">
