@@ -50,7 +50,7 @@ interface ChartData {
 const ClassSurvey: React.FC = () => {
   const [surveys, setSurveys] = useState<SurveyData[]>([]);
   const [selectedSurvey, setSelectedSurvey] = useState<string>("");
-  const [viewMode, setViewMode] = useState<"names" | "graphs">("names");
+  const [viewMode, setViewMode] = useState<"names" | "graphs">("graphs");
   const [chartData, setChartData] = useState<ChartData[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -595,7 +595,7 @@ const ClassSurvey: React.FC = () => {
       {/* 메인 콘텐츠 영역 */}
       <div className="flex-1">
         {/* 메인 콘텐츠 */}
-        <div className="pt-6">
+        <div className="pt-4">
           {selectedSurvey && (
             <div>
               <div className="flex justify-between">
@@ -604,16 +604,6 @@ const ClassSurvey: React.FC = () => {
                 </h2>
                 <div className="flex items-center gap-1">
                   <button
-                    onClick={() => setViewMode("names")}
-                    className={`rounded-lg px-4 py-2 text-sm font-medium transition-colors ${
-                      viewMode === "names"
-                        ? "bg-[#3F80EA] text-white"
-                        : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-                    }`}
-                  >
-                    학생이름과 보기
-                  </button>
-                  <button
                     onClick={() => setViewMode("graphs")}
                     className={`rounded-lg px-4 py-2 text-sm font-medium transition-colors ${
                       viewMode === "graphs"
@@ -621,13 +611,23 @@ const ClassSurvey: React.FC = () => {
                         : "bg-gray-100 text-gray-700 hover:bg-gray-200"
                     }`}
                   >
-                    차트 보기
+                    결과보기
+                  </button>
+                  <button
+                    onClick={() => setViewMode("names")}
+                    className={`rounded-lg px-4 py-2 text-sm font-medium transition-colors ${
+                      viewMode === "names"
+                        ? "bg-[#3F80EA] text-white"
+                        : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                    }`}
+                  >
+                    학생이름과 결과보기
                   </button>
                 </div>
               </div>
 
               {viewMode === "graphs" ? (
-                <div className="space-y-8">
+                <div className="space-y-4">
                   {/* 전체 요약 차트 */}
                   {chartData.length > 0 && (
                     <div className="rounded-lg border border-gray-200 bg-white p-6">
@@ -662,7 +662,7 @@ const ClassSurvey: React.FC = () => {
                   )}
 
                   {/* 개별 문항 차트들 */}
-                  <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+                  <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
                     {chartData.map((data, index) => (
                       <div
                         key={index}
@@ -727,7 +727,7 @@ const ClassSurvey: React.FC = () => {
                   </div>
                 </div>
               ) : (
-                <div className="space-y-8">
+                <div className="space-y-4">
                   {chartData.map((data, index) => (
                     <div
                       key={index}
