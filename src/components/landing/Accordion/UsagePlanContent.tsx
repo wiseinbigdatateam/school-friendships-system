@@ -15,7 +15,7 @@ function UsagePlanContent({ selectedItemId }: { selectedItemId: string }) {
         </span>
         <span
           className={clsx(
-            "h-10 w-full rounded-[36px] border border-dashed border-gray-300 bg-gray-50 py-2 text-center xl:w-[474px]",
+            "hidden h-10 w-full rounded-[36px] border border-dashed border-gray-300 bg-gray-50 py-2 text-center lg:block xl:w-[474px]",
             selectedItem.id === "학교 폭력조사" ? "px-3" : "px-[72px]",
           )}
         >
@@ -24,19 +24,21 @@ function UsagePlanContent({ selectedItemId }: { selectedItemId: string }) {
       </div>
       <div
         className={clsx(
-          "flex h-[344px] items-center",
+          "flex h-[344px] w-full items-center",
           selectedItem.id === "교우관계분석"
-            ? "justify-center gap-[30px]"
+            ? "justify-center lg:gap-5 xl:gap-[30px]"
             : "gap-1",
         )}
       >
         <img
           src={selectedItem.img1}
           alt={`${selectedItem.id} 첫 번째 이미지`}
+          className="w-2/3"
         />
         <img
           src={selectedItem.img2}
           alt={`${selectedItem.id} 두 번째 이미지`}
+          className="w-1/3"
         />
       </div>
     </div>
