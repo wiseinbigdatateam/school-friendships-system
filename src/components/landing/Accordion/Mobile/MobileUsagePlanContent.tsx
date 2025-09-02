@@ -2,7 +2,7 @@ import { useState } from "react";
 import { accordionData } from "../../../../data/accordionData";
 import clsx from "clsx";
 
-function UsagePlanContent() {
+function MobileUsagePlanContent() {
   const [openItem, setOpenItem] = useState<string | null>("교우관계분석");
   const [isToggleActive, setIsToggleActive] = useState<boolean>(true);
 
@@ -80,4 +80,4 @@ function UsagePlanContent() {
   );
 }
 
-export default UsagePlanContent;
+export default MobileUsagePlanContent;
