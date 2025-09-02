@@ -194,7 +194,7 @@ const StudentManagement: React.FC = () => {
           `
           *,
           parent_contact
-        `
+        `,
         )
         .eq("is_active", true);
 
@@ -220,7 +220,7 @@ const StudentManagement: React.FC = () => {
           teacherInfo.grade_level,
           "학년",
           teacherInfo.class_number,
-          "반"
+          "반",
         );
         query = query
           .eq("grade", teacherInfo.grade_level)
@@ -252,7 +252,7 @@ const StudentManagement: React.FC = () => {
         console.log("첫 번째 학생 정보:", studentsData[0]);
         console.log(
           "학생들의 학년/반 분포:",
-          studentsData.map((s) => `${s.grade}학년${s.class}반`)
+          studentsData.map((s) => `${s.grade}학년${s.class}반`),
         );
       }
 
@@ -294,7 +294,7 @@ const StudentManagement: React.FC = () => {
                 n.id === student.id ||
                 (n.name === student.name &&
                   n.grade === student.grade &&
-                  n.class === student.class)
+                  n.class === student.class),
             );
 
             if (node) {
@@ -590,7 +590,7 @@ const StudentManagement: React.FC = () => {
       // 1900년 1월 1일부터의 일수를 계산
       const excelStartDate = new Date(1900, 0, 1);
       const targetDate = new Date(
-        excelStartDate.getTime() + (serialNumber - 1) * 24 * 60 * 60 * 1000
+        excelStartDate.getTime() + (serialNumber - 1) * 24 * 60 * 60 * 1000,
       );
       return targetDate.toISOString().split("T")[0];
     }
@@ -689,12 +689,12 @@ const StudentManagement: React.FC = () => {
   // 정렬 아이콘 렌더링 함수
   const getSortIcon = (field: string) => {
     if (sortField !== field) {
-      return <ChevronUpIcon className="w-4 h-4 text-gray-400" />;
+      return <ChevronUpIcon className="h-4 w-4 text-gray-400" />;
     }
     return sortDirection === "asc" ? (
-      <ChevronUpIcon className="w-4 h-4 text-blue-600" />
+      <ChevronUpIcon className="h-4 w-4 text-blue-600" />
     ) : (
-      <ChevronDownIcon className="w-4 h-4 text-blue-600" />
+      <ChevronDownIcon className="h-4 w-4 text-blue-600" />
     );
   };
 
@@ -781,7 +781,7 @@ const StudentManagement: React.FC = () => {
           await handleExcelUpload(file);
         } else {
           toast.error(
-            "지원하지 않는 파일 형식입니다. CSV 또는 Excel 파일을 사용해주세요."
+            "지원하지 않는 파일 형식입니다. CSV 또는 Excel 파일을 사용해주세요.",
           );
         }
       } catch (error) {
@@ -901,7 +901,7 @@ const StudentManagement: React.FC = () => {
       // 업로드 진행 상황 표시
       toast.loading(
         `${validStudents.length}명의 학생 정보를 업로드하는 중...`,
-        { duration: 0 }
+        { duration: 0 },
       );
 
       // Supabase에 학생 데이터 저장 (순차적으로 처리하여 진행 상황 표시)
@@ -949,7 +949,7 @@ const StudentManagement: React.FC = () => {
               student["교육ID"] ||
               `LEI${new Date().getFullYear()}_${String(i + 1).padStart(
                 6,
-                "0"
+                "0",
               )}`, // 엑셀에서 가져오거나 자동 생성
             current_school_id: teacherInfo?.school_id || null, // 담임선생님의 학교 ID로 자동 설정
             parent_contact:
@@ -979,12 +979,12 @@ const StudentManagement: React.FC = () => {
           console.log(
             "- student_number:",
             typeof studentData.student_number,
-            studentData.student_number
+            studentData.student_number,
           );
           console.log(
             "- gender:",
             typeof studentData.gender,
-            studentData.gender
+            studentData.gender,
           );
           console.log(
             "- birth_date:",
@@ -992,7 +992,7 @@ const StudentManagement: React.FC = () => {
             studentData.birth_date,
             "(원본:",
             student["생년월일"],
-            ")"
+            ")",
           );
           console.log(
             "- enrolled_at:",
@@ -1000,32 +1000,32 @@ const StudentManagement: React.FC = () => {
             studentData.enrolled_at,
             "(원본:",
             student["입학일"],
-            ")"
+            ")",
           );
           console.log(
             "- is_active:",
             typeof studentData.is_active,
-            studentData.is_active
+            studentData.is_active,
           );
           console.log(
             "- lifelong_education_id:",
             typeof studentData.lifelong_education_id,
-            studentData.lifelong_education_id
+            studentData.lifelong_education_id,
           );
           console.log(
             "- parent_contact:",
             typeof studentData.parent_contact,
-            studentData.parent_contact
+            studentData.parent_contact,
           );
           console.log(
             "- created_at:",
             typeof studentData.created_at,
-            studentData.created_at
+            studentData.created_at,
           );
           console.log(
             "- updated_at:",
             typeof studentData.updated_at,
-            studentData.updated_at
+            studentData.updated_at,
           );
 
           // Supabase에 학생 데이터 삽입
@@ -1043,7 +1043,7 @@ const StudentManagement: React.FC = () => {
             console.error("오류 세부사항:", insertError.details);
             console.error("오류 힌트:", insertError.hint);
             throw new Error(
-              `${student["이름"]} 저장 실패: ${insertError.message}`
+              `${student["이름"]} 저장 실패: ${insertError.message}`,
             );
           }
 
@@ -1103,11 +1103,11 @@ const StudentManagement: React.FC = () => {
         // 성공 메시지
         if (failedUploads.length === 0) {
           toast.success(
-            `${successfulUploads.length}명의 학생 정보가 성공적으로 업로드되었습니다.`
+            `${successfulUploads.length}명의 학생 정보가 성공적으로 업로드되었습니다.`,
           );
         } else {
           toast.success(
-            `${successfulUploads.length}명 업로드 성공, ${failedUploads.length}명 실패`
+            `${successfulUploads.length}명 업로드 성공, ${failedUploads.length}명 실패`,
           );
         }
       }
@@ -1175,8 +1175,8 @@ const StudentManagement: React.FC = () => {
                 ...student,
                 teacher_memos: [...(student.teacher_memos || []), newMemo],
               }
-            : student
-        )
+            : student,
+        ),
       );
 
       toast.success("메모가 성공적으로 저장되었습니다.");
@@ -1201,10 +1201,10 @@ const StudentManagement: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="flex min-h-screen items-center justify-center bg-gray-50">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-lg font-medium text-gray-900 mb-2">
+          <div className="mx-auto mb-4 h-16 w-16 animate-spin rounded-full border-b-2 border-blue-600"></div>
+          <p className="mb-2 text-lg font-medium text-gray-900">
             학생 데이터 로딩 중...
           </p>
           <p className="text-gray-600">데이터를 불러오는 중입니다.</p>
@@ -1216,11 +1216,11 @@ const StudentManagement: React.FC = () => {
   // 권한 확인
   if (!canAccessPage()) {
     return (
-      <div className="min-h-screen bg-gray-50  flex items-center justify-center">
+      <div className="flex min-h-screen items-center justify-center bg-gray-50">
         <div className="text-center">
-          <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-red-100">
             <svg
-              className="w-8 h-8 text-red-600"
+              className="h-8 w-8 text-red-600"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -1233,13 +1233,13 @@ const StudentManagement: React.FC = () => {
               />
             </svg>
           </div>
-          <h2 className="text-xl font-semibold text-gray-900 mb-2">
+          <h2 className="mb-2 text-xl font-semibold text-gray-900">
             접근 권한이 없습니다
           </h2>
           <p className="text-gray-600">
             학생 관리 페이지에 접근할 수 있는 권한이 없습니다.
           </p>
-          <p className="text-sm text-gray-500 mt-2">
+          <p className="mt-2 text-sm text-gray-500">
             담임교사, 학년 부장, 학교 관리자, 교육청 관리자만 접근 가능합니다.
           </p>
         </div>
@@ -1248,420 +1248,412 @@ const StudentManagement: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen pb-16 bg-gray-50 ">
-      <div className="max-w-7xl mx-auto">
-        {/* 헤더 */}
-        <div className="mb-8">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900 mb-2">
-                학생 관리
-              </h1>
-              <p className="text-gray-600">
-                학생들의 기본 정보와 교우관계 분석 결과를 확인하고 관리합니다.
-              </p>
-              {/* 권한별 접근 범위 표시 */}
-              <div className="mt-2 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                <div className="flex items-center space-x-2">
-                  <div className="w-4 h-4 bg-[#3F80EA] rounded-full"></div>
-                  <span className="text-sm font-medium text-blue-900">
-                    현재 접근 범위: {getAccessScope().description}
-                  </span>
-                </div>
-              </div>
-            </div>
-            <div className="flex space-x-3">
-              <button
-                onClick={handleDownloadTemplate}
-                className="inline-flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
-              >
-                <ArrowDownTrayIcon className="w-5 h-5 mr-2" />
-                엑셀 템플릿 다운로드
-              </button>
-              <button
-                onClick={handleUploadStudents}
-                className="inline-flex items-center px-4 py-2 bg-[#3F80EA] text-white rounded-lg hover:bg-blue-600 transition-colors"
-                title={
-                  teacherInfo?.school_id
-                    ? `${schoolName || "현재 학교"}에 학생 등록`
-                    : "학교 정보가 없습니다"
-                }
-              >
-                <ArrowUpTrayIcon className="w-5 h-5 mr-2" />
-                학생 명단 업로드
-                {teacherInfo?.school_id && (
-                  <span className="ml-2 text-xs bg-blue-500 text-white px-2 py-1 rounded">
-                    {schoolName || "현재 학교"}
-                  </span>
-                )}
-              </button>
-            </div>
-          </div>
-        </div>
-
-        {/* 담임 정보 표시 */}
-        {teacherInfo &&
-          (teacherInfo.role === "homeroom_teacher" ||
-            teacherInfo.role === "grade_teacher") && (
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-3">
-                  <div className="w-8 h-8 bg-gray-300 rounded-full flex items-center justify-center">
-                    <span className="text-white text-sm font-semibold">담</span>
-                  </div>
-                  <div>
-                    <h3 className="text-lg font-medium text-blue-900">
-                      {teacherInfo.name || currentUser?.email}{" "}
-                      {getRoleDisplayName(teacherInfo.role)}
-                    </h3>
-                    <p className="text-sm text-blue-700">
-                      {teacherInfo.grade_level}학년 {teacherInfo.class_number}반
-                      담당
-                    </p>
-                  </div>
-                </div>
-                <div className="text-sm text-blue-600">
-                  학년과 반이 자동으로 고정되었습니다
-                </div>
-              </div>
-            </div>
-          )}
-
-        {/* 검색 및 필터 */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
-          {/* 필터 및 통계 정보 */}
-          <div className="mb-4 p-3 bg-gray-50 rounded-lg text-sm text-gray-600">
-            <div className="flex flex-wrap gap-4">
-              <div>
-                <strong>학년 옵션:</strong> {getGradeOptions().length}개 (
-                {getGradeOptions().join(", ") || "없음"})
-              </div>
-              <div>
-                <strong>반 옵션:</strong> {getClassOptions().length}개 (
-                {getClassOptions().join(", ") || "없음"})
-              </div>
-              <div>
-                <strong>현재 필터:</strong> {gradeFilter}학년 {classFilter}반
-                {(teacherInfo?.role === "homeroom_teacher" ||
-                  teacherInfo?.role === "grade_teacher") &&
-                  " (담임 고정)"}
-              </div>
-              <div>
-                <strong>표시 학생:</strong> {filteredStudents.length}명 /{" "}
-                {students.length}명
-              </div>
-            </div>
-
-            {/* 담임 정보 표시 */}
-            {(teacherInfo?.role === "homeroom_teacher" ||
-              teacherInfo?.role === "grade_teacher") &&
-              teacherInfo.grade_level &&
-              teacherInfo.class_number && (
-                <div className="mt-3 p-2 bg-blue-50 border border-blue-200 rounded text-xs text-blue-800">
-                  🎯 {getRoleDisplayName(teacherInfo.role)}:{" "}
-                  {teacherInfo.grade_level}학년 {teacherInfo.class_number}반 -
-                  담당 반 학생만 표시
-                </div>
-              )}
-          </div>
-
-          {/* 위험도 통계 */}
-          <div className="mb-6 p-4 bg-gradient-to-r from-red-50 to-yellow-50 border border-red-200 rounded-lg">
-            <h3 className="text-lg font-semibold text-red-900 mb-3">
-              📊 위험도별 학생 현황
-            </h3>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="bg-red-100 border border-red-300 rounded-lg p-3 text-center">
-                <div className="text-2xl font-bold text-red-800">
-                  {getHighRiskStudentCount()}
-                </div>
-                <div className="text-sm text-red-700 font-medium">
-                  주의 필요
-                </div>
-                <div className="text-xs text-red-600">중심성 &lt; 0.3</div>
-              </div>
-              <div className="bg-yellow-100 border border-yellow-300 rounded-lg p-3 text-center">
-                <div className="text-2xl font-bold text-yellow-800">
-                  {getRiskLevelCounts().medium}
-                </div>
-                <div className="text-sm text-yellow-700 font-medium">
-                  관찰 중
-                </div>
-                <div className="text-xs text-yellow-600">중심성 0.3~0.6</div>
-              </div>
-              <div className="bg-green-100 border border-green-300 rounded-lg p-3 text-center">
-                <div className="text-2xl font-bold text-green-800">
-                  {getRiskLevelCounts().low}
-                </div>
-                <div className="text-sm text-green-700 font-medium">안정</div>
-                <div className="text-xs text-green-600">중심성 &ge; 0.6</div>
-              </div>
-            </div>
-            <div className="mt-3 text-center text-sm text-red-700">
-              🚨 <strong>주의 학생 수: {getHighRiskStudentCount()}명</strong> -
-              즉시 관찰 및 개입이 필요한 학생들
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            {/* 검색 */}
-            <div className="relative">
-              <input
-                type="text"
-                placeholder="Q 학생 이름 또는 학번 검색..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              />
-              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <MagnifyingGlassIcon className="h-5 w-5 text-gray-400" />
-              </div>
-            </div>
-
-            {/* 학년 필터 */}
-            <select
-              value={gradeFilter}
-              onChange={(e) => setGradeFilter(e.target.value)}
-              disabled={teacherInfo?.role === "homeroom_teacher"}
-              className={`px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
-                teacherInfo?.role === "homeroom_teacher"
-                  ? "bg-gray-100 cursor-not-allowed"
-                  : ""
-              }`}
-            >
-              <option value="all">모든 학년</option>
-              {getGradeOptions().map((grade) => (
-                <option key={grade} value={grade}>
-                  {grade}학년
-                </option>
-              ))}
-              {/* 디버깅용: 실제 옵션 개수 표시 */}
-              {getGradeOptions().length === 0 && (
-                <option disabled>학년 데이터 없음</option>
-              )}
-            </select>
-
-            {/* 반 필터 */}
-            <select
-              value={classFilter}
-              onChange={(e) => setClassFilter(e.target.value)}
-              disabled={teacherInfo?.role === "homeroom_teacher"}
-              className={`px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
-                teacherInfo?.role === "homeroom_teacher"
-                  ? "bg-gray-100 cursor-not-allowed"
-                  : ""
-              }`}
-            >
-              <option value="all">모든 반</option>
-              {getClassOptions().map((cls) => (
-                <option key={cls} value={cls}>
-                  {cls}반
-                </option>
-              ))}
-              {/* 디버깅용: 실제 옵션 개수 표시 */}
-              {getClassOptions().length === 0 && (
-                <option disabled>반 데이터 없음</option>
-              )}
-            </select>
-
-            {/* 위험도 필터 */}
-            <select
-              value={riskFilter}
-              onChange={(e) => setRiskFilter(e.target.value)}
-              className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            >
-              <option value="all">모든 위험도</option>
-              <option value="high">주의 필요</option>
-              <option value="medium">관찰 중</option>
-              <option value="low">안정</option>
-            </select>
-          </div>
-        </div>
-
-        {/* 정렬 옵션 */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 mb-6">
-          <div className="flex items-center justify-between">
-            <h3 className="text-sm font-medium text-gray-700">정렬 기준</h3>
-            <div className="flex space-x-2">
-              {[
-                { field: "name", label: "이름" },
-                // { field: 'grade', label: '학년' },
-                // { field: 'class', label: '반' },
-                { field: "student_number", label: "번호" },
-                { field: "risk_level", label: "위험도" },
-                { field: "network_centrality", label: "교우관계 중심성" },
-              ].map(({ field, label }) => (
-                <button
-                  key={field}
-                  onClick={() => toggleSort(field)}
-                  className={`px-3 py-1 text-sm rounded-md border transition-colors ${
-                    sortField === field
-                      ? "border-blue-500 text-blue-700 bg-blue-50"
-                      : "border-gray-300 text-gray-600 hover:border-gray-400"
-                  }`}
-                >
-                  <div className="flex items-center space-x-1">
-                    <span>{label}</span>
-                    {getSortIcon(field)}
-                  </div>
-                </button>
-              ))}
-            </div>
-          </div>
-        </div>
-
-        {/* 업로드 진행 상황 */}
-        {isUploading && (
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
-            <div className="flex items-center justify-between mb-2">
-              <h3 className="text-lg font-medium text-blue-900">
-                학생 명단 업로드 중...
-              </h3>
-              <span className="text-sm text-blue-700">
-                {uploadProgress} / {uploadTotal}
-              </span>
-            </div>
-
-            {/* 학교 정보 표시 */}
-            {teacherInfo?.school_id && (
-              <div className="mb-3 p-2 bg-blue-100 border border-blue-300 rounded text-sm text-blue-800">
-                <p>
-                  <strong>등록 학교:</strong> {schoolName || "현재 학교"}
-                </p>
-                <p className="text-xs mt-1">
-                  모든 학생이 이 학교에 자동으로 등록됩니다.
-                </p>
-              </div>
-            )}
-
-            <div className="w-full bg-blue-200 rounded-full h-2">
-              <div
-                className="bg-blue-600 h-2 rounded-full transition-all duration-300"
-                style={{ width: `${(uploadProgress / uploadTotal) * 100}%` }}
-              ></div>
-            </div>
-            <p className="text-sm text-blue-600 mt-2">
-              {uploadProgress}명의 학생 정보를 업로드했습니다. (
-              {Math.round((uploadProgress / uploadTotal) * 100)}%)
+    <div className="mx-auto min-h-screen max-w-7xl bg-gray-50 px-4 pb-16 sm:px-6 lg:px-8">
+      {/* 헤더 */}
+      <div className="mb-8">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="mb-2 text-3xl font-bold text-gray-900">학생 관리</h1>
+            <p className="text-gray-600">
+              학생들의 기본 정보와 교우관계 분석 결과를 확인하고 관리합니다.
             </p>
+            {/* 권한별 접근 범위 표시 */}
+            <div className="mt-2 rounded-lg border border-blue-200 bg-blue-50 p-3">
+              <div className="flex items-center space-x-2">
+                <div className="h-4 w-4 rounded-full bg-[#3F80EA]"></div>
+                <span className="text-sm font-medium text-blue-900">
+                  현재 접근 범위: {getAccessScope().description}
+                </span>
+              </div>
+            </div>
+          </div>
+          <div className="flex space-x-3">
+            <button
+              onClick={handleDownloadTemplate}
+              className="inline-flex items-center rounded-lg bg-green-600 px-4 py-2 text-white transition-colors hover:bg-green-700"
+            >
+              <ArrowDownTrayIcon className="mr-2 h-5 w-5" />
+              엑셀 템플릿 다운로드
+            </button>
+            <button
+              onClick={handleUploadStudents}
+              className="inline-flex items-center rounded-lg bg-[#3F80EA] px-4 py-2 text-white transition-colors hover:bg-blue-600"
+              title={
+                teacherInfo?.school_id
+                  ? `${schoolName || "현재 학교"}에 학생 등록`
+                  : "학교 정보가 없습니다"
+              }
+            >
+              <ArrowUpTrayIcon className="mr-2 h-5 w-5" />
+              학생 명단 업로드
+              {teacherInfo?.school_id && (
+                <span className="ml-2 rounded bg-blue-500 px-2 py-1 text-xs text-white">
+                  {schoolName || "현재 학교"}
+                </span>
+              )}
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* 담임 정보 표시 */}
+      {teacherInfo &&
+        (teacherInfo.role === "homeroom_teacher" ||
+          teacherInfo.role === "grade_teacher") && (
+          <div className="mb-6 rounded-lg border border-blue-200 bg-blue-50 p-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-3">
+                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gray-300">
+                  <span className="text-sm font-semibold text-white">담</span>
+                </div>
+                <div>
+                  <h3 className="text-lg font-medium text-blue-900">
+                    {teacherInfo.name || currentUser?.email}{" "}
+                    {getRoleDisplayName(teacherInfo.role)}
+                  </h3>
+                  <p className="text-sm text-blue-700">
+                    {teacherInfo.grade_level}학년 {teacherInfo.class_number}반
+                    담당
+                  </p>
+                </div>
+              </div>
+              <div className="text-sm text-blue-600">
+                학년과 반이 자동으로 고정되었습니다
+              </div>
+            </div>
           </div>
         )}
 
-        {/* 학생 목록 */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-4 gap-4">
-          {sortedStudents.length === 0 ? (
-            <div className="col-span-full bg-white rounded-lg border border-gray-200 p-12 text-center">
-              <svg
-                className="mx-auto h-12 w-12 text-gray-400 mb-4"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"
-                />
-              </svg>
-              <h3 className="text-lg font-medium text-gray-900 mb-2">
-                학생이 없습니다
-              </h3>
-              <p className="text-gray-500">검색 조건을 변경해보세요.</p>
+      {/* 검색 및 필터 */}
+      <div className="mb-6 rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
+        {/* 필터 및 통계 정보 */}
+        <div className="mb-4 rounded-lg bg-gray-50 p-3 text-sm text-gray-600">
+          <div className="flex flex-wrap gap-4">
+            <div>
+              <strong>학년 옵션:</strong> {getGradeOptions().length}개 (
+              {getGradeOptions().join(", ") || "없음"})
             </div>
-          ) : (
-            sortedStudents.map((student) => (
-              <div
-                key={student.id}
-                className="bg-white border border-gray-200 rounded-lg p-6 hover:shadow-md transition-shadow"
-              >
-                <div className="flex items-start justify-between mb-4">
-                  <div className="flex items-center space-x-4">
-                    <div className="w-12 h-12 bg-gray-300 rounded-full flex items-center justify-center">
-                      <span className="text-white font-semibold">
-                        {student.name.charAt(0)}
-                      </span>
-                    </div>
-                    <div>
-                      <h3 className="text-lg font-semibold text-gray-900">
-                        {student.name}
-                      </h3>
-                      <p className="text-sm text-gray-600">
-                        {student.grade}학년 {student.class}반{" "}
-                        {parseInt(student.student_number)}번
-                      </p>
-                    </div>
-                  </div>
+            <div>
+              <strong>반 옵션:</strong> {getClassOptions().length}개 (
+              {getClassOptions().join(", ") || "없음"})
+            </div>
+            <div>
+              <strong>현재 필터:</strong> {gradeFilter}학년 {classFilter}반
+              {(teacherInfo?.role === "homeroom_teacher" ||
+                teacherInfo?.role === "grade_teacher") &&
+                " (담임 고정)"}
+            </div>
+            <div>
+              <strong>표시 학생:</strong> {filteredStudents.length}명 /{" "}
+              {students.length}명
+            </div>
+          </div>
 
-                  <span
-                    className={`px-2 py-1 rounded-full text-xs font-medium ${getRiskColor(
-                      getRiskLevel(student)
-                    )}`}
-                  >
-                    {getRiskLabel(getRiskLevel(student))}
-                  </span>
-                </div>
-
-                {/* 메모 수 */}
-                <div className="mb-4 text-sm">
-                  <span className="text-gray-600">교사 메모:</span>
-                  <span className="ml-2 text-gray-900">
-                    {student.teacher_memos?.length || 0}개
-                  </span>
-                  <span className="ml-4 text-gray-600">개입 기록:</span>
-                  <span className="ml-2 text-gray-900">
-                    {student.intervention_logs?.length || 0}개
-                  </span>
-                </div>
-
-                <div className="flex space-x-2">
-                  <button
-                    onClick={() => handleViewDetails(student)}
-                    className="flex-1 bg-[#3F80EA] text-white py-2 px-4 rounded-md text-sm font-medium hover:bg-blue-600 transition-colors"
-                  >
-                    상세보기
-                  </button>
-                  <button
-                    onClick={() => handleAddMemo(student)}
-                    className="bg-gray-100 text-gray-700 py-2 px-4 rounded-md text-sm font-medium hover:bg-gray-200 transition-colors"
-                  >
-                    메모 추가
-                  </button>
-                </div>
+          {/* 담임 정보 표시 */}
+          {(teacherInfo?.role === "homeroom_teacher" ||
+            teacherInfo?.role === "grade_teacher") &&
+            teacherInfo.grade_level &&
+            teacherInfo.class_number && (
+              <div className="mt-3 rounded border border-blue-200 bg-blue-50 p-2 text-xs text-blue-800">
+                🎯 {getRoleDisplayName(teacherInfo.role)}:{" "}
+                {teacherInfo.grade_level}학년 {teacherInfo.class_number}반 -
+                담당 반 학생만 표시
               </div>
-            ))
-          )}
+            )}
         </div>
+
+        {/* 위험도 통계 */}
+        <div className="mb-6 rounded-lg border border-red-200 bg-gradient-to-r from-red-50 to-yellow-50 p-4">
+          <h3 className="mb-3 text-lg font-semibold text-red-900">
+            📊 위험도별 학생 현황
+          </h3>
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+            <div className="rounded-lg border border-red-300 bg-red-100 p-3 text-center">
+              <div className="text-2xl font-bold text-red-800">
+                {getHighRiskStudentCount()}
+              </div>
+              <div className="text-sm font-medium text-red-700">주의 필요</div>
+              <div className="text-xs text-red-600">중심성 &lt; 0.3</div>
+            </div>
+            <div className="rounded-lg border border-yellow-300 bg-yellow-100 p-3 text-center">
+              <div className="text-2xl font-bold text-yellow-800">
+                {getRiskLevelCounts().medium}
+              </div>
+              <div className="text-sm font-medium text-yellow-700">관찰 중</div>
+              <div className="text-xs text-yellow-600">중심성 0.3~0.6</div>
+            </div>
+            <div className="rounded-lg border border-green-300 bg-green-100 p-3 text-center">
+              <div className="text-2xl font-bold text-green-800">
+                {getRiskLevelCounts().low}
+              </div>
+              <div className="text-sm font-medium text-green-700">안정</div>
+              <div className="text-xs text-green-600">중심성 &ge; 0.6</div>
+            </div>
+          </div>
+          <div className="mt-3 text-center text-sm text-red-700">
+            🚨 <strong>주의 학생 수: {getHighRiskStudentCount()}명</strong> -
+            즉시 관찰 및 개입이 필요한 학생들
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
+          {/* 검색 */}
+          <div className="relative">
+            <input
+              type="text"
+              placeholder="Q 학생 이름 또는 학번 검색..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full rounded-lg border border-gray-300 py-2 pl-10 pr-4 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+            <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
+              <MagnifyingGlassIcon className="h-5 w-5 text-gray-400" />
+            </div>
+          </div>
+
+          {/* 학년 필터 */}
+          <select
+            value={gradeFilter}
+            onChange={(e) => setGradeFilter(e.target.value)}
+            disabled={teacherInfo?.role === "homeroom_teacher"}
+            className={`rounded-lg border border-gray-300 px-4 py-2 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+              teacherInfo?.role === "homeroom_teacher"
+                ? "cursor-not-allowed bg-gray-100"
+                : ""
+            }`}
+          >
+            <option value="all">모든 학년</option>
+            {getGradeOptions().map((grade) => (
+              <option key={grade} value={grade}>
+                {grade}학년
+              </option>
+            ))}
+            {/* 디버깅용: 실제 옵션 개수 표시 */}
+            {getGradeOptions().length === 0 && (
+              <option disabled>학년 데이터 없음</option>
+            )}
+          </select>
+
+          {/* 반 필터 */}
+          <select
+            value={classFilter}
+            onChange={(e) => setClassFilter(e.target.value)}
+            disabled={teacherInfo?.role === "homeroom_teacher"}
+            className={`rounded-lg border border-gray-300 px-4 py-2 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+              teacherInfo?.role === "homeroom_teacher"
+                ? "cursor-not-allowed bg-gray-100"
+                : ""
+            }`}
+          >
+            <option value="all">모든 반</option>
+            {getClassOptions().map((cls) => (
+              <option key={cls} value={cls}>
+                {cls}반
+              </option>
+            ))}
+            {/* 디버깅용: 실제 옵션 개수 표시 */}
+            {getClassOptions().length === 0 && (
+              <option disabled>반 데이터 없음</option>
+            )}
+          </select>
+
+          {/* 위험도 필터 */}
+          <select
+            value={riskFilter}
+            onChange={(e) => setRiskFilter(e.target.value)}
+            className="rounded-lg border border-gray-300 px-4 py-2 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-blue-500"
+          >
+            <option value="all">모든 위험도</option>
+            <option value="high">주의 필요</option>
+            <option value="medium">관찰 중</option>
+            <option value="low">안정</option>
+          </select>
+        </div>
+      </div>
+
+      {/* 정렬 옵션 */}
+      <div className="mb-6 rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
+        <div className="flex items-center justify-between">
+          <h3 className="text-sm font-medium text-gray-700">정렬 기준</h3>
+          <div className="flex space-x-2">
+            {[
+              { field: "name", label: "이름" },
+              // { field: 'grade', label: '학년' },
+              // { field: 'class', label: '반' },
+              { field: "student_number", label: "번호" },
+              { field: "risk_level", label: "위험도" },
+              { field: "network_centrality", label: "교우관계 중심성" },
+            ].map(({ field, label }) => (
+              <button
+                key={field}
+                onClick={() => toggleSort(field)}
+                className={`rounded-md border px-3 py-1 text-sm transition-colors ${
+                  sortField === field
+                    ? "border-blue-500 bg-blue-50 text-blue-700"
+                    : "border-gray-300 text-gray-600 hover:border-gray-400"
+                }`}
+              >
+                <div className="flex items-center space-x-1">
+                  <span>{label}</span>
+                  {getSortIcon(field)}
+                </div>
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* 업로드 진행 상황 */}
+      {isUploading && (
+        <div className="mb-6 rounded-lg border border-blue-200 bg-blue-50 p-4">
+          <div className="mb-2 flex items-center justify-between">
+            <h3 className="text-lg font-medium text-blue-900">
+              학생 명단 업로드 중...
+            </h3>
+            <span className="text-sm text-blue-700">
+              {uploadProgress} / {uploadTotal}
+            </span>
+          </div>
+
+          {/* 학교 정보 표시 */}
+          {teacherInfo?.school_id && (
+            <div className="mb-3 rounded border border-blue-300 bg-blue-100 p-2 text-sm text-blue-800">
+              <p>
+                <strong>등록 학교:</strong> {schoolName || "현재 학교"}
+              </p>
+              <p className="mt-1 text-xs">
+                모든 학생이 이 학교에 자동으로 등록됩니다.
+              </p>
+            </div>
+          )}
+
+          <div className="h-2 w-full rounded-full bg-blue-200">
+            <div
+              className="h-2 rounded-full bg-blue-600 transition-all duration-300"
+              style={{ width: `${(uploadProgress / uploadTotal) * 100}%` }}
+            ></div>
+          </div>
+          <p className="mt-2 text-sm text-blue-600">
+            {uploadProgress}명의 학생 정보를 업로드했습니다. (
+            {Math.round((uploadProgress / uploadTotal) * 100)}%)
+          </p>
+        </div>
+      )}
+
+      {/* 학생 목록 */}
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-4">
+        {sortedStudents.length === 0 ? (
+          <div className="col-span-full rounded-lg border border-gray-200 bg-white p-12 text-center">
+            <svg
+              className="mx-auto mb-4 h-12 w-12 text-gray-400"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"
+              />
+            </svg>
+            <h3 className="mb-2 text-lg font-medium text-gray-900">
+              학생이 없습니다
+            </h3>
+            <p className="text-gray-500">검색 조건을 변경해보세요.</p>
+          </div>
+        ) : (
+          sortedStudents.map((student) => (
+            <div
+              key={student.id}
+              className="rounded-lg border border-gray-200 bg-white p-6 transition-shadow hover:shadow-md"
+            >
+              <div className="mb-4 flex items-start justify-between">
+                <div className="flex items-center space-x-4">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-full bg-gray-300">
+                    <span className="font-semibold text-white">
+                      {student.name.charAt(0)}
+                    </span>
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-semibold text-gray-900">
+                      {student.name}
+                    </h3>
+                    <p className="text-sm text-gray-600">
+                      {student.grade}학년 {student.class}반{" "}
+                      {parseInt(student.student_number)}번
+                    </p>
+                  </div>
+                </div>
+
+                <span
+                  className={`rounded-full px-2 py-1 text-xs font-medium ${getRiskColor(
+                    getRiskLevel(student),
+                  )}`}
+                >
+                  {getRiskLabel(getRiskLevel(student))}
+                </span>
+              </div>
+
+              {/* 메모 수 */}
+              <div className="mb-4 text-sm">
+                <span className="text-gray-600">교사 메모:</span>
+                <span className="ml-2 text-gray-900">
+                  {student.teacher_memos?.length || 0}개
+                </span>
+                <span className="ml-4 text-gray-600">개입 기록:</span>
+                <span className="ml-2 text-gray-900">
+                  {student.intervention_logs?.length || 0}개
+                </span>
+              </div>
+
+              <div className="flex space-x-2">
+                <button
+                  onClick={() => handleViewDetails(student)}
+                  className="flex-1 rounded-md bg-[#3F80EA] px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-blue-600"
+                >
+                  상세보기
+                </button>
+                <button
+                  onClick={() => handleAddMemo(student)}
+                  className="rounded-md bg-gray-100 px-4 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-200"
+                >
+                  메모 추가
+                </button>
+              </div>
+            </div>
+          ))
+        )}
       </div>
 
       {/* 상세보기 모달 */}
       {detailModalOpen && selectedStudent && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4">
+          <div className="max-h-[90vh] w-full max-w-4xl overflow-y-auto rounded-lg bg-white">
             {/* 모달 헤더 */}
-            <div className="flex items-center justify-between p-6 border-b border-gray-200">
+            <div className="flex items-center justify-between border-b border-gray-200 p-6">
               <h2 className="text-2xl font-bold text-gray-900">
                 {selectedStudent.name} 상세 정보
               </h2>
               <button
                 onClick={closeDetailModal}
-                className="text-gray-400 hover:text-gray-600 transition-colors"
+                className="text-gray-400 transition-colors hover:text-gray-600"
               >
-                <XMarkIcon className="w-6 h-6" />
+                <XMarkIcon className="h-6 w-6" />
               </button>
             </div>
 
             {/* 모달 내용 */}
-            <div className="p-6 space-y-6">
+            <div className="space-y-6 p-6">
               {/* 기본 정보 */}
               <div>
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                <h3 className="mb-4 text-lg font-semibold text-gray-900">
                   기본 정보
                 </h3>
                 <div className="grid grid-cols-2 gap-4 text-sm">
                   <div>
                     <span className="text-gray-600">학생 번호:</span>
-                    <span className="ml-2 text-gray-900 font-medium text-blue-600">
+                    <span className="ml-2 font-medium text-blue-600 text-gray-900">
                       {parseInt(selectedStudent.student_number)}번
                     </span>
                   </div>
@@ -1681,7 +1673,7 @@ const StudentManagement: React.FC = () => {
                     <span className="text-gray-600">입학일:</span>
                     <span className="ml-2 text-gray-900">
                       {new Date(
-                        selectedStudent.enrolled_at
+                        selectedStudent.enrolled_at,
                       ).toLocaleDateString()}
                     </span>
                   </div>
@@ -1702,7 +1694,7 @@ const StudentManagement: React.FC = () => {
 
               {/* 학부모 연락처 */}
               <div>
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                <h3 className="mb-4 text-lg font-semibold text-gray-900">
                   학부모 연락처
                 </h3>
                 {selectedStudent.parent_contact &&
@@ -1789,12 +1781,12 @@ const StudentManagement: React.FC = () => {
                 typeof selectedStudent.network_metrics === "object" &&
                 selectedStudent.network_metrics !== null && (
                   <div>
-                    <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                    <h3 className="mb-4 text-lg font-semibold text-gray-900">
                       교우관계 분석
                     </h3>
                     <div className="space-y-4">
                       <div>
-                        <h4 className="text-md font-medium text-gray-700 mb-2">
+                        <h4 className="text-md mb-2 font-medium text-gray-700">
                           중심성 지수
                         </h4>
                         <div className="grid grid-cols-3 gap-4 text-sm">
@@ -1803,7 +1795,7 @@ const StudentManagement: React.FC = () => {
                             <span className="ml-2 text-gray-900">
                               {safeStringify(
                                 (selectedStudent.network_metrics as any)
-                                  ?.centrality_scores?.centrality || "N/A"
+                                  ?.centrality_scores?.centrality || "N/A",
                               )}
                             </span>
                           </div>
@@ -1812,7 +1804,7 @@ const StudentManagement: React.FC = () => {
                             <span className="ml-2 text-gray-900">
                               {safeStringify(
                                 (selectedStudent.network_metrics as any)
-                                  ?.centrality_scores?.betweenness || "N/A"
+                                  ?.centrality_scores?.betweenness || "N/A",
                               )}
                             </span>
                           </div>
@@ -1821,7 +1813,7 @@ const StudentManagement: React.FC = () => {
                             <span className="ml-2 text-gray-900">
                               {safeStringify(
                                 (selectedStudent.network_metrics as any)
-                                  ?.centrality_scores?.closeness || "N/A"
+                                  ?.centrality_scores?.closeness || "N/A",
                               )}
                             </span>
                           </div>
@@ -1833,7 +1825,7 @@ const StudentManagement: React.FC = () => {
                           <span className="ml-2 text-gray-900">
                             {safeStringify(
                               (selectedStudent.network_metrics as any)
-                                ?.community_membership || "N/A"
+                                ?.community_membership || "N/A",
                             )}
                           </span>
                         </div>
@@ -1842,8 +1834,8 @@ const StudentManagement: React.FC = () => {
                             네트워크 위험도:
                           </span>
                           <span
-                            className={`ml-2 px-2 py-1 rounded-full text-xs font-medium ${getRiskColor(
-                              getRiskLevel(selectedStudent)
+                            className={`ml-2 rounded-full px-2 py-1 text-xs font-medium ${getRiskColor(
+                              getRiskLevel(selectedStudent),
                             )}`}
                           >
                             {getRiskLabel(getRiskLevel(selectedStudent))}
@@ -1867,7 +1859,7 @@ const StudentManagement: React.FC = () => {
                         <span className="ml-2 text-gray-900">
                           {safeStringify(
                             (selectedStudent.network_metrics as any)
-                              ?.recommendations || "N/A"
+                              ?.recommendations || "N/A",
                           )}
                         </span>
                       </div>
@@ -1877,7 +1869,7 @@ const StudentManagement: React.FC = () => {
 
               {/* 교사 메모 */}
               <div>
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                <h3 className="mb-4 text-lg font-semibold text-gray-900">
                   교사 메모
                 </h3>
                 {selectedStudent.teacher_memos &&
@@ -1887,9 +1879,9 @@ const StudentManagement: React.FC = () => {
                     {selectedStudent.teacher_memos.map((memo, index) => (
                       <div
                         key={memo.id || index}
-                        className="bg-gray-50 p-4 rounded-lg"
+                        className="rounded-lg bg-gray-50 p-4"
                       >
-                        <div className="flex justify-between items-start mb-2">
+                        <div className="mb-2 flex items-start justify-between">
                           <span className="text-sm text-gray-600">
                             {memo.created_at
                               ? new Date(memo.created_at).toLocaleDateString()
@@ -1928,18 +1920,18 @@ const StudentManagement: React.FC = () => {
 
       {/* 메모 추가 모달 */}
       {memoModalOpen && selectedStudent && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg max-w-2xl w-full">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4">
+          <div className="w-full max-w-2xl rounded-lg bg-white">
             {/* 모달 헤더 */}
-            <div className="flex items-center justify-between p-6 border-b border-gray-200">
+            <div className="flex items-center justify-between border-b border-gray-200 p-6">
               <h2 className="text-xl font-bold text-gray-900">
                 {selectedStudent.name} 학생 메모 추가
               </h2>
               <button
                 onClick={closeMemoModal}
-                className="text-gray-400 hover:text-gray-600 transition-colors"
+                className="text-gray-400 transition-colors hover:text-gray-600"
               >
-                <XMarkIcon className="w-6 h-6" />
+                <XMarkIcon className="h-6 w-6" />
               </button>
             </div>
 
@@ -1948,7 +1940,7 @@ const StudentManagement: React.FC = () => {
               <div className="mb-4">
                 <label
                   htmlFor="memoContent"
-                  className="block text-sm font-medium text-gray-700 mb-2"
+                  className="mb-2 block text-sm font-medium text-gray-700"
                 >
                   메모 내용
                 </label>
@@ -1957,7 +1949,7 @@ const StudentManagement: React.FC = () => {
                   value={newMemoContent}
                   onChange={(e) => setNewMemoContent(e.target.value)}
                   rows={6}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full rounded-md border border-gray-300 px-3 py-2 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-blue-500"
                   placeholder="학생에 대한 메모를 입력하세요..."
                 />
               </div>
@@ -1965,13 +1957,13 @@ const StudentManagement: React.FC = () => {
               <div className="flex justify-end space-x-3">
                 <button
                   onClick={closeMemoModal}
-                  className="px-4 py-2 text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200 transition-colors"
+                  className="rounded-md bg-gray-100 px-4 py-2 text-gray-700 transition-colors hover:bg-gray-200"
                 >
                   취소
                 </button>
                 <button
                   onClick={handleSaveMemo}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+                  className="rounded-md bg-blue-600 px-4 py-2 text-white transition-colors hover:bg-blue-700"
                 >
                   저장
                 </button>

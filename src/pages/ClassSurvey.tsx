@@ -543,7 +543,7 @@ const ClassSurvey: React.FC = () => {
   }
 
   return (
-    <div className="mx-auto min-h-screen max-w-7xl flex-col bg-gray-50 pb-16">
+    <div className="mx-auto min-h-screen max-w-7xl bg-gray-50 px-4 pb-16 sm:px-6 lg:px-8">
       {/* 상단 사이드바 */}
       <div className="mb-4 h-fit w-full rounded-lg border border-gray-200 bg-white">
         <div className="p-6">

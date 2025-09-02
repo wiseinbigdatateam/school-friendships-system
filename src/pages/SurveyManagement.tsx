@@ -53,13 +53,13 @@ const SurveyItem: React.FC<{
   };
 
   return (
-    <div className="bg-white border border-gray-200 rounded-lg p-6 hover:shadow-md transition-shadow">
-      <div className="flex items-start justify-between mb-4">
+    <div className="rounded-lg border border-gray-200 bg-white p-6 transition-shadow hover:shadow-md">
+      <div className="mb-4 flex items-start justify-between">
         <div className="flex-1">
-          <h3 className="text-lg font-semibold text-gray-900 mb-2">
+          <h3 className="mb-2 text-lg font-semibold text-gray-900">
             {survey.title}
           </h3>
-          <p className="text-sm text-gray-600 mb-3 line-clamp-2">
+          <p className="mb-3 line-clamp-2 text-sm text-gray-600">
             {survey.description}
           </p>
 
@@ -77,9 +77,9 @@ const SurveyItem: React.FC<{
             value={survey.status}
             onChange={(e) => handleStatusChange(e.target.value)}
             disabled={isStatusChanging}
-            className={`px-2 py-1 rounded-full text-xs font-medium border-0 focus:ring-2 focus:ring-blue-500 transition-all ${
+            className={`rounded-full border-0 px-2 py-1 text-xs font-medium transition-all focus:ring-2 focus:ring-blue-500 ${
               isStatusChanging
-                ? "opacity-50 cursor-not-allowed"
+                ? "cursor-not-allowed opacity-50"
                 : "cursor-pointer"
             } ${statusConfig?.color || "bg-gray-100 text-gray-800"}`}
           >
@@ -91,7 +91,7 @@ const SurveyItem: React.FC<{
           {isStatusChanging && (
             <div className="flex items-center text-xs text-blue-600">
               <svg
-                className="animate-spin w-3 h-3 mr-1"
+                className="mr-1 h-3 w-3 animate-spin"
                 fill="none"
                 viewBox="0 0 24 24"
               >
@@ -129,10 +129,10 @@ const SurveyItem: React.FC<{
             {(survey.status === "active" || survey.status === "draft") && (
               <button
                 onClick={() => onGetSurveyLink(survey)}
-                className="inline-flex items-center px-3 py-1.5 bg-purple-100 text-purple-700 text-xs font-medium rounded-full hover:bg-purple-200 transition-colors"
+                className="inline-flex items-center rounded-full bg-purple-100 px-3 py-1.5 text-xs font-medium text-purple-700 transition-colors hover:bg-purple-200"
               >
                 <svg
-                  className="w-3 h-3 mr-1"
+                  className="mr-1 h-3 w-3"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -150,10 +150,10 @@ const SurveyItem: React.FC<{
             {survey.status === "active" && (
               <button
                 onClick={() => onMonitor(survey)}
-                className="inline-flex items-center px-3 py-1.5 bg-orange-100 text-orange-700 text-xs font-medium rounded-full hover:bg-orange-200 transition-colors"
+                className="inline-flex items-center rounded-full bg-orange-100 px-3 py-1.5 text-xs font-medium text-orange-700 transition-colors hover:bg-orange-200"
               >
                 <svg
-                  className="w-3 h-3 mr-1"
+                  className="mr-1 h-3 w-3"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -172,7 +172,7 @@ const SurveyItem: React.FC<{
             {survey.status !== "active" && survey.status !== "completed" && (
               <button
                 onClick={() => onEdit(survey)}
-                className="text-blue-600 hover:text-blue-700 text-sm font-medium"
+                className="text-sm font-medium text-blue-600 hover:text-blue-700"
               >
                 수정
               </button>
@@ -181,7 +181,7 @@ const SurveyItem: React.FC<{
             {survey.status !== "active" && (
               <button
                 onClick={() => onDelete(survey.id)}
-                className="text-red-600 hover:text-red-700 text-sm font-medium"
+                className="text-sm font-medium text-red-600 hover:text-red-700"
               >
                 삭제
               </button>
@@ -190,7 +190,7 @@ const SurveyItem: React.FC<{
         </div>
       </div>
 
-      <div className="flex items-center justify-between pt-3 border-t border-gray-100">
+      <div className="flex items-center justify-between border-t border-gray-100 pt-3">
         <div className="text-xs text-gray-500">
           생성일: {new Date(survey.created_at || "").toLocaleDateString()}
         </div>
@@ -211,11 +211,11 @@ const SurveyManagement: React.FC = () => {
   // const [isCreateModalOpen, setIsCreateModalOpen] = useState(false); // 새 설문 생성 주석 처리
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editingSurvey, setEditingSurvey] = useState<SurveyWithStats | null>(
-    null
+    null,
   );
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [deletingSurvey, setDeletingSurvey] = useState<SurveyWithStats | null>(
-    null
+    null,
   );
   // const [isMobileSendModalOpen, setIsMobileSendModalOpen] = useState(false);
   // const [selectedSurveyForMobile, setSelectedSurveyForMobile] = useState<SurveyWithStats | null>(null);
@@ -323,7 +323,7 @@ const SurveyManagement: React.FC = () => {
         surveysData = await SurveyService.getSurveysBySchoolGradeClass(
           userSchoolId,
           teacherInfo.grade_level.toString(),
-          teacherInfo.class_number.toString()
+          teacherInfo.class_number.toString(),
         );
 
         console.log("🔍 담임교사용 설문 데이터 로드 완료:", {
@@ -349,7 +349,7 @@ const SurveyManagement: React.FC = () => {
 
         surveysData = await SurveyService.getSurveysBySchoolGradeClass(
           userSchoolId,
-          teacherInfo.grade_level.toString()
+          teacherInfo.grade_level.toString(),
         );
 
         console.log("🔍 학년부장용 설문 데이터 로드 완료:", {
@@ -369,7 +369,7 @@ const SurveyManagement: React.FC = () => {
         if (statusFilter !== "all") {
           surveysData = await SurveyService.getSurveysByStatus(
             userSchoolId,
-            statusFilter as "draft" | "active" | "completed" | "archived"
+            statusFilter as "draft" | "active" | "completed" | "archived",
           );
         } else {
           surveysData = await SurveyService.getAllSurveys(userSchoolId);
@@ -391,7 +391,7 @@ const SurveyManagement: React.FC = () => {
         if (statusFilter !== "all") {
           surveysData = await SurveyService.getSurveysByStatus(
             userSchoolId,
-            statusFilter as "draft" | "active" | "completed" | "archived"
+            statusFilter as "draft" | "active" | "completed" | "archived",
           );
         } else {
           surveysData = await SurveyService.getAllSurveys(userSchoolId);
@@ -413,7 +413,7 @@ const SurveyManagement: React.FC = () => {
         if (statusFilter !== "all") {
           surveysData = await SurveyService.getSurveysByStatus(
             userSchoolId,
-            statusFilter as "draft" | "active" | "completed" | "archived"
+            statusFilter as "draft" | "active" | "completed" | "archived",
           );
         } else {
           surveysData = await SurveyService.getAllSurveys(userSchoolId);
@@ -432,10 +432,13 @@ const SurveyManagement: React.FC = () => {
 
       console.log("🔍 필터링 전 설문 데이터:", {
         total: surveysData.length,
-        byStatus: surveysData.reduce((acc, s) => {
-          acc[s.status] = (acc[s.status] || 0) + 1;
-          return acc;
-        }, {} as Record<string, number>),
+        byStatus: surveysData.reduce(
+          (acc, s) => {
+            acc[s.status] = (acc[s.status] || 0) + 1;
+            return acc;
+          },
+          {} as Record<string, number>,
+        ),
         allSurveys: surveysData.map((s) => ({
           id: s.id,
           title: s.title,
@@ -646,8 +649,8 @@ const SurveyManagement: React.FC = () => {
       if (updatedSurvey) {
         setSurveys((prev) =>
           prev.map((survey) =>
-            survey.id === editingSurvey.id ? updatedSurvey : survey
-          )
+            survey.id === editingSurvey.id ? updatedSurvey : survey,
+          ),
         );
         setIsEditModalOpen(false);
         setEditingSurvey(null);
@@ -682,7 +685,7 @@ const SurveyManagement: React.FC = () => {
         // 목록에서 삭제된 설문 제거
         setSurveys((prev) => {
           const updatedSurveys = prev.filter(
-            (survey) => survey.id !== deletingSurvey.id
+            (survey) => survey.id !== deletingSurvey.id,
           );
           console.log("🔍 설문 목록 업데이트:", {
             이전: prev.length,
@@ -739,7 +742,7 @@ const SurveyManagement: React.FC = () => {
       const methodName = methodMap[method] || "SMS 문자";
 
       alert(
-        `모바일 설문 발송이 완료되었습니다!\n\n발송 방법: ${methodName}\n학생들에게 설문 링크가 전송되었습니다.`
+        `모바일 설문 발송이 완료되었습니다!\n\n발송 방법: ${methodName}\n학생들에게 설문 링크가 전송되었습니다.`,
       );
     } catch (error) {
       console.error("Failed to send mobile survey:", error);
@@ -817,7 +820,7 @@ const SurveyManagement: React.FC = () => {
 
       const success = await SurveyService.updateSurveyStatus(
         surveyId,
-        newStatus
+        newStatus,
       );
 
       if (success) {
@@ -830,8 +833,8 @@ const SurveyManagement: React.FC = () => {
                   status: newStatus,
                   updated_at: new Date().toISOString(),
                 }
-              : survey
-          )
+              : survey,
+          ),
         );
 
         console.log("🔍 설문 상태 변경 성공:", {
@@ -853,7 +856,7 @@ const SurveyManagement: React.FC = () => {
             statusLabels[currentSurvey.status as keyof typeof statusLabels]
           }'에서 '${
             statusLabels[newStatus as keyof typeof statusLabels]
-          }'로 변경되었습니다.`
+          }'로 변경되었습니다.`,
         );
 
         // 설문 상태 변경 알림 생성
@@ -867,7 +870,7 @@ const SurveyManagement: React.FC = () => {
               newStatus: newStatus,
               surveyId: surveyId,
             },
-            "info"
+            "info",
           );
 
           // 권한별 알림 생성 (학년부장, 학교 관리자 등)
@@ -887,7 +890,7 @@ const SurveyManagement: React.FC = () => {
                 }로 변경되었습니다.`,
                 type: "info",
                 category: "설문",
-              }
+              },
             );
           }
         } catch (error) {
@@ -953,91 +956,90 @@ const SurveyManagement: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600"></div>
+      <div className="flex min-h-screen items-center justify-center bg-gray-50">
+        <div className="h-32 w-32 animate-spin rounded-full border-b-2 border-blue-600"></div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 pb-16">
-      <div className="max-w-7xl mx-auto">
-        {/* 헤더 */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">설문 관리</h1>
-          <p className="text-gray-600">
-            교우관계 분석을 위한 설문조사를 생성하고 관리합니다.
-          </p>
-        </div>
+    <div className="mx-auto min-h-screen max-w-7xl bg-gray-50 px-4 pb-16 sm:px-6 lg:px-8">
+      {/* 헤더 */}
+      <div className="mb-8">
+        <h1 className="mb-2 text-3xl font-bold text-gray-900">설문 관리</h1>
+        <p className="text-gray-600">
+          교우관계 분석을 위한 설문조사를 생성하고 관리합니다.
+        </p>
+      </div>
 
-        {/* 에러 메시지 */}
-        {error && (
-          <div className="mb-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
-            <div className="flex">
-              <div className="flex-shrink-0">
+      {/* 에러 메시지 */}
+      {error && (
+        <div className="mb-6 rounded-lg border border-yellow-200 bg-yellow-50 p-4">
+          <div className="flex">
+            <div className="flex-shrink-0">
+              <svg
+                className="h-5 w-5 text-yellow-400"
+                viewBox="0 0 20 20"
+                fill="currentColor"
+              >
+                <path
+                  fillRule="evenodd"
+                  d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z"
+                  clipRule="evenodd"
+                />
+              </svg>
+            </div>
+            <div className="ml-3">
+              <p className="text-sm text-yellow-700">{error}</p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 컨트롤 패널 */}
+      <div className="mb-6 rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
+        <div className="flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
+          <div className="flex flex-1 flex-col gap-4 sm:flex-row">
+            {/* 검색 */}
+            <div className="relative">
+              <input
+                type="text"
+                placeholder="설문 제목 또는 설명 검색..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full rounded-lg border border-gray-300 py-2 pl-10 pr-4 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-blue-500 sm:w-80"
+              />
+              <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
                 <svg
-                  className="h-5 w-5 text-yellow-400"
-                  viewBox="0 0 20 20"
-                  fill="currentColor"
+                  className="h-5 w-5 text-gray-400"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
                 >
                   <path
-                    fillRule="evenodd"
-                    d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z"
-                    clipRule="evenodd"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
                   />
                 </svg>
               </div>
-              <div className="ml-3">
-                <p className="text-sm text-yellow-700">{error}</p>
-              </div>
             </div>
+
+            {/* 상태 필터 */}
+            <select
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+              className="rounded-lg border border-gray-300 px-4 py-2 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="all">모든 상태</option>
+              <option value="active">진행중</option>
+              <option value="completed">완료</option>
+            </select>
           </div>
-        )}
 
-        {/* 컨트롤 패널 */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
-          <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
-            <div className="flex flex-col sm:flex-row gap-4 flex-1">
-              {/* 검색 */}
-              <div className="relative">
-                <input
-                  type="text"
-                  placeholder="설문 제목 또는 설명 검색..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full sm:w-80 pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                />
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <svg
-                    className="h-5 w-5 text-gray-400"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-                    />
-                  </svg>
-                </div>
-              </div>
-
-              {/* 상태 필터 */}
-              <select
-                value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value)}
-                className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              >
-                <option value="all">모든 상태</option>
-                <option value="active">진행중</option>
-                <option value="completed">완료</option>
-              </select>
-            </div>
-
-            {/* 새 설문 생성 버튼 - 주석 처리 */}
-            {/* <button
+          {/* 새 설문 생성 버튼 - 주석 처리 */}
+          {/* <button
               onClick={() => setIsCreateModalOpen(true)}
               className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center space-x-2"
             >
@@ -1046,55 +1048,54 @@ const SurveyManagement: React.FC = () => {
               </svg>
               <span>새 설문 생성</span>
             </button> */}
-          </div>
         </div>
+      </div>
 
-        {/* 설문 목록 */}
-        <div className="space-y-4">
-          {filteredSurveys.length === 0 ? (
-            <div className="bg-white rounded-lg border border-gray-200 p-12 text-center">
-              <svg
-                className="mx-auto h-12 w-12 text-gray-400 mb-4"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                />
-              </svg>
-              <h3 className="text-lg font-medium text-gray-900 mb-2">
-                설문이 없습니다
-              </h3>
-              <p className="text-gray-500 mb-4">
-                새로운 설문을 생성하여 시작해보세요.
-              </p>
-              {/* 첫 설문 생성하기 버튼 - 주석 처리 */}
-              {/* <button
+      {/* 설문 목록 */}
+      <div className="space-y-4">
+        {filteredSurveys.length === 0 ? (
+          <div className="rounded-lg border border-gray-200 bg-white p-12 text-center">
+            <svg
+              className="mx-auto mb-4 h-12 w-12 text-gray-400"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+              />
+            </svg>
+            <h3 className="mb-2 text-lg font-medium text-gray-900">
+              설문이 없습니다
+            </h3>
+            <p className="mb-4 text-gray-500">
+              새로운 설문을 생성하여 시작해보세요.
+            </p>
+            {/* 첫 설문 생성하기 버튼 - 주석 처리 */}
+            {/* <button
                 onClick={() => setIsCreateModalOpen(true)}
                 className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
               >
                 첫 설문 생성하기
               </button> */}
-            </div>
-          ) : (
-            filteredSurveys.map((survey) => (
-              <SurveyItem
-                key={survey.id}
-                survey={survey}
-                onEdit={handleEditSurvey}
-                onDelete={handleDeleteSurvey}
-                // onSendMobile={handleSendMobileSurvey} // 모바일 발송 주석 처리
-                onGetSurveyLink={handleGetSurveyLink}
-                onMonitor={handleMonitorSurvey}
-                onStatusChange={handleStatusChange}
-              />
-            ))
-          )}
-        </div>
+          </div>
+        ) : (
+          filteredSurveys.map((survey) => (
+            <SurveyItem
+              key={survey.id}
+              survey={survey}
+              onEdit={handleEditSurvey}
+              onDelete={handleDeleteSurvey}
+              // onSendMobile={handleSendMobileSurvey} // 모바일 발송 주석 처리
+              onGetSurveyLink={handleGetSurveyLink}
+              onMonitor={handleMonitorSurvey}
+              onStatusChange={handleStatusChange}
+            />
+          ))
+        )}
       </div>
 
       {/* 설문 생성 모달 - 주석 처리 */}
@@ -1126,12 +1127,12 @@ const SurveyManagement: React.FC = () => {
 
       {/* 설문 삭제 확인 모달 */}
       {isDeleteModalOpen && deletingSurvey && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
-            <div className="flex items-center mb-4">
-              <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center mr-3">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+          <div className="mx-4 w-full max-w-md rounded-lg bg-white p-6">
+            <div className="mb-4 flex items-center">
+              <div className="mr-3 flex h-10 w-10 items-center justify-center rounded-full bg-red-100">
                 <svg
-                  className="w-6 h-6 text-red-600"
+                  className="h-6 w-6 text-red-600"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -1150,28 +1151,28 @@ const SurveyManagement: React.FC = () => {
             </div>
 
             <div className="mb-6">
-              <p className="text-gray-600 mb-2">
+              <p className="mb-2 text-gray-600">
                 다음 설문을 삭제하시겠습니까?
               </p>
-              <div className="bg-gray-50 p-3 rounded-lg">
+              <div className="rounded-lg bg-gray-50 p-3">
                 <p className="font-medium text-gray-900">
                   {deletingSurvey.title}
                 </p>
-                <p className="text-sm text-gray-600 mt-1">
+                <p className="mt-1 text-sm text-gray-600">
                   {deletingSurvey.description}
                 </p>
-                <p className="text-xs text-gray-500 mt-2">
+                <p className="mt-2 text-xs text-gray-500">
                   상태:{" "}
                   {deletingSurvey.status === "draft"
                     ? "작성중"
                     : deletingSurvey.status === "active"
-                    ? "진행중"
-                    : deletingSurvey.status === "completed"
-                    ? "완료"
-                    : "보관"}
+                      ? "진행중"
+                      : deletingSurvey.status === "completed"
+                        ? "완료"
+                        : "보관"}
                 </p>
               </div>
-              <p className="text-sm text-red-600 mt-3">
+              <p className="mt-3 text-sm text-red-600">
                 ⚠️ 이 작업은 되돌릴 수 없으며, 설문 응답 데이터도 함께
                 삭제됩니다.
               </p>
@@ -1180,13 +1181,13 @@ const SurveyManagement: React.FC = () => {
             <div className="flex space-x-3">
               <button
                 onClick={cancelDeleteSurvey}
-                className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+                className="flex-1 rounded-lg border border-gray-300 px-4 py-2 text-gray-700 transition-colors hover:bg-gray-50"
               >
                 취소
               </button>
               <button
                 onClick={confirmDeleteSurvey}
-                className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+                className="flex-1 rounded-lg bg-red-600 px-4 py-2 text-white transition-colors hover:bg-red-700"
               >
                 삭제
               </button>
@@ -1197,12 +1198,12 @@ const SurveyManagement: React.FC = () => {
 
       {/* 링크 복사 모달 */}
       {isLinkModalOpen && selectedSurveyForLink && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 max-w-2xl w-full mx-4">
-            <div className="flex items-center mb-4">
-              <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center mr-3">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+          <div className="mx-4 w-full max-w-2xl rounded-lg bg-white p-6">
+            <div className="mb-4 flex items-center">
+              <div className="mr-3 flex h-10 w-10 items-center justify-center rounded-full bg-blue-100">
                 <svg
-                  className="w-6 h-6 text-blue-600"
+                  className="h-6 w-6 text-blue-600"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -1221,8 +1222,8 @@ const SurveyManagement: React.FC = () => {
             </div>
 
             <div className="mb-6">
-              <div className="bg-gray-50 p-4 rounded-lg mb-4">
-                <h4 className="font-medium text-gray-900 mb-2">
+              <div className="mb-4 rounded-lg bg-gray-50 p-4">
+                <h4 className="mb-2 font-medium text-gray-900">
                   {selectedSurveyForLink.title}
                 </h4>
                 <p className="text-sm text-gray-600">
@@ -1232,7 +1233,7 @@ const SurveyManagement: React.FC = () => {
 
               {/* 설문 링크 */}
               <div className="mb-4">
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="mb-2 block text-sm font-medium text-gray-700">
                   설문 링크
                 </label>
                 <div className="flex">
@@ -1240,16 +1241,16 @@ const SurveyManagement: React.FC = () => {
                     type="text"
                     value={`${window.location.origin}/survey/${selectedSurveyForLink.id}`}
                     readOnly
-                    className="flex-1 px-3 py-2 border border-gray-300 rounded-l-lg bg-gray-50 text-gray-900 text-sm"
+                    className="flex-1 rounded-l-lg border border-gray-300 bg-gray-50 px-3 py-2 text-sm text-gray-900"
                   />
                   <button
                     onClick={() => {
                       navigator.clipboard.writeText(
-                        `${window.location.origin}/survey/${selectedSurveyForLink.id}`
+                        `${window.location.origin}/survey/${selectedSurveyForLink.id}`,
                       );
                       toast.success("링크가 클립보드에 복사되었습니다!");
                     }}
-                    className="px-4 py-2 bg-blue-600 text-white rounded-r-lg hover:bg-blue-700 transition-colors text-sm"
+                    className="rounded-r-lg bg-blue-600 px-4 py-2 text-sm text-white transition-colors hover:bg-blue-700"
                   >
                     복사
                   </button>
@@ -1258,23 +1259,23 @@ const SurveyManagement: React.FC = () => {
 
               {/* 문자 메시지 템플릿 */}
               <div className="mb-4">
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="mb-2 block text-sm font-medium text-gray-700">
                   문자 메시지 템플릿
                 </label>
                 <textarea
                   value={`안녕하세요! ${selectedSurveyForLink.title} 설문에 참여해주세요.\n\n설문 링크: ${window.location.origin}/survey/${selectedSurveyForLink.id}\n\n설문 기간: ${selectedSurveyForLink.start_date} ~ ${selectedSurveyForLink.end_date}\n\n많은 참여 부탁드립니다.`}
                   readOnly
                   rows={6}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50 text-gray-900 text-sm resize-none"
+                  className="w-full resize-none rounded-lg border border-gray-300 bg-gray-50 px-3 py-2 text-sm text-gray-900"
                 />
                 <button
                   onClick={() => {
                     navigator.clipboard.writeText(
-                      `안녕하세요! ${selectedSurveyForLink.title} 설문에 참여해주세요.\n\n설문 링크: ${window.location.origin}/survey/${selectedSurveyForLink.id}\n\n설문 기간: ${selectedSurveyForLink.start_date} ~ ${selectedSurveyForLink.end_date}\n\n많은 참여 부탁드립니다.`
+                      `안녕하세요! ${selectedSurveyForLink.title} 설문에 참여해주세요.\n\n설문 링크: ${window.location.origin}/survey/${selectedSurveyForLink.id}\n\n설문 기간: ${selectedSurveyForLink.start_date} ~ ${selectedSurveyForLink.end_date}\n\n많은 참여 부탁드립니다.`,
                     );
                     toast.success("메시지가 클립보드에 복사되었습니다!");
                   }}
-                  className="mt-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm"
+                  className="mt-2 rounded-lg bg-green-600 px-4 py-2 text-sm text-white transition-colors hover:bg-green-700"
                 >
                   메시지 복사
                 </button>
@@ -1287,7 +1288,7 @@ const SurveyManagement: React.FC = () => {
                   setIsLinkModalOpen(false);
                   setSelectedSurveyForLink(null);
                 }}
-                className="px-6 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"
+                className="rounded-lg bg-gray-600 px-6 py-2 text-white transition-colors hover:bg-gray-700"
               >
                 닫기
               </button>

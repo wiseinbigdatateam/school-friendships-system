@@ -392,7 +392,7 @@ const IndividualAnalysis: React.FC = () => {
   }
 
   return (
-    <div className="mx-auto min-h-screen max-w-7xl bg-gray-50 pb-16">
+    <div className="mx-auto min-h-screen max-w-7xl bg-gray-50 px-4 pb-16 sm:px-6 lg:px-8">
       {/* 상단 내비게이션 바 */}
       <div className="rounded-t-lg bg-white">
         <div className="w-full px-4 py-4 sm:px-6 lg:px-8">
