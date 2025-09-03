@@ -14,15 +14,17 @@ function AccordionList({ tabMenu, onItemSelect }: AccordionListProps) {
     accordionData.usagePlan,
   );
 
-  const handleCloseAccordion = () => {
-    setOpenItem(null);
-    setIsToggleActive(false);
-  };
-
-  const handleOpenAccordion = (id: string) => {
-    setOpenItem(id);
-    setIsToggleActive(true);
-    onItemSelect(id);
+  const handleAccordion = (id: string) => {
+    if (openItem === id && isToggleActive) {
+      // 현재 열린 아이템을 다시 클릭하면 닫기
+      setOpenItem(null);
+      setIsToggleActive(false);
+    } else {
+      // 다른 아이템을 클릭하거나 닫힌 상태에서 클릭하면 열기
+      setOpenItem(id);
+      setIsToggleActive(true);
+      onItemSelect(id);
+    }
   };
 
   useEffect(() => {
@@ -46,10 +48,11 @@ function AccordionList({ tabMenu, onItemSelect }: AccordionListProps) {
         >
           <div
             className={clsx(
-              "flex justify-between",
+              "flex cursor-pointer justify-between",
               openItem === item.id &&
                 "before:absolute before:left-0 before:top-0 before:h-full before:w-1 before:bg-gray-600 before:content-['']",
             )}
+            onClick={() => handleAccordion(item.id)}
           >
             <h3 className="text-xl font-semibold">{`${idx + 1}. ${item.id}`}</h3>
             {openItem === item.id && isToggleActive ? (
@@ -57,14 +60,12 @@ function AccordionList({ tabMenu, onItemSelect }: AccordionListProps) {
                 src="/landing/toggle_up.svg"
                 alt="토글 닫기 아이콘"
                 className="cursor-pointer"
-                onClick={() => handleCloseAccordion()}
               />
             ) : (
               <img
                 src="/landing/toggle_down.svg"
                 alt="토글 열기 아이콘"
                 className="cursor-pointer"
-                onClick={() => handleOpenAccordion(item.id)}
               />
             )}
           </div>

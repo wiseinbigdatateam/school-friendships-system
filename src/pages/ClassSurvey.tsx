@@ -97,6 +97,9 @@ const ClassSurvey: React.FC = () => {
     scales: {
       y: {
         beginAtZero: true,
+        border: {
+          dash: [2, 2],
+        },
         ticks: {
           stepSize: 1,
           callback: function (value: any) {
@@ -109,6 +112,7 @@ const ClassSurvey: React.FC = () => {
 
   const doughnutChartOptions = {
     responsive: true,
+
     plugins: {
       legend: {
         position: "bottom" as const,
@@ -139,6 +143,7 @@ const ClassSurvey: React.FC = () => {
         },
       },
     },
+
     scales: {
       y: {
         beginAtZero: true,
@@ -159,27 +164,23 @@ const ClassSurvey: React.FC = () => {
       {
         label: "응답자 수",
         data: [data.yes_count, data.no_count],
-        backgroundColor: ["rgba(59, 130, 246, 0.8)", "rgba(30, 64, 175, 0.8)"],
-        borderColor: ["rgba(59, 130, 246, 1)", "rgba(30, 64, 175, 1)"],
-        borderWidth: 2,
-        borderRadius: 8,
+        backgroundColor: ["#094185", "rgba(59, 130, 246, 0.8)"],
         borderSkipped: false,
+        barThickness: 28,
       },
     ],
   });
 
-  const createDoughnutChartData = (data: ChartData) => ({
-    labels: ["예", "아니오"],
-    datasets: [
-      {
-        data: [data.yes_count, data.no_count],
-        backgroundColor: ["rgba(59, 130, 246, 0.8)", "rgba(30, 64, 175, 0.8)"],
-        borderColor: ["rgba(59, 130, 246, 1)", "rgba(30, 64, 175, 1)"],
-        borderWidth: 2,
-        hoverOffset: 4,
-      },
-    ],
-  });
+  // const createDoughnutChartData = (data: ChartData) => ({
+  //   labels: ["예", "아니오"],
+  //   datasets: [
+  //     {
+  //       data: [data.yes_count, data.no_count],
+  //       backgroundColor: ["#094185", "rgba(59, 130, 246, 0.8)"],
+  //       hoverOffset: 4,
+  //     },
+  //   ],
+  // });
 
   const createLineChartData = () => {
     const labels = chartData.map(
@@ -194,7 +195,7 @@ const ClassSurvey: React.FC = () => {
           data: chartData.map((data) => data.yes_count),
           borderColor: "rgba(59, 130, 246, 1)",
           backgroundColor: "rgba(59, 130, 246, 0.1)",
-          borderWidth: 3,
+          borderWidth: 2,
           fill: true,
           tension: 0.4,
           pointBackgroundColor: "rgba(59, 130, 246, 1)",
@@ -207,7 +208,7 @@ const ClassSurvey: React.FC = () => {
           data: chartData.map((data) => data.no_count),
           borderColor: "rgba(30, 64, 175, 1)",
           backgroundColor: "rgba(30, 64, 175, 0.1)",
-          borderWidth: 3,
+          borderWidth: 2,
           fill: true,
           tension: 0.4,
           pointBackgroundColor: "rgba(30, 64, 175, 1)",
@@ -230,8 +231,6 @@ const ClassSurvey: React.FC = () => {
         {
           data: [totalYes, totalNo],
           backgroundColor: ["rgba(34, 197, 94, 0.8)", "rgba(239, 68, 68, 0.8)"],
-          borderColor: ["rgba(34, 197, 94, 1)", "rgba(239, 68, 68, 1)"],
-          borderWidth: 2,
           hoverOffset: 4,
         },
       ],
@@ -635,22 +634,22 @@ const ClassSurvey: React.FC = () => {
                         전체 응답 요약
                       </h3>
                       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-                        <div>
+                        <div className="flex flex-col">
                           <h4 className="mb-4 text-lg font-medium text-gray-800">
                             전체 응답 분포
                           </h4>
-                          <div className="h-64">
+                          <div className="h-64 self-center">
                             <Doughnut
                               data={createSummaryChartData()}
                               options={doughnutChartOptions}
                             />
                           </div>
                         </div>
-                        <div>
+                        <div className="flex flex-col">
                           <h4 className="mb-4 text-lg font-medium text-gray-800">
                             문항별 응답 추이
                           </h4>
-                          <div className="h-64">
+                          <div className="h-64 self-center">
                             <Line
                               data={createLineChartData()}
                               options={lineChartOptions}
@@ -679,7 +678,7 @@ const ClassSurvey: React.FC = () => {
                             <h4 className="mb-3 text-sm font-medium text-gray-700">
                               응답 분포 (막대 차트)
                             </h4>
-                            <div className="h-48">
+                            <div className="h-64">
                               <Bar
                                 data={createBarChartData(data)}
                                 options={barChartOptions}
@@ -688,7 +687,7 @@ const ClassSurvey: React.FC = () => {
                           </div>
 
                           {/* 도넛 차트 */}
-                          <div>
+                          {/* <div className="flex flex-col items-center">
                             <h4 className="mb-3 text-sm font-medium text-gray-700">
                               응답 비율 (도넛 차트)
                             </h4>
@@ -698,7 +697,7 @@ const ClassSurvey: React.FC = () => {
                                 options={doughnutChartOptions}
                               />
                             </div>
-                          </div>
+                          </div> */}
 
                           {/* 응답 현황 요약 */}
                           <div className="rounded-lg bg-gray-50 p-4">
@@ -747,7 +746,7 @@ const ClassSurvey: React.FC = () => {
                               <h4 className="mb-3 text-sm font-medium text-gray-700">
                                 응답 분포 (막대 차트)
                               </h4>
-                              <div className="h-48">
+                              <div className="h-64">
                                 <Bar
                                   data={createBarChartData(data)}
                                   options={barChartOptions}
@@ -756,7 +755,7 @@ const ClassSurvey: React.FC = () => {
                             </div>
 
                             {/* 도넛 차트 */}
-                            <div>
+                            {/* <div>
                               <h4 className="mb-3 text-sm font-medium text-gray-700">
                                 응답 비율 (도넛 차트)
                               </h4>
@@ -766,13 +765,13 @@ const ClassSurvey: React.FC = () => {
                                   options={doughnutChartOptions}
                                 />
                               </div>
-                            </div>
+                            </div> */}
                           </div>
                         </div>
 
                         {/* 오른쪽: 응답 표 */}
                         <div className="flex-1">
-                          <div className="mb-4">
+                          <div className="mb-14">
                             <h4 className="mb-3 text-sm font-medium text-gray-700">
                               응답 현황
                             </h4>
@@ -782,13 +781,13 @@ const ClassSurvey: React.FC = () => {
                             <table className="w-full">
                               <thead className="bg-gray-100">
                                 <tr>
-                                  <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-700">
+                                  <th className="w-[18%] px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-700">
                                     답변
                                   </th>
                                   <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-700">
                                     학생
                                   </th>
-                                  <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-700">
+                                  <th className="w-[14%] px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-700">
                                     합계
                                   </th>
                                 </tr>
