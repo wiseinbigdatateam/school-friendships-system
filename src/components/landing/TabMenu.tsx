@@ -12,7 +12,7 @@ const menuLabel = [
 
 function TabMenu({ value, onChange }: TabMenuProps) {
   return (
-    <div className="w-full bg-gray-300 py-5">
+    <div className="sticky top-[47px] z-20 w-full bg-gray-300 py-5">
       <div className="mx-auto flex w-fit gap-3 rounded-[50px] bg-white p-2 max-md:p-1">
         {menuLabel.map((item, idx) => (
           <span
