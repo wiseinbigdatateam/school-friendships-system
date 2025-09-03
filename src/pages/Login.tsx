@@ -147,13 +147,23 @@ const Login: React.FC = () => {
       }
 
       // 이메일 전송 (네이버 웍스 사용)
+      console.log('📧 이메일 발송 시작:', {
+        email: forgotPasswordEmail,
+        userName: user.name,
+        tempPassword: tempPassword
+      });
+      
       const emailData = emailService.generatePasswordResetEmail(
         forgotPasswordEmail,
         tempPassword,
         user.name
       );
       
+      console.log('📄 생성된 이메일 데이터:', emailData);
+      
       const emailSent = await emailService.sendEmail(emailData);
+      
+      console.log('📧 이메일 발송 결과:', emailSent);
       
       if (!emailSent) {
         throw new Error('이메일 발송에 실패했습니다.');

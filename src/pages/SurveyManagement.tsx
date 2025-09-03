@@ -451,11 +451,11 @@ const SurveyManagement: React.FC = () => {
 
         if (statusFilter !== "all") {
           surveysData = await SurveyService.getSurveysByStatus(
-            "", // 빈 문자열로 모든 설문 조회
+            "all", // "all" 문자열로 모든 설문 조회
             statusFilter as "draft" | "active" | "completed" | "archived",
           );
         } else {
-          surveysData = await SurveyService.getAllSurveys(""); // 빈 문자열로 모든 설문 조회
+          surveysData = await SurveyService.getAllSurveys("all"); // "all" 문자열로 모든 설문 조회
         }
 
         console.log("🔍 시스템 관리자용 설문 데이터 로드 완료:", {

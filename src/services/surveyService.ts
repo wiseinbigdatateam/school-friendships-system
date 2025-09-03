@@ -20,7 +20,7 @@ export class SurveyService {
         .order('created_at', { ascending: false });
 
       // schoolId가 유효한 경우에만 필터링 적용
-      if (schoolId && schoolId !== '' && schoolId !== 'undefined' && schoolId !== 'null') {
+      if (schoolId && schoolId !== '' && schoolId !== 'undefined' && schoolId !== 'null' && schoolId !== 'all') {
         console.log('🔍 학교 ID 필터링 적용:', { schoolId });
         query = query.eq('school_id', schoolId);
       } else {
@@ -70,7 +70,7 @@ export class SurveyService {
         .order('created_at', { ascending: false });
 
       // schoolId가 유효한 경우에만 필터링 적용
-      if (schoolId && schoolId !== '' && schoolId !== 'undefined' && schoolId !== 'null') {
+      if (schoolId && schoolId !== '' && schoolId !== 'undefined' && schoolId !== 'null' && schoolId !== 'all') {
         console.log('🔍 학교 ID 필터링 적용:', { schoolId });
         query = query.eq('school_id', schoolId);
       } else {

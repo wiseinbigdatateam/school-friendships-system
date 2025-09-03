@@ -20,19 +20,40 @@ export const emailService = {
   // 네이버 웍스 액세스 토큰 획득 (프록시 서버 사용)
   async getAccessToken(): Promise<string> {
     try {
-      const response = await axios.post(`${process.env.REACT_APP_PROXY_SERVER_URL || 'http://localhost:3001'}/api/naver-works/token`, {
+      console.log('🔑 액세스 토큰 획득 시작');
+      
+      // 운영 환경에서는 HTTPS를 통해 Nginx 프록시 사용, 개발 환경에서는 환경 변수 사용
+      const proxyUrl = window.location.hostname === 'edu.wiseon.io' 
+        ? 'https://edu.wiseon.io/api' 
+        : (process.env.REACT_APP_PROXY_SERVER_URL || 'http://localhost:3001');
+        
+      console.log('🌐 프록시 서버 URL (토큰):', proxyUrl);
+      console.log('🔧 클라이언트 설정:', {
+        clientId: NAVER_WORKS_CONFIG.clientId ? '설정됨' : '미설정',
+        clientSecret: NAVER_WORKS_CONFIG.clientSecret ? '설정됨' : '미설정'
+      });
+        
+      const response = await axios.post(`${proxyUrl}/naver-works/token`, {
         clientId: NAVER_WORKS_CONFIG.clientId,
         clientSecret: NAVER_WORKS_CONFIG.clientSecret
       });
+
+      console.log('📊 토큰 응답:', response.data);
 
       const accessToken = response.data.access_token;
       if (!accessToken) {
         throw new Error('액세스 토큰을 받지 못했습니다.');
       }
       
+      console.log('✅ 액세스 토큰 획득 완료');
       return accessToken;
     } catch (error) {
-      console.error('네이버 웍스 액세스 토큰 획득 실패:', error);
+      console.error('❌ 네이버 웍스 액세스 토큰 획득 실패:', error);
+      if (error && typeof error === 'object' && 'response' in error) {
+        const axiosError = error as any;
+        console.error('📊 토큰 응답 상태:', axiosError.response?.status);
+        console.error('📄 토큰 응답 데이터:', axiosError.response?.data);
+      }
       throw new Error('이메일 서비스 인증에 실패했습니다.');
     }
   },
@@ -40,6 +61,12 @@ export const emailService = {
   // 이메일 발송 (실제 네이버 웍스 API 사용)
   async sendEmail(emailData: EmailData): Promise<boolean> {
     try {
+      console.log('🚀 이메일 발송 시작:', {
+        to: emailData.to,
+        subject: emailData.subject,
+        hostname: window.location.hostname
+      });
+
       // 네이버 웍스 설정이 없으면 시뮬레이션 모드
       if (!NAVER_WORKS_CONFIG.clientId || !NAVER_WORKS_CONFIG.clientSecret || !NAVER_WORKS_CONFIG.domain) {
         console.log('🔧 개발 환경 - 이메일 발송 시뮬레이션:');
@@ -50,19 +77,43 @@ export const emailService = {
         return true;
       }
 
-      // 실제 네이버 웍스 API 호출 (프록시 서버 사용)
-      const accessToken = await this.getAccessToken();
+      console.log('🔧 네이버 웍스 설정 확인:', {
+        clientId: NAVER_WORKS_CONFIG.clientId ? '설정됨' : '미설정',
+        clientSecret: NAVER_WORKS_CONFIG.clientSecret ? '설정됨' : '미설정',
+        domain: NAVER_WORKS_CONFIG.domain
+      });
 
-      const response = await axios.post(`${process.env.REACT_APP_PROXY_SERVER_URL || 'http://localhost:3001'}/api/naver-works/send-email`, {
+      // 실제 네이버 웍스 API 호출 (프록시 서버 사용)
+      console.log('🔑 액세스 토큰 획득 중...');
+      const accessToken = await this.getAccessToken();
+      console.log('✅ 액세스 토큰 획득 완료');
+
+      // 운영 환경에서는 HTTPS를 통해 Nginx 프록시 사용, 개발 환경에서는 환경 변수 사용
+      const proxyUrl = window.location.hostname === 'edu.wiseon.io' 
+        ? 'https://edu.wiseon.io/api' 
+        : (process.env.REACT_APP_PROXY_SERVER_URL || 'http://localhost:3001');
+
+      console.log('🌐 프록시 서버 URL:', proxyUrl);
+
+      const requestData = {
         accessToken,
         domain: NAVER_WORKS_CONFIG.domain,
         emailData
-      });
+      };
 
-      console.log('이메일 발송 성공:', response.data);
+      console.log('📤 이메일 발송 요청 데이터:', requestData);
+
+      const response = await axios.post(`${proxyUrl}/naver-works/send-email`, requestData);
+
+      console.log('✅ 이메일 발송 성공:', response.data);
       return true;
     } catch (error) {
-      console.error('이메일 발송 실패:', error);
+      console.error('❌ 이메일 발송 실패:', error);
+      if (error && typeof error === 'object' && 'response' in error) {
+        const axiosError = error as any;
+        console.error('📊 응답 상태:', axiosError.response?.status);
+        console.error('📄 응답 데이터:', axiosError.response?.data);
+      }
       throw new Error('이메일 발송에 실패했습니다.');
     }
   },

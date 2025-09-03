@@ -566,9 +566,9 @@ const SchoolSearchModal: React.FC<{
   }, []);
 
   const filteredSchools = schools.filter(school => 
-    school.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    school.address.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    school.code.toLowerCase().includes(searchTerm.toLowerCase())
+    (school.name?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
+    (school.address?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
+    (school.code?.toLowerCase() || '').includes(searchTerm.toLowerCase())
   );
 
   return (
@@ -610,11 +610,11 @@ const SchoolSearchModal: React.FC<{
                   >
                     <div className="flex justify-between items-start">
                       <div>
-                        <h4 className="font-medium text-gray-900">{school.name}</h4>
-                        <p className="text-sm text-gray-600">{school.address}</p>
+                        <h4 className="font-medium text-gray-900">{school.name || '학교명 없음'}</h4>
+                        <p className="text-sm text-gray-600">{school.address || '주소 정보 없음'}</p>
                       </div>
                       <span className="text-sm font-mono text-blue-600 bg-blue-100 px-2 py-1 rounded">
-                        {school.code}
+                        {school.code || '코드 없음'}
                       </span>
                     </div>
                   </div>
