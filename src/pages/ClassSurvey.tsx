@@ -650,7 +650,7 @@ const ClassSurvey: React.FC = () => {
                           <h4 className="mb-4 text-lg font-medium text-gray-800">
                             문항별 응답 추이
                           </h4>
-                          <div className="h-[64] self-center">
+                          <div className="h-64 self-center">
                             <Line
                               data={createLineChartData()}
                               options={lineChartOptions}

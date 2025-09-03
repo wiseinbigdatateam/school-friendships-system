@@ -46,7 +46,7 @@ const NetworkGraph: React.FC<NetworkGraphProps> = ({
 
     const svg = d3.select(svgRef.current);
     const width = 800;
-    const height = 600;
+    const height = 400;
 
     // SVG 크기 설정
     svg.attr("width", width).attr("height", height);
@@ -280,11 +280,11 @@ const NetworkGraph: React.FC<NetworkGraphProps> = ({
 
   return (
     <div className="flex h-full w-full flex-col items-center">
-      <div className="overflow-hidden rounded-lg border border-gray-200 bg-white">
+      <div className="rounded-lg border border-gray-200 bg-white">
         <svg
           ref={svgRef}
           className="h-full w-full"
-          style={{ minHeight: "600px" }}
+          style={{ minHeight: "400px" }}
         />
       </div>
 
