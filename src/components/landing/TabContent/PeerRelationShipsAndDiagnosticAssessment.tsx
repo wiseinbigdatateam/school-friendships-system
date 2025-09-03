@@ -289,7 +289,7 @@ function PeerRelationShipsAndDiagnosticAssessment() {
               ))}
             </ul>
 
-            <div className="flex flex-col rounded-xl border border-dashed border-gray-400 p-3">
+            <div className="flex flex-col gap-3 rounded-xl border border-dashed border-gray-400 p-3">
               {teachersRights.effects.map((item) => (
                 <div className="flex items-center gap-2 text-sm max-md:flex-col max-md:items-start max-md:gap-1">
                   <span className="min-w-[146px] rounded-[4px] border border-[#e7e7e7] px-3 py-1 text-center text-red-500">

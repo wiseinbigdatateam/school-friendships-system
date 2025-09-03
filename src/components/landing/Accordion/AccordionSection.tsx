@@ -9,7 +9,7 @@ function AccordionSection({ tabMenu }: { tabMenu: number }) {
   return (
     <>
       {/* 1024px ~ */}
-      <div className="hidden gap-8 p-10 lg:flex">
+      <div className="hidden p-10 lg:flex lg:gap-5 xl:gap-10">
         {/* 이미지 영역 */}
         <AccordionContents tabMenu={tabMenu} selectedItemId={selectedItemId} />
         {/* 토글 카드 */}

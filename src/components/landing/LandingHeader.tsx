@@ -22,18 +22,15 @@ function LandingHeader() {
 
         <div className="flex gap-3 lg:gap-10">
           <nav className="flex items-center gap-10">
-            <button className="hidden text-base lg:block">서비스소개</button>
-            <button
-              className="text-sm lg:text-base"
-              onClick={handleContactClick}
-            >
+            <button className="hidden text-sm lg:block">서비스소개</button>
+            <button className="text-sm" onClick={handleContactClick}>
               체험 신청하기
             </button>
           </nav>
 
           <button
             onClick={handleLoginClick}
-            className="h-8 rounded-[30px] bg-sky-700 px-6 py-1.5 text-base text-white transition-all duration-200 hover:bg-sky-500"
+            className="h-8 rounded-[30px] bg-sky-700 px-6 py-1.5 text-sm text-white transition-all duration-200 hover:bg-sky-500"
           >
             로그인
           </button>

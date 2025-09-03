@@ -21,10 +21,10 @@ const Landing: React.FC = () => {
       <LandingHeader />
 
       {/* 히어로 섹션 */}
-      <section className="relative flex h-[700px] items-center justify-center overflow-hidden">
+      <section className="relative flex h-[700px] items-center justify-center overflow-hidden max-md:h-[480px]">
         {/* 배경 이미지  */}
         <div
-          className="absolute top-0 z-0 h-[700px] w-full bg-cover bg-center bg-no-repeat"
+          className="absolute top-0 z-0 h-[700px] w-full bg-cover bg-center bg-no-repeat max-md:h-[480px]"
           style={{
             backgroundImage: `url('/mask_bg.png')`,
           }}
