@@ -111,19 +111,32 @@ const Header: React.FC<HeaderProps> = ({ logo, navigationItems }) => {
 
           {/* 설문관리 네비게이션 */}
           <nav className="hidden items-center space-x-6 md:flex">
+            {/* 모니터링 */}
+            <div className="relative">
+              <button
+                onClick={() => handleNavigationClick("/dashboard")}
+                className={`rounded-md px-3 py-2 text-sm font-medium transition-colors ${
+                  isCurrentPath("/dashboard")
+                    ? "bg-blue-50 text-blue-600"
+                    : "text-gray-700 hover:bg-gray-50 hover:text-blue-600"
+                }`}
+              >
+                모니터링
+              </button>
+            </div>
+
             {/* 교우 현황 */}
             <div className="relative">
               <button
                 onClick={() => handleDropdownToggle("friendship")}
                 className={`flex items-center space-x-1 rounded-md px-3 py-2 text-sm font-medium transition-colors ${
-                  isCurrentPath("/dashboard") ||
                   isCurrentPath("/survey-templates") ||
                   isCurrentPath("/survey-management")
                     ? "bg-blue-50 text-blue-600"
                     : "text-gray-700 hover:bg-gray-50 hover:text-blue-600"
                 }`}
               >
-                <span>교우 현황</span>
+                <span>진단 조사관리</span>
                 <svg
                   className={`h-4 w-4 transition-transform ${
                     activeDropdown === "friendship" ? "rotate-180" : ""
@@ -146,16 +159,6 @@ const Header: React.FC<HeaderProps> = ({ logo, navigationItems }) => {
                 <div className="absolute left-0 top-full z-50 mt-1 w-48 rounded-md border border-gray-200 bg-white shadow-lg">
                   <div className="py-1">
                     <button
-                      onClick={() => handleNavigationClick("/dashboard")}
-                      className={`block w-full px-4 py-2 text-left text-sm transition-colors ${
-                        isCurrentPath("/dashboard")
-                          ? "bg-blue-50 text-blue-600"
-                          : "text-gray-700 hover:bg-gray-50 hover:text-gray-900"
-                      }`}
-                    >
-                      진행모니터링
-                    </button>
-                    <button
                       onClick={() => handleNavigationClick("/survey-templates")}
                       className={`block w-full px-4 py-2 text-left text-sm transition-colors ${
                         isCurrentPath("/survey-templates")
@@ -163,7 +166,7 @@ const Header: React.FC<HeaderProps> = ({ logo, navigationItems }) => {
                           : "text-gray-700 hover:bg-gray-50 hover:text-gray-900"
                       }`}
                     >
-                      교우 관계 설문 작성
+                      설문 생성
                     </button>
                     <button
                       onClick={() =>
@@ -193,7 +196,7 @@ const Header: React.FC<HeaderProps> = ({ logo, navigationItems }) => {
                     : "text-gray-700 hover:bg-gray-50 hover:text-blue-600"
                 }`}
               >
-                <span>교우 현황 분석</span>
+                <span>교우 관계 분석</span>
                 <svg
                   className={`h-4 w-4 transition-transform ${
                     activeDropdown === "analysis" ? "rotate-180" : ""
@@ -223,7 +226,7 @@ const Header: React.FC<HeaderProps> = ({ logo, navigationItems }) => {
                           : "text-gray-700 hover:bg-gray-50 hover:text-gray-900"
                       }`}
                     >
-                      교우 현황 분석
+                      학습별 분석결과
                     </button>
                     <button
                       onClick={() =>
@@ -235,14 +238,14 @@ const Header: React.FC<HeaderProps> = ({ logo, navigationItems }) => {
                           : "text-gray-700 hover:bg-gray-50 hover:text-gray-900"
                       }`}
                     >
-                      학생개별 분석
+                      학생별 결과분석
                     </button>
                   </div>
                 </div>
               )}
             </div>
 
-            {/* 학급조사 */}
+            {/* 학급별 분석결과 */}
             <div className="relative">
               <button
                 onClick={() => handleNavigationClick("/class-survey")}

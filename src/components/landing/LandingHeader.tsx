@@ -1,10 +1,6 @@
-import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 
-import ContactModal from "./ContactModal";
-
 function LandingHeader() {
-  const [isContactModalOpen, setIsContactModalOpen] = useState(false);
   const navigate = useNavigate();
 
   const handleLoginClick = () => {
@@ -12,7 +8,7 @@ function LandingHeader() {
   };
 
   const handleContactClick = () => {
-    setIsContactModalOpen(true);
+    navigate("/contact");
   };
 
   return (

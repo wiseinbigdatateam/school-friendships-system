@@ -195,7 +195,7 @@ const Contact: React.FC = () => {
               </div>
               <div>
                 <div className="text-sm font-medium text-gray-900">전화문의</div>
-                <div className="text-sm text-gray-600">1588-0000</div>
+                <div className="text-sm text-gray-600">02-558-5144</div>
               </div>
             </div>
             
@@ -207,7 +207,7 @@ const Contact: React.FC = () => {
               </div>
               <div>
                 <div className="text-sm font-medium text-gray-900">이메일</div>
-                <div className="text-sm text-gray-600">support@wiseon.school</div>
+                <div className="text-sm text-gray-600">wiseon@wiseinc.co.kr</div>
               </div>
             </div>
             

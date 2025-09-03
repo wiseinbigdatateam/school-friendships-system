@@ -132,16 +132,6 @@ const NetworkAnalysis: React.FC = () => {
 
   const [analysisResults, setAnalysisResults] =
     useState<NetworkAnalysisResult | null>(null);
-  const [savedAnalysisList, setSavedAnalysisList] = useState<
-    Array<{
-      id: string;
-      survey_id: string;
-      survey_title: string;
-      calculated_at: string;
-      total_students: number;
-      total_relationships: number;
-    }>
-  >([]);
 
   // analysisResults 변경 감지
   useEffect(() => {
@@ -410,72 +400,6 @@ const NetworkAnalysis: React.FC = () => {
         };
       default:
         return { type: "none", description: "" };
-    }
-  };
-
-  // 저장된 분석 리스트 가져오기
-  const fetchSavedAnalysisList = async () => {
-    try {
-      console.log("🔍 저장된 분석 리스트 가져오기 시작");
-
-      const { data: savedAnalysis, error } = await supabase
-        .from("network_analysis_results")
-        .select("*")
-        .eq("analysis_type", "complete_network_analysis")
-        .order("calculated_at", { ascending: false });
-
-      if (error) {
-        console.error("🔍 저장된 분석 리스트 조회 오류:", error);
-        return;
-      }
-
-      if (!savedAnalysis || savedAnalysis.length === 0) {
-        console.log("🔍 저장된 분석 결과가 없습니다");
-        setSavedAnalysisList([]);
-        return;
-      }
-
-      // 설문 제목과 함께 분석 리스트 구성
-      const analysisList = await Promise.all(
-        savedAnalysis.map(async (analysis) => {
-          if (!analysis.survey_id) return null;
-
-          const { data: survey } = await supabase
-            .from("surveys")
-            .select("title")
-            .eq("id", analysis.survey_id)
-            .single();
-
-          const recommendations = analysis.recommendations as any;
-          const completeData = recommendations?.complete_analysis_data;
-
-          return {
-            id: analysis.id,
-            survey_id: analysis.survey_id,
-            survey_title: survey?.title || "제목 없음",
-            calculated_at: analysis.calculated_at || new Date().toISOString(),
-            total_students: completeData?.nodes?.length || 0,
-            total_relationships: completeData?.edges?.length || 0,
-          };
-        }),
-      );
-
-      // null 값 필터링
-      const filteredAnalysisList = analysisList.filter(
-        (item) => item !== null,
-      ) as Array<{
-        id: string;
-        survey_id: string;
-        survey_title: string;
-        calculated_at: string;
-        total_students: number;
-        total_relationships: number;
-      }>;
-
-      console.log("🔍 분석 리스트 구성 완료:", filteredAnalysisList);
-      setSavedAnalysisList(filteredAnalysisList);
-    } catch (error) {
-      console.error("🔍 저장된 분석 리스트 가져오기 오류:", error);
     }
   };
 
@@ -779,52 +703,6 @@ const NetworkAnalysis: React.FC = () => {
     }
   };
 
-  // 저장된 분석 결과 삭제
-  const handleDeleteAnalysis = async (analysisId: string, surveyId: string) => {
-    if (
-      !window.confirm(
-        "이 분석 결과를 삭제하시겠습니까?\n\n삭제된 데이터는 복구할 수 없습니다.",
-      )
-    ) {
-      return;
-    }
-
-    try {
-      setLoading(true);
-
-      // 데이터베이스에서 분석 결과 삭제
-      const { error } = await supabase
-        .from("network_analysis_results")
-        .delete()
-        .eq("id", analysisId);
-
-      if (error) {
-        console.error("🔍 분석 결과 삭제 오류:", error);
-        toast.error("분석 결과 삭제에 실패했습니다.");
-        return;
-      }
-
-      // 로컬 상태에서 삭제
-      setSavedAnalysisList((prev) =>
-        prev.filter((item) => item.id !== analysisId),
-      );
-
-      // 현재 표시 중인 분석 결과가 삭제된 것이라면 초기화
-      if (analysisResults && selectedSurvey?.id === surveyId) {
-        setAnalysisResults(null);
-        setSelectedSurvey(null);
-      }
-
-      toast.success("분석 결과가 삭제되었습니다.");
-      console.log("🔍 분석 결과 삭제 완료:", { analysisId, surveyId });
-    } catch (error) {
-      console.error("🔍 분석 결과 삭제 중 오류:", error);
-      toast.error("분석 결과 삭제 중 오류가 발생했습니다.");
-    } finally {
-      setLoading(false);
-    }
-  };
-
   // 네트워크 분석 실행
   const handleRunNetworkAnalysis = async () => {
     if (!selectedSurvey) {
@@ -950,9 +828,6 @@ const NetworkAnalysis: React.FC = () => {
 
       console.log("🔍 전체 네트워크 분석 결과가 DB에 저장되었습니다.");
       toast.success("전체 분석 결과가 DB에 저장되었습니다!");
-
-      // 저장 후 분석 리스트 새로고침
-      await fetchSavedAnalysisList();
     } catch (error) {
       console.error("🔍 DB 저장 오류:", error);
       throw error;
@@ -1133,156 +1008,6 @@ const NetworkAnalysis: React.FC = () => {
           {teacherInfo?.role === "district_admin" &&
             "전체 학교 학생들의 AI 기반 네트워크 분석을 통해 교우관계를 시각화하고 분석합니다."}
         </p>
-      </div>
-
-      {/* 저장된 분석 리스트 섹션 */}
-      <div className="mb-4 rounded-lg bg-white shadow">
-        <div className="border-b border-gray-200 px-6 py-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <h3 className="text-lg font-medium text-gray-900">
-                저장된 분석 결과
-              </h3>
-              <p className="text-sm text-gray-600">
-                이전에 수행한 네트워크 분석 결과를 확인할 수 있습니다.
-              </p>
-            </div>
-            <button
-              onClick={fetchSavedAnalysisList}
-              className="rounded-md bg-blue-100 px-3 py-2 text-sm text-blue-700 transition-colors hover:bg-blue-200"
-            >
-              새로고침
-            </button>
-          </div>
-        </div>
-
-        <div className="p-6">
-          {savedAnalysisList.length > 0 ? (
-            <div className="space-y-4">
-              <div className="mb-4 text-sm text-gray-600">
-                총{" "}
-                <span className="font-semibold text-blue-600">
-                  {savedAnalysisList.length}개
-                </span>
-                의 분석 결과가 저장되어 있습니다.
-              </div>
-              <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
-                {savedAnalysisList.map((analysis) => (
-                  <div
-                    key={analysis.id}
-                    className="group relative rounded-lg border border-gray-200 p-4 transition-colors hover:border-blue-300"
-                  >
-                    {/* 삭제 버튼 */}
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleDeleteAnalysis(analysis.id, analysis.survey_id);
-                      }}
-                      className="absolute right-2 top-2 flex h-6 w-6 items-center justify-center rounded-full bg-red-500 text-white opacity-0 transition-opacity hover:bg-red-600 group-hover:opacity-100"
-                      title="분석 결과 삭제"
-                    >
-                      <svg
-                        className="h-3 w-3"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M6 18L18 6M6 6l12 12"
-                        />
-                      </svg>
-                    </button>
-
-                    {/* 분석 결과 카드 본문 */}
-                    <div
-                      className="cursor-pointer"
-                      onClick={async () => {
-                        try {
-                          setLoading(true);
-                          const savedResults = await loadSavedNetworkAnalysis(
-                            analysis.survey_id,
-                          );
-                          if (savedResults) {
-                            setAnalysisResults(savedResults);
-                            // 해당 설문도 선택 상태로 설정
-                            const survey = surveys.find(
-                              (s) => s.id === analysis.survey_id,
-                            );
-                            if (survey) {
-                              setSelectedSurvey(survey);
-                            }
-                            toast.success("저장된 분석 결과를 불러왔습니다!");
-                          } else {
-                            toast.error("분석 결과를 불러올 수 없습니다.");
-                          }
-                        } catch (error) {
-                          console.error(
-                            "🔍 저장된 분석 결과 불러오기 오류:",
-                            error,
-                          );
-                          toast.error(
-                            "분석 결과를 불러오는 중 오류가 발생했습니다.",
-                          );
-                        } finally {
-                          setLoading(false);
-                        }
-                      }}
-                    >
-                      <div className="mb-3 flex items-center justify-between">
-                        <h4 className="truncate pr-8 font-medium text-gray-900">
-                          {analysis.survey_title}
-                        </h4>
-                        <span className="rounded-full bg-green-100 px-2 py-1 text-xs font-medium text-green-800">
-                          완료
-                        </span>
-                      </div>
-
-                      <div className="space-y-2 text-sm text-gray-600">
-                        <div className="flex justify-between">
-                          <span>분석일:</span>
-                          <span className="font-medium">
-                            {new Date(
-                              analysis.calculated_at,
-                            ).toLocaleDateString()}
-                          </span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span>학생 수:</span>
-                          <span className="font-medium">
-                            {analysis.total_students}명
-                          </span>
-                          <span>관계 수:</span>
-                          <span className="font-medium">
-                            {analysis.total_relationships}개
-                          </span>
-                        </div>
-                      </div>
-
-                      <div className="mt-3 border-t border-gray-100 pt-3">
-                        <div className="text-center text-xs text-blue-600">
-                          클릭하여 결과 보기
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          ) : (
-            <div className="py-8 text-center text-gray-500">
-              <ChartBarIcon className="mx-auto mb-4 h-12 w-12 text-gray-400" />
-              <p className="mb-2 text-lg font-medium">
-                저장된 분석 결과가 없습니다
-              </p>
-              <p className="text-sm">
-                네트워크 분석을 실행하면 결과가 여기에 저장됩니다.
-              </p>
-            </div>
-          )}
-        </div>
       </div>
 
       {/* 설문 선택 섹션 */}
@@ -1474,7 +1199,7 @@ const NetworkAnalysis: React.FC = () => {
             <p className="mt-2 text-sm text-gray-500">
               선택된 설문: {selectedSurvey.title}
             </p>
-            {analysisResults && (
+            {/* {analysisResults && (
               <div className="mt-3 space-y-3 border-t border-gray-100 pt-3">
                 <p className="mb-2 text-xs text-green-600">
                   ✅ 분석 결과가 로드되었습니다
@@ -1518,7 +1243,7 @@ const NetworkAnalysis: React.FC = () => {
                   </button>
 
                   {/* 지도 리포트 페이지로 이동 버튼 */}
-                  <button
+                  {/* <button
                     onClick={() => {
                       toast.success("지도 리포트 페이지로 이동합니다!");
                       // 분석 결과를 localStorage에 임시 저장하여 Reports 페이지에서 사용
@@ -1542,7 +1267,7 @@ const NetworkAnalysis: React.FC = () => {
                   </button>
                 </div>
               </div>
-            )}
+            )}  */}
           </div>
         </div>
       )}
@@ -1564,17 +1289,6 @@ const NetworkAnalysis: React.FC = () => {
                 전체 현황
               </button>
               <button
-                onClick={() => setAnalysisView("individual")}
-                className={`rounded-md px-4 py-2 text-sm font-medium ${
-                  analysisView === "individual"
-                    ? "bg-blue-600 text-white"
-                    : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-                }`}
-              >
-                <UsersIcon className="mr-2 inline h-4 w-4" />
-                개별 관계 분석
-              </button>
-              <button
                 onClick={() => setAnalysisView("network")}
                 className={`rounded-md px-4 py-2 text-sm font-medium ${
                   analysisView === "network"
@@ -1584,17 +1298,6 @@ const NetworkAnalysis: React.FC = () => {
               >
                 <ChartBarIcon className="mr-2 inline h-4 w-4" />
                 네트워크 시각화
-              </button>
-              <button
-                onClick={() => setAnalysisView("graph")}
-                className={`rounded-md px-4 py-2 text-sm font-medium ${
-                  analysisView === "graph"
-                    ? "bg-blue-600 text-white"
-                    : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-                }`}
-              >
-                <UserGroupIcon className="mr-2 inline h-4 w-4" />
-                교우관계 그래프
               </button>
             </div>
           </div>

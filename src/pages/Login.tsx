@@ -1,6 +1,9 @@
 import React, { useState } from 'react';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import { supabase } from '../lib/supabase';
+import { toast } from 'react-hot-toast';
+import { emailService } from '../services/emailService';
 
 interface LoginFormData {
   email: string;
@@ -19,6 +22,9 @@ const Login: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
+  const [showForgotPassword, setShowForgotPassword] = useState(false);
+  const [forgotPasswordEmail, setForgotPasswordEmail] = useState('');
+  const [forgotPasswordLoading, setForgotPasswordLoading] = useState(false);
 
   // 이미 로그인된 경우 대시보드로 리다이렉트
   React.useEffect(() => {
@@ -90,6 +96,76 @@ const Login: React.FC = () => {
     });
   };
 
+  // 비밀번호 찾기 함수
+  const handleForgotPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!forgotPasswordEmail) {
+      toast.error('이메일 주소를 입력해주세요.');
+      return;
+    }
+
+    setForgotPasswordLoading(true);
+
+    try {
+      // 이메일 유효성 검사
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(forgotPasswordEmail)) {
+        throw new Error('올바른 이메일 주소를 입력해주세요.');
+      }
+
+      // 사용자 존재 여부 확인
+      const { data: user, error: userError } = await supabase
+        .from('users')
+        .select('id, email, name')
+        .eq('email', forgotPasswordEmail)
+        .single();
+
+      if (userError || !user) {
+        throw new Error('등록되지 않은 이메일 주소입니다.');
+      }
+
+      // 임시 비밀번호 생성 (8자리 랜덤 문자열)
+      const tempPassword = Math.random().toString(36).slice(-8);
+      
+      // 개발 환경에서는 간단한 해시 사용 (실제 운영에서는 서버에서 처리)
+      const hashedTempPassword = btoa(tempPassword); // Base64 인코딩
+
+      // 데이터베이스에서 사용자 비밀번호 업데이트
+      const { error: updateError } = await supabase
+        .from('users')
+        .update({ password_hash: hashedTempPassword })
+        .eq('email', forgotPasswordEmail);
+
+      if (updateError) {
+        throw new Error('비밀번호 재설정 중 오류가 발생했습니다.');
+      }
+
+      // 이메일 전송 (네이버 웍스 사용)
+      const emailData = emailService.generatePasswordResetEmail(
+        forgotPasswordEmail,
+        tempPassword,
+        user.name
+      );
+      
+      const emailSent = await emailService.sendEmail(emailData);
+      
+      if (!emailSent) {
+        throw new Error('이메일 발송에 실패했습니다.');
+      }
+
+      toast.success('임시 비밀번호가 이메일로 전송되었습니다.');
+      setShowForgotPassword(false);
+      setForgotPasswordEmail('');
+      
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : '비밀번호 찾기에 실패했습니다.';
+      toast.error(errorMessage);
+    } finally {
+      setForgotPasswordLoading(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-md w-full">
@@ -141,10 +217,10 @@ const Login: React.FC = () => {
                     <strong>📧 <button onClick={handleDemoAdminLogin} className="text-sm text-blue-600 hover:text-blue-700 font-medium underline">
                     test_admin@school.com</button></strong> - (학교관리자)
                   </div>
-                  <div className="bg-blue-100 rounded px-2 py-1">
+                  {/* <div className="bg-blue-100 rounded px-2 py-1">
                     <strong>📧 <button onClick={handleDemoDistrictLogin} className="text-sm text-blue-600 hover:text-blue-700 font-medium underline">
                     test_district@school.com</button></strong> - (교육청관리자)
-                  </div>
+                  </div> */}
                 </div>
                             <div className="text-xs text-blue-700 bg-blue-50 rounded px-2 py-1 mb-3">
               💡 <strong>실제 bcrypt 암호화된 패스워드로 로그인됩니다!</strong><br/>
@@ -259,6 +335,7 @@ const Login: React.FC = () => {
               </label>
               <button
                 type="button"
+                onClick={() => setShowForgotPassword(true)}
                 className="text-blue-600 hover:text-blue-700 font-medium"
               >
                 비밀번호 찾기
@@ -279,7 +356,7 @@ const Login: React.FC = () => {
           </div>
 
           {/* 소셜 로그인 (향후 구현 예정) */}
-          <div className="space-y-3">
+          {/* <div className="space-y-3">
             <button
               type="button"
               disabled
@@ -304,7 +381,7 @@ const Login: React.FC = () => {
               </svg>
               Facebook으로 로그인 (준비 중)
             </button>
-          </div>
+          </div> */}
 
           {/* 회원가입 링크 */}
           <div className="mt-8 text-center space-y-3">
@@ -323,6 +400,90 @@ const Login: React.FC = () => {
           </div>
         </div>
 
+        {/* 비밀번호 찾기 모달 */}
+        {showForgotPassword && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-2xl shadow-xl max-w-md w-full p-6">
+              <div className="flex items-center justify-between mb-6">
+                <h3 className="text-xl font-bold text-gray-900">비밀번호 찾기</h3>
+                <button
+                  onClick={() => {
+                    setShowForgotPassword(false);
+                    setForgotPasswordEmail('');
+                  }}
+                  className="text-gray-400 hover:text-gray-600"
+                >
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+
+              <form onSubmit={handleForgotPassword} className="space-y-4">
+                <div>
+                  <label htmlFor="forgot-email" className="block text-sm font-medium text-gray-700 mb-2">
+                    이메일 주소
+                  </label>
+                  <input
+                    id="forgot-email"
+                    type="email"
+                    value={forgotPasswordEmail}
+                    onChange={(e) => setForgotPasswordEmail(e.target.value)}
+                    className="block w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                    placeholder="가입한 이메일 주소를 입력하세요"
+                    required
+                  />
+                </div>
+
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                  <div className="flex items-start">
+                    <svg className="w-5 h-5 text-blue-600 mt-0.5 mr-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <div>
+                      <h4 className="text-sm font-medium text-blue-900 mb-1">비밀번호 재설정 안내</h4>
+                      <p className="text-sm text-blue-700">
+                        입력한 이메일 주소로 임시 비밀번호가 전송됩니다.<br/>
+                        로그인 후 반드시 비밀번호를 변경해주세요.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex space-x-3 pt-4">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowForgotPassword(false);
+                      setForgotPasswordEmail('');
+                    }}
+                    className="flex-1 px-4 py-3 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"
+                  >
+                    취소
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={forgotPasswordLoading}
+                    className="flex-1 px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  >
+                    {forgotPasswordLoading ? (
+                      <>
+                        <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white inline" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        처리 중...
+                      </>
+                    ) : (
+                      '임시 비밀번호 전송'
+                    )}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+
         {/* 하단 정보 */}
         <div className="mt-8 text-center text-sm text-gray-500 space-y-2">
           <p>
@@ -338,7 +499,7 @@ const Login: React.FC = () => {
               고객지원센터
             </Link>
             {' | '}
-            전화: 1588-0000
+            전화: 02-558-5144
           </p>
         </div>
       </div>
