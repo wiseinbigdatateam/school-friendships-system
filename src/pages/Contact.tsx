@@ -127,7 +127,7 @@ const Contact: React.FC = () => {
 
   if (submitted) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-green-50 to-blue-50 px-4 py-12 sm:px-6 lg:px-8">
+      <div className="flex min-h-screen items-center justify-center bg-gray-50 px-4 py-12 sm:px-6 lg:px-8">
         <div className="w-full max-w-md space-y-8 text-center">
           <div>
             <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-green-100">
@@ -186,13 +186,13 @@ const Contact: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 px-4 py-12 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-gray-50 px-4 py-12 sm:px-6 lg:px-8">
       <div className="mx-auto max-w-2xl">
         <div className="mb-6 flex flex-col items-center gap-2">
           <Link to="/login" className="inline-block self-start">
             <img src="/logo_school.png" alt="와이즈온 스쿨 로고" />
           </Link>
-          <h1 className="text-3xl font-extrabold text-gray-900">문의하기</h1>
+          <h1 className="text-2xl font-extrabold text-gray-900">문의하기</h1>
           <p className="text-gray-600">
             궁금한 사항이나 도움이 필요한 내용을 언제든지 문의해주세요
           </p>
@@ -280,10 +280,6 @@ const Contact: React.FC = () => {
 
         {/* 문의 폼 */}
         <div className="rounded-lg border bg-white p-6 shadow-sm">
-          <h2 className="mb-6 text-lg font-semibold text-gray-900">
-            온라인 문의
-          </h2>
-
           <form onSubmit={handleSubmit} className="space-y-6">
             {error && (
               <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">

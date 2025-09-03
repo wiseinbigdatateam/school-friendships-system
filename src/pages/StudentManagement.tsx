@@ -1253,21 +1253,23 @@ const StudentManagement: React.FC = () => {
       <div className="mb-4">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="mb-2 text-3xl font-bold text-gray-900">학생 관리</h1>
+            <h1 className="mb-2 text-2xl font-bold text-gray-900">학생 관리</h1>
             <p className="text-gray-600">
               학생들의 기본 정보와 교우관계 분석 결과를 확인하고 관리합니다.
             </p>
             {/* 권한별 접근 범위 표시 */}
-            <div className="mt-2 rounded-lg border border-blue-200 bg-blue-50 p-3">
+            {/* <div className="mt-2 rounded-lg border border-blue-200 bg-blue-50 p-3">
               <div className="flex items-center space-x-2">
                 <div className="h-4 w-4 rounded-full bg-[#3F80EA]"></div>
                 <span className="text-sm font-medium text-blue-900">
                   현재 접근 범위: {getAccessScope().description}
                 </span>
               </div>
-            </div>
+            </div> */}
           </div>
-          <div className="flex space-x-3">
+
+          {/* 원본 */}
+          {/* <div className="flex space-x-3">
             <button
               onClick={handleDownloadTemplate}
               className="inline-flex items-center rounded-lg bg-green-600 px-4 py-2 text-white transition-colors hover:bg-green-700"
@@ -1287,10 +1289,39 @@ const StudentManagement: React.FC = () => {
               <ArrowUpTrayIcon className="mr-2 h-5 w-5" />
               학생 명단 업로드
               {teacherInfo?.school_id && (
-                <span className="ml-2 rounded bg-blue-500 px-2 py-1 text-xs text-white">
+          
+              <span className="ml-2 rounded bg-blue-500 px-2 py-1 text-xs text-white">
                   {schoolName || "현재 학교"}
                 </span>
               )}
+            </button>
+          </div> */}
+
+          {/* 테스트 */}
+          <div className="flex space-x-3">
+            <button
+              onClick={handleDownloadTemplate}
+              className="inline-flex items-center rounded-lg bg-gray-400 px-4 py-2 text-white transition-colors hover:bg-[#3F80EA]"
+            >
+              <ArrowDownTrayIcon className="mr-2 h-5 w-5" />
+              엑셀 템플릿 다운로드
+            </button>
+            <button
+              onClick={handleUploadStudents}
+              className="inline-flex items-center rounded-lg bg-gray-400 px-4 py-2 text-white transition-colors hover:bg-[#3F80EA]"
+              title={
+                teacherInfo?.school_id
+                  ? `${schoolName || "현재 학교"}에 학생 등록`
+                  : "학교 정보가 없습니다"
+              }
+            >
+              <ArrowUpTrayIcon className="h-5 w-5" />
+              {teacherInfo?.school_id && (
+                <span className="rounded px-2 py-1 text-xs text-white">
+                  ({schoolName || "현재 학교"})
+                </span>
+              )}
+              학생 명단 업로드
             </button>
           </div>
         </div>
@@ -1300,7 +1331,7 @@ const StudentManagement: React.FC = () => {
       {teacherInfo &&
         (teacherInfo.role === "homeroom_teacher" ||
           teacherInfo.role === "grade_teacher") && (
-          <div className="mb-4 rounded-lg border border-blue-200 bg-blue-50 p-4">
+          <div className="mb-4 rounded-lg border border-gray-200 bg-white p-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-3">
                 <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gray-300">
@@ -1317,7 +1348,7 @@ const StudentManagement: React.FC = () => {
                   </p>
                 </div>
               </div>
-              <div className="text-sm text-blue-600">
+              <div className="text-sm text-gray-600">
                 학년과 반이 자동으로 고정되었습니다
               </div>
             </div>
@@ -1354,7 +1385,7 @@ const StudentManagement: React.FC = () => {
             teacherInfo?.role === "grade_teacher") &&
             teacherInfo.grade_level &&
             teacherInfo.class_number && (
-              <div className="mt-3 rounded border border-blue-200 bg-blue-50 p-2 text-xs text-blue-800">
+              <div className="mt-3 rounded bg-blue-50 p-2 text-xs text-blue-800">
                 🎯 {getRoleDisplayName(teacherInfo.role)}:{" "}
                 {teacherInfo.grade_level}학년 {teacherInfo.class_number}반 -
                 담당 반 학생만 표시
@@ -1363,26 +1394,26 @@ const StudentManagement: React.FC = () => {
         </div>
 
         {/* 위험도 통계 */}
-        <div className="mb-6 rounded-lg border border-red-200 bg-gradient-to-r from-red-50 to-yellow-50 p-4">
-          <h3 className="mb-3 text-lg font-semibold text-red-900">
-            📊 위험도별 학생 현황
+        <div className="mb-6 rounded-lg bg-gray-50 from-red-50 to-yellow-50 p-4">
+          <h3 className="mb-3 text-lg font-semibold text-gray-900">
+            📊 유형별 학생 현황
           </h3>
           <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-            <div className="rounded-lg border border-red-300 bg-red-100 p-3 text-center">
+            <div className="rounded-lg bg-red-100 p-3 text-center">
               <div className="text-2xl font-bold text-red-800">
                 {getHighRiskStudentCount()}
               </div>
               <div className="text-sm font-medium text-red-700">주의 필요</div>
               <div className="text-xs text-red-600">중심성 &lt; 0.3</div>
             </div>
-            <div className="rounded-lg border border-yellow-300 bg-yellow-100 p-3 text-center">
+            <div className="rounded-lg bg-yellow-100 p-3 text-center">
               <div className="text-2xl font-bold text-yellow-800">
                 {getRiskLevelCounts().medium}
               </div>
               <div className="text-sm font-medium text-yellow-700">관찰 중</div>
               <div className="text-xs text-yellow-600">중심성 0.3~0.6</div>
             </div>
-            <div className="rounded-lg border border-green-300 bg-green-100 p-3 text-center">
+            <div className="rounded-lg bg-green-100 p-3 text-center">
               <div className="text-2xl font-bold text-green-800">
                 {getRiskLevelCounts().low}
               </div>
@@ -1390,10 +1421,10 @@ const StudentManagement: React.FC = () => {
               <div className="text-xs text-green-600">중심성 &ge; 0.6</div>
             </div>
           </div>
-          <div className="mt-3 text-center text-sm text-red-700">
+          {/* <div className="mt-3 text-center text-sm text-red-700">
             🚨 <strong>주의 학생 수: {getHighRiskStudentCount()}명</strong> -
             즉시 관찰 및 개입이 필요한 학생들
-          </div>
+          </div> */}
         </div>
 
         <div className="grid grid-cols-1 gap-3 md:grid-cols-4">
@@ -1541,7 +1572,7 @@ const StudentManagement: React.FC = () => {
       )}
 
       {/* 학생 목록 */}
-      <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-4">
+      <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 2xl:grid-cols-3">
         {sortedStudents.length === 0 ? (
           <div className="col-span-full rounded-lg border border-gray-200 bg-white p-12 text-center">
             <svg
@@ -1596,7 +1627,7 @@ const StudentManagement: React.FC = () => {
               </div>
 
               {/* 메모 수 */}
-              <div className="mb-4 text-sm">
+              {/* <div className="mb-4 text-sm">
                 <span className="text-gray-600">교사 메모:</span>
                 <span className="ml-2 text-gray-900">
                   {student.teacher_memos?.length || 0}개
@@ -1605,21 +1636,29 @@ const StudentManagement: React.FC = () => {
                 <span className="ml-2 text-gray-900">
                   {student.intervention_logs?.length || 0}개
                 </span>
-              </div>
+              </div> */}
 
-              <div className="flex space-x-2">
-                <button
-                  onClick={() => handleViewDetails(student)}
-                  className="flex-1 rounded-md bg-[#3F80EA] px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-blue-600"
-                >
-                  상세보기
-                </button>
-                <button
-                  onClick={() => handleAddMemo(student)}
-                  className="rounded-md bg-gray-100 px-4 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-200"
-                >
-                  메모 추가
-                </button>
+              <div className="flex items-center justify-between space-x-2">
+                <div className="flex gap-2 text-sm">
+                  <span className="text-gray-600">교사 메모:</span>
+                  <span className="text-gray-900">
+                    {student.teacher_memos?.length || 0}개
+                  </span>
+                </div>
+                <div className="flex gap-1">
+                  <button
+                    onClick={() => handleViewDetails(student)}
+                    className="rounded-md bg-[#3F80EA] px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-blue-600"
+                  >
+                    상세보기
+                  </button>
+                  <button
+                    onClick={() => handleAddMemo(student)}
+                    className="rounded-md bg-gray-100 px-4 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-200"
+                  >
+                    메모 추가
+                  </button>
+                </div>
               </div>
             </div>
           ))

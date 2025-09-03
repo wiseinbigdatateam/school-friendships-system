@@ -29,7 +29,7 @@ function AiDiagnosisReport() {
               <p className="pt-1 text-base font-semibold text-emerald-500">
                 종합진단
               </p>
-              <div className="flex items-center gap-2 text-xl font-semibold max-md:flex-col max-md:text-base">
+              <div className="flex items-center gap-2 text-xl max-md:flex-col max-md:text-base">
                 김OO 학생의 네트워크 유형{" "}
                 <span className="rounded-[28px] bg-indigo-500 px-6 py-2 text-white">
                   주도형
@@ -52,7 +52,7 @@ function AiDiagnosisReport() {
               <p className="pt-1 text-center text-base font-semibold text-emerald-500">
                 세부분석
               </p>
-              <p className="gap-2 text-center text-xl font-semibold max-md:text-base">
+              <p className="gap-2 text-center text-xl max-md:text-base">
                 학교생활과 네트워크 위치
               </p>
 
@@ -74,7 +74,7 @@ function AiDiagnosisReport() {
                 <span className="block text-amber-400">(Insight)</span>
                 맞춤 솔루션 제안
               </div>
-              <p className="text-center text-xl font-semibold text-white max-md:text-base">
+              <p className="text-center text-xl text-white max-md:text-base">
                 김OO 학생의 뛰어난 리더십을 긍정적으로 발휘하도록 돕고..
               </p>
 

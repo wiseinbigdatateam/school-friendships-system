@@ -32,7 +32,7 @@ function MobileUsagePlanContent() {
             key={item.id}
             onClick={() => handleAccordion(item.id)}
           >
-            <h3 className="text-base md:text-xl">{`${idx + 1}. ${item.id}`}</h3>
+            <p className="text-base md:text-xl">{`${idx + 1}. ${item.id}`}</p>
             {openItem === item.id && isToggleActive ? (
               <img
                 src="/landing/toggle_up.svg"

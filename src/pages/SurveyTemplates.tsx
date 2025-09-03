@@ -428,7 +428,7 @@ const SurveyTemplates: React.FC = () => {
       {/* 헤더 */}
       <div className="mb-6">
         <div>
-          <h1 className="mb-2 text-3xl font-bold text-gray-900">설문 생성</h1>
+          <h1 className="mb-2 text-2xl font-bold text-gray-900">설문 생성</h1>
           <p className="text-gray-600">
             목적에 맞는 설문 템플릿을 선택하여 교우관계 조사를 시작하세요.
           </p>

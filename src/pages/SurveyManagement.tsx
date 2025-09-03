@@ -966,7 +966,7 @@ const SurveyManagement: React.FC = () => {
     <div className="mx-auto min-h-screen max-w-7xl bg-gray-50 px-4 pb-16 sm:px-6 lg:px-8">
       {/* 헤더 */}
       <div className="mb-8">
-        <h1 className="mb-2 text-3xl font-bold text-gray-900">설문 관리</h1>
+        <h1 className="mb-2 text-2xl font-bold text-gray-900">설문 관리</h1>
         <p className="text-gray-600">
           교우관계 분석을 위한 설문조사를 생성하고 관리합니다.
         </p>
