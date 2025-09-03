@@ -53,6 +53,9 @@ const SurveyResponse: React.FC = () => {
   );
   const [existingResponse, setExistingResponse] = useState<any>(null);
 
+  // 각 질문별 검색어 상태 추가
+  const [questionSearchTerms, setQuestionSearchTerms] = useState<Record<string, string>>({});
+
   // 설문 정보와 학생 목록 로드
   useEffect(() => {
     const fetchSurveyAndStudents = async () => {
@@ -74,69 +77,62 @@ const SurveyResponse: React.FC = () => {
           // 설문 데이터에 이미 max_selections이 포함되어 있음
           setSurvey(surveyData);
 
+          let templateData: any = null;
+
           // 1-1. 설문 템플릿 정보 로드 (카테고리, 답변옵션, maxSelections 확인용)
           if (surveyData.template_id) {
             try {
-              const { data: templateData, error: templateError } =
+              const { data: templateDataResult, error: templateError } =
                 await supabase
                   .from("survey_templates")
                   .select("id, name, metadata")
                   .eq("id", surveyData.template_id)
                   .single();
 
-              if (!templateError && templateData) {
+              if (!templateError && templateDataResult) {
+                templateData = templateDataResult;
                 setSurveyTemplate({
                   id: templateData.id,
                   name: templateData.name,
                   metadata: templateData.metadata as any,
                 });
-                console.log("설문 템플릿 정보:", templateData);
-                console.log(
-                  "템플릿 metadata maxSelections:",
-                  (templateData.metadata as any)?.maxSelections,
-                );
+              } else {
+                console.error("템플릿 데이터 로드 실패:", templateError);
               }
             } catch (error) {
               console.error("템플릿 정보 로드 실패:", error);
             }
           }
 
-          // 디버깅: max_selections 값 확인
-          console.log("설문 데이터:", surveyData);
-          if (surveyData.questions && Array.isArray(surveyData.questions)) {
-            console.log(
-              "질문별 max_selections:",
-              surveyData.questions.map((q: any) => ({
-                id: q.id,
-                text: q.text || q.question,
-                max_selections: q.max_selections || q.maxSelections || 1,
-                type: q.type,
-                required: q.required,
-              })),
-            );
-
-            // 각 질문의 상세 정보 출력
-            surveyData.questions.forEach((q: any, index: number) => {
-              const maxSelections = q.max_selections || q.maxSelections || 1;
-              console.log(`질문 ${index + 1} 상세:`, {
-                id: q.id,
-                text: q.text || q.question,
-                max_selections: maxSelections,
-                raw_max_selections: q.max_selections,
-                raw_maxSelections: q.maxSelections,
-                questionObject: q, // 전체 질문 객체 확인
-                finalMaxSelections: maxSelections, // 최종 사용되는 값
-              });
-            });
-          }
-
           // 응답 폼 초기화 (카테고리에 따라 다르게)
           const initialResponses: Record<string, any> = {};
           if (surveyData.questions && Array.isArray(surveyData.questions)) {
+            // 템플릿의 max_selections 값을 각 질문에 복사 (교우관계 카테고리만)
+            const questionsWithMaxSelections = surveyData.questions.map((question: any, index: number) => {
+              // 교우관계 카테고리일 때만 템플릿의 max_selections 배열에서 해당 질문의 값 가져오기
+              if (templateData?.metadata?.category === "교우관계" &&
+                  (templateData?.metadata as any)?.max_selections && 
+                  Array.isArray((templateData?.metadata as any)?.max_selections) && 
+                  (templateData?.metadata as any)?.max_selections[index] !== undefined) {
+                const maxSelections = (templateData?.metadata as any)?.max_selections[index];
+                
+                return {
+                  ...question,
+                  maxSelections: maxSelections
+                };
+              } else {
+                // 교우관계가 아니면 원본 질문 그대로 사용
+                return question;
+              }
+            });
+            
+            // 수정된 질문 배열로 surveyData 업데이트
+            surveyData.questions = questionsWithMaxSelections;
+            
             surveyData.questions.forEach((question: any) => {
               if (question.type === "multiple_choice") {
                 // 카테고리에 따라 초기값 설정
-                if (surveyTemplate?.metadata?.category === "교우관계") {
+                if (templateData?.metadata?.category === "교우관계") {
                   initialResponses[question.id] = []; // 학생 ID 배열로 초기화
                 } else {
                   initialResponses[question.id] = ""; // 단일 선택값으로 초기화
@@ -185,6 +181,27 @@ const SurveyResponse: React.FC = () => {
       return;
     }
 
+    // 생년월일 형식 검증
+    const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+    if (!dateRegex.test(birthDate)) {
+      setVerificationError("생년월일은 YYYY-MM-DD 형식으로 입력해주세요. (예: 2005-03-15)");
+      return;
+    }
+
+    // 유효한 날짜인지 확인
+    const inputDate = new Date(birthDate);
+    const today = new Date();
+    
+    if (isNaN(inputDate.getTime())) {
+      setVerificationError("올바른 날짜를 입력해주세요.");
+      return;
+    }
+
+    if (inputDate > today) {
+      setVerificationError("미래의 날짜는 입력할 수 없습니다.");
+      return;
+    }
+
     // 이름과 생년월일로 학생 검증
     const matchedStudent = students.find((student) => {
       const nameMatch = student.name
@@ -226,6 +243,7 @@ const SurveyResponse: React.FC = () => {
         setCurrentStep("survey");
         setVerificationError(null);
         setSearchTerm(""); // 설문 단계로 이동할 때 검색어 초기화
+        setQuestionSearchTerms({}); // 질문별 검색어도 초기화
       } catch (error) {
         console.error("응답 확인 중 오류:", error);
         setVerificationError(
@@ -245,6 +263,14 @@ const SurveyResponse: React.FC = () => {
       ...prev,
       [questionId]: value,
     }));
+    
+    // 교우관계 질문에서 친구를 선택할 때 검색어 초기화
+    if (surveyTemplate?.metadata?.category === "교우관계") {
+      setQuestionSearchTerms(prev => ({
+        ...prev,
+        [questionId]: ""
+      }));
+    }
   };
 
   // 설문 제출
@@ -385,12 +411,46 @@ const SurveyResponse: React.FC = () => {
               <label className="mb-2 block text-sm font-medium text-gray-700">
                 생년월일
               </label>
-              <input
-                type="date"
-                value={birthDate}
-                onChange={(e) => setBirthDate(e.target.value)}
-                className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
+              <div className="relative">
+                <input
+                  type="text"
+                  placeholder="YYYY-MM-DD (예: 2005-03-15)"
+                  value={birthDate}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    // 숫자와 하이픈만 허용
+                    const sanitizedValue = value.replace(/[^0-9-]/g, '');
+                    
+                    // YYYY-MM-DD 형식으로 자동 포맷팅
+                    let formattedValue = sanitizedValue;
+                    if (sanitizedValue.length >= 4 && !sanitizedValue.includes('-')) {
+                      formattedValue = sanitizedValue.slice(0, 4) + '-' + sanitizedValue.slice(4);
+                    }
+                    if (formattedValue.length >= 7 && formattedValue.split('-').length === 2) {
+                      formattedValue = formattedValue.slice(0, 7) + '-' + formattedValue.slice(7);
+                    }
+                    
+                    // 최대 길이 제한 (YYYY-MM-DD = 10자)
+                    if (formattedValue.length <= 10) {
+                      setBirthDate(formattedValue);
+                    }
+                  }}
+                  maxLength={10}
+                  className="w-full rounded-lg border border-gray-300 px-3 py-2 pr-10 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+                <input
+                  type="date"
+                  value={birthDate}
+                  onChange={(e) => setBirthDate(e.target.value)}
+                  className="absolute right-2 top-1/2 h-6 w-6 -translate-y-1/2 cursor-pointer opacity-0"
+                  style={{ pointerEvents: 'auto' }}
+                />
+                <div className="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none">
+                  <svg className="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                  </svg>
+                </div>
+              </div>
             </div>
 
             {/* 본인 확인 버튼 */}
@@ -465,7 +525,9 @@ const SurveyResponse: React.FC = () => {
             {/* 도움말 */}
             <div className="text-center text-xs text-gray-500">
               <p>• 정확한 이름과 생년월일을 입력해주세요</p>
-              <p>• 생년월일은 YYYY-MM-DD 형식으로 입력하세요</p>
+              <p>• 생년월일은 직접 입력하거나 달력 아이콘을 클릭하여 선택할 수 있습니다</p>
+              <p>• 입력 형식: YYYY-MM-DD (예: 2005-03-15)</p>
+              <p>• 숫자만 입력하면 자동으로 하이픈이 추가됩니다</p>
             </div>
           </div>
         </div>
@@ -530,27 +592,34 @@ const SurveyResponse: React.FC = () => {
                               // surveys 테이블의 questions에서 max_selections 값을 우선적으로 가져오기
                               let maxSelections = 1; // 기본값
 
-                              // 먼저 question.max_selections 확인 (surveys 테이블의 데이터)
+                              // 먼저 surveyTemplate의 max_selections 배열에서 해당 질문의 값 가져오기 (우선순위 1)
                               if (
+                                (surveyTemplate?.metadata as any)?.max_selections &&
+                                Array.isArray((surveyTemplate?.metadata as any)?.max_selections) &&
+                                (surveyTemplate?.metadata as any)?.max_selections[index] !== undefined
+                              ) {
+                                maxSelections = (surveyTemplate?.metadata as any)?.max_selections[index];
+                              } else if (
+                                surveyTemplate?.metadata?.maxSelections &&
+                                Array.isArray(surveyTemplate.metadata.maxSelections) &&
+                                surveyTemplate.metadata.maxSelections[index] !== undefined
+                              ) {
+                                maxSelections = surveyTemplate.metadata.maxSelections[index];
+                              } else if (
                                 question.max_selections !== undefined &&
                                 question.max_selections !== null
                               ) {
-                                maxSelections = question.max_selections;
+                                // 문자열인 경우 숫자로 변환
+                                if (typeof question.max_selections === 'string') {
+                                  maxSelections = parseInt(question.max_selections) || 1;
+                                } else {
+                                  maxSelections = question.max_selections;
+                                }
                               } else if (
                                 question.maxSelections !== undefined &&
                                 question.maxSelections !== null
                               ) {
                                 maxSelections = question.maxSelections;
-                              } else if (
-                                surveyTemplate?.metadata?.maxSelections &&
-                                Array.isArray(
-                                  surveyTemplate.metadata.maxSelections,
-                                ) &&
-                                surveyTemplate.metadata.maxSelections[index] !==
-                                  undefined
-                              ) {
-                                maxSelections =
-                                  surveyTemplate.metadata.maxSelections[index];
                               }
 
                               // 숫자가 아닌 경우 기본값 사용
@@ -580,8 +649,11 @@ const SurveyResponse: React.FC = () => {
                             <input
                               type="text"
                               placeholder="친구 이름으로 검색..."
-                              value={searchTerm}
-                              onChange={(e) => setSearchTerm(e.target.value)}
+                              value={questionSearchTerms[question.id] || ""}
+                              onChange={(e) => setQuestionSearchTerms(prev => ({
+                                ...prev,
+                                [question.id]: e.target.value
+                              }))}
                               className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-blue-500"
                             />
                           </div>
@@ -620,11 +692,13 @@ const SurveyResponse: React.FC = () => {
                                 (student) => student.id !== selectedStudent.id,
                               ) // 자기 자신 제외
                               .filter(
-                                (student) =>
-                                  searchTerm === "" ||
-                                  student.name
-                                    .toLowerCase()
-                                    .includes(searchTerm.toLowerCase()),
+                                (student) => {
+                                  const currentSearchTerm = questionSearchTerms[question.id] || "";
+                                  return currentSearchTerm === "" ||
+                                    student.name
+                                      .toLowerCase()
+                                      .includes(currentSearchTerm.toLowerCase());
+                                }
                               ) // 검색 필터링
                               .map((student) => {
                                 const currentValues =
@@ -633,42 +707,8 @@ const SurveyResponse: React.FC = () => {
                                   student.id,
                                 );
 
-                                // surveys 테이블의 questions에서 max_selections 값을 우선적으로 가져오기
-                                let maxSelections = 1; // 기본값
-
-                                // 먼저 question.max_selections 확인 (surveys 테이블의 데이터)
-                                if (
-                                  question.max_selections !== undefined &&
-                                  question.max_selections !== null
-                                ) {
-                                  maxSelections = question.max_selections;
-                                } else if (
-                                  question.maxSelections !== undefined &&
-                                  question.maxSelections !== null
-                                ) {
-                                  maxSelections = question.maxSelections;
-                                } else if (
-                                  surveyTemplate?.metadata?.maxSelections &&
-                                  Array.isArray(
-                                    surveyTemplate.metadata.maxSelections,
-                                  ) &&
-                                  surveyTemplate.metadata.maxSelections[
-                                    index
-                                  ] !== undefined
-                                ) {
-                                  maxSelections =
-                                    surveyTemplate.metadata.maxSelections[
-                                      index
-                                    ];
-                                }
-
-                                // 숫자가 아닌 경우 기본값 사용
-                                if (
-                                  typeof maxSelections !== "number" ||
-                                  isNaN(maxSelections)
-                                ) {
-                                  maxSelections = 1;
-                                }
+                                // 질문의 maxSelections 값 사용 (이미 템플릿 값으로 수정됨)
+                                const maxSelections = question.maxSelections || 1;
 
                                 const isDisabled =
                                   !isSelected &&
@@ -712,7 +752,7 @@ const SurveyResponse: React.FC = () => {
                                       className="mr-2 h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 disabled:opacity-50"
                                     />
                                     <div className="min-w-0 flex-1">
-                                      <p className="truncate text-sm font-medium text-gray-900">
+                                      <p className="truncate text-sm font-medium text-gray-900 overflow-hidden whitespace-nowrap">
                                         {student.name}
                                       </p>
                                     </div>
