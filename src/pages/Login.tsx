@@ -128,8 +128,13 @@ const Login: React.FC = () => {
       // 임시 비밀번호 생성 (8자리 랜덤 문자열)
       const tempPassword = Math.random().toString(36).slice(-8);
       
-      // 개발 환경에서는 간단한 해시 사용 (실제 운영에서는 서버에서 처리)
-      const hashedTempPassword = btoa(tempPassword); // Base64 인코딩
+      // bcrypt로 임시 비밀번호 해시화
+      const { hashPassword } = await import('../utils/password');
+      const hashedTempPassword = await hashPassword(tempPassword);
+
+      // 디버깅: 임시 비밀번호 콘솔 출력
+      console.log('🔍 임시 비밀번호:', tempPassword);
+      console.log('🔍 해시된 비밀번호:', hashedTempPassword);
 
       // 데이터베이스에서 사용자 비밀번호 업데이트
       const { error: updateError } = await supabase

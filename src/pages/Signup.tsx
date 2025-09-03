@@ -173,6 +173,10 @@ const Signup: React.FC = () => {
         is_active: false
       };
 
+      // 디버깅: 실제 전송되는 데이터 확인
+      console.log('🔍 전송되는 사용자 데이터:', newUser);
+      console.log('🔍 Role 값:', formData.role);
+
       // 7. Supabase에 사용자 등록
       const { data: userData, error: insertError } = await supabase
         .from('users')
@@ -327,7 +331,7 @@ const Signup: React.FC = () => {
                   className="appearance-none relative block w-full px-3 py-2 border border-gray-300 text-gray-900 rounded-lg focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10"
                 >
                   <option value="homeroom_teacher">담임교사</option>
-                  <option value="grade_lead">학년부장</option>
+                  <option value="grade_teacher">학년부장</option>
                 </select>
               </div>
 

@@ -66,11 +66,22 @@ const AccountSettings: React.FC = () => {
         throw new Error('사용자 정보를 찾을 수 없습니다.');
       }
 
-      // 현재 비밀번호 확인 (임시로 하드코딩된 비밀번호 사용)
-      // TODO: 실제 비밀번호 해시 시스템 구현 필요
-      const currentPassword = '1q2w3e4r'; // 임시 하드코딩
+      // 현재 비밀번호 확인 (데이터베이스의 해시와 비교)
+      const { data: userData, error: userError } = await supabase
+        .from('users')
+        .select('password_hash')
+        .eq('id', user.id)
+        .single();
+
+      if (userError || !userData?.password_hash) {
+        throw new Error('사용자 정보를 찾을 수 없습니다.');
+      }
+
+      // bcrypt로 현재 비밀번호 검증
+      const { verifyPassword } = await import('../utils/password');
+      const isCurrentPasswordValid = await verifyPassword(passwordData.currentPassword, userData.password_hash);
       
-      if (passwordData.currentPassword !== currentPassword) {
+      if (!isCurrentPasswordValid) {
         throw new Error('현재 비밀번호가 올바르지 않습니다.');
       }
 
@@ -78,11 +89,11 @@ const AccountSettings: React.FC = () => {
       const saltRounds = 12;
       const newPasswordHash = await bcrypt.hash(passwordData.newPassword, saltRounds);
 
-      // 비밀번호 업데이트 (임시로 contact_info에 저장)
+      // 비밀번호 업데이트 (password_hash 필드에 저장)
       const { error: updateError } = await supabase
         .from('users')
         .update({
-          contact_info: { password_hash: newPasswordHash },
+          password_hash: newPasswordHash,
           updated_at: new Date().toISOString()
         })
         .eq('id', user.id);

@@ -15,15 +15,10 @@ interface EmailData {
   from?: string;
 }
 
-class EmailService {
-  private accessToken: string | null = null;
-
+// 이메일 서비스 함수들
+export const emailService = {
   // 네이버 웍스 액세스 토큰 획득 (프록시 서버 사용)
-  private async getAccessToken(): Promise<string> {
-    if (this.accessToken) {
-      return this.accessToken;
-    }
-
+  async getAccessToken(): Promise<string> {
     try {
       const response = await axios.post(`${process.env.REACT_APP_PROXY_SERVER_URL || 'http://localhost:3001'}/api/naver-works/token`, {
         clientId: NAVER_WORKS_CONFIG.clientId,
@@ -35,13 +30,12 @@ class EmailService {
         throw new Error('액세스 토큰을 받지 못했습니다.');
       }
       
-      this.accessToken = accessToken;
       return accessToken;
     } catch (error) {
       console.error('네이버 웍스 액세스 토큰 획득 실패:', error);
       throw new Error('이메일 서비스 인증에 실패했습니다.');
     }
-  }
+  },
 
   // 이메일 발송 (실제 네이버 웍스 API 사용)
   async sendEmail(emailData: EmailData): Promise<boolean> {
@@ -71,7 +65,7 @@ class EmailService {
       console.error('이메일 발송 실패:', error);
       throw new Error('이메일 발송에 실패했습니다.');
     }
-  }
+  },
 
   // 비밀번호 재설정 이메일 템플릿
   generatePasswordResetEmail(to: string, tempPassword: string, userName: string): EmailData {
@@ -144,6 +138,4 @@ class EmailService {
       content
     };
   }
-}
-
-export const emailService = new EmailService();
+};

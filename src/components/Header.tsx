@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { HeaderProps } from "../types";
 import { useAuth } from "../contexts/AuthContext";
@@ -12,6 +12,33 @@ const Header: React.FC<HeaderProps> = ({ logo, navigationItems }) => {
   const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [showNotificationMenu, setShowNotificationMenu] = useState(false);
+  
+  // 드롭다운 메뉴 참조
+  const userMenuRef = useRef<HTMLDivElement>(null);
+  const notificationMenuRef = useRef<HTMLDivElement>(null);
+
+  // 외부 클릭 감지하여 드롭다운 메뉴 닫기
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      // 사용자 메뉴 외부 클릭 감지
+      if (userMenuRef.current && !userMenuRef.current.contains(event.target as Node)) {
+        setShowUserMenu(false);
+      }
+      
+      // 알림 메뉴 외부 클릭 감지
+      if (notificationMenuRef.current && !notificationMenuRef.current.contains(event.target as Node)) {
+        setShowNotificationMenu(false);
+      }
+    };
+
+    // 이벤트 리스너 추가
+    document.addEventListener('mousedown', handleClickOutside);
+    
+    // 클린업 함수
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
 
   // 사용자 역할에 따라 메뉴 접근 권한 확인
   const canAccessAdminFeatures = () => {
@@ -277,7 +304,7 @@ const Header: React.FC<HeaderProps> = ({ logo, navigationItems }) => {
           {/* 사용자 정보 및 알림 */}
           <div className="flex items-center space-x-4">
             {/* 알림 버튼 */}
-            <div className="relative">
+            <div className="relative" ref={notificationMenuRef}>
               <button
                 onClick={() => setShowNotificationMenu(!showNotificationMenu)}
                 className="relative p-1.5 text-gray-600 transition-colors hover:text-gray-900"
@@ -408,7 +435,7 @@ const Header: React.FC<HeaderProps> = ({ logo, navigationItems }) => {
             </div>
 
             {/* 사용자 프로필 */}
-            <div className="relative">
+            <div className="relative" ref={userMenuRef}>
               <button
                 onClick={() => setShowUserMenu(!showUserMenu)}
                 className="flex items-center space-x-2 rounded-lg p-1.5 transition-colors hover:bg-gray-50"

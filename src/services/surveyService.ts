@@ -409,4 +409,114 @@ export class SurveyService {
       throw error;
     }
   }
+
+  // 설문 상태 자동 업데이트 (날짜 기한 체크)
+  static async updateSurveyStatusByDate(): Promise<void> {
+    try {
+      const today = new Date().toISOString().split('T')[0];
+      
+      // 종료일이 지난 설문들을 완료 상태로 변경
+      const { error } = await supabase
+        .from('surveys')
+        .update({ 
+          status: 'completed',
+          updated_at: new Date().toISOString()
+        })
+        .lt('end_date', today)
+        .neq('status', 'completed');
+
+      if (error) {
+        console.error('Error updating survey status by date:', error);
+        throw error;
+      }
+
+      console.log('🔍 설문 상태 자동 업데이트 완료 (날짜 기한)');
+    } catch (error) {
+      console.error('SurveyService.updateSurveyStatusByDate error:', error);
+      throw error;
+    }
+  }
+
+  // 설문 상태 자동 업데이트 (응답 완료 체크)
+  static async updateSurveyStatusByCompletion(surveyId: string): Promise<void> {
+    try {
+      // 설문 정보 조회
+      const survey = await this.getSurveyById(surveyId);
+      if (!survey) return;
+
+      // 대상 학생 수 계산 (target_grades, target_classes 기반)
+      const targetStudentCount = await this.getTargetStudentCount(survey);
+      
+      // 응답 수 조회
+      const responseCount = survey.response_count || 0;
+
+      // 응답률이 90% 이상이면 완료 상태로 변경
+      const responseRate = targetStudentCount > 0 ? (responseCount / targetStudentCount) * 100 : 0;
+      
+      if (responseRate >= 90 && survey.status !== 'completed') {
+        await this.updateSurveyStatus(surveyId, 'completed');
+        console.log(`🔍 설문 ${surveyId} 응답 완료로 상태 변경: ${responseRate.toFixed(1)}%`);
+      }
+    } catch (error) {
+      console.error('SurveyService.updateSurveyStatusByCompletion error:', error);
+      throw error;
+    }
+  }
+
+  // 대상 학생 수 계산
+  private static async getTargetStudentCount(survey: SurveyWithStats): Promise<number> {
+    try {
+      // school_id가 null이면 0 반환
+      if (!survey.school_id) {
+        console.log('🔍 school_id가 null이므로 대상 학생 수를 0으로 반환');
+        return 0;
+      }
+
+      let query = supabase
+        .from('students')
+        .select('id', { count: 'exact' })
+        .eq('current_school_id', survey.school_id);
+
+      // 학년 필터
+      if (survey.target_grades && survey.target_grades.length > 0) {
+        query = query.in('grade', survey.target_grades);
+      }
+
+      // 반 필터
+      if (survey.target_classes && survey.target_classes.length > 0) {
+        query = query.in('class', survey.target_classes);
+      }
+
+      const { count, error } = await query;
+
+      if (error) {
+        console.error('Error getting target student count:', error);
+        return 0;
+      }
+
+      return count || 0;
+    } catch (error) {
+      console.error('SurveyService.getTargetStudentCount error:', error);
+      return 0;
+    }
+  }
+
+  // 모든 설문 상태 자동 업데이트
+  static async updateAllSurveyStatuses(): Promise<void> {
+    try {
+      // 날짜 기한 체크
+      await this.updateSurveyStatusByDate();
+      
+      // 활성화된 설문들의 응답 완료 체크
+      const activeSurveys = await this.getSurveysByStatus('', 'active');
+      for (const survey of activeSurveys) {
+        await this.updateSurveyStatusByCompletion(survey.id);
+      }
+      
+      console.log('🔍 모든 설문 상태 자동 업데이트 완료');
+    } catch (error) {
+      console.error('SurveyService.updateAllSurveyStatuses error:', error);
+      throw error;
+    }
+  }
 }

@@ -9,6 +9,7 @@ import { NotificationService } from "../services/notificationService";
 
 // 설문 상태 표시를 위한 설정
 const surveyStatusConfig = {
+  draft: { label: "대기중", color: "bg-gray-100 text-gray-800" },
   active: { label: "진행중", color: "bg-blue-100 text-blue-800" },
   completed: { label: "완료", color: "bg-green-100 text-green-800" },
 };
@@ -83,6 +84,7 @@ const SurveyItem: React.FC<{
                 : "cursor-pointer"
             } ${statusConfig?.color || "bg-gray-100 text-gray-800"}`}
           >
+            <option value="draft">대기중</option>
             <option value="active">진행중</option>
             <option value="completed">완료</option>
           </select>
@@ -293,6 +295,11 @@ const SurveyManagement: React.FC = () => {
     try {
       setLoading(true);
       setError(null);
+
+      // 설문 상태 자동 업데이트 실행
+      console.log("🔍 설문 상태 자동 업데이트 시작");
+      await SurveyService.updateAllSurveyStatuses();
+      console.log("🔍 설문 상태 자동 업데이트 완료");
 
       console.log("🔍 설문 데이터 로드 시작:", {
         userSchoolId,

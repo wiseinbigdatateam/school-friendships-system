@@ -266,6 +266,14 @@ const SurveyResponse: React.FC = () => {
 
       if (error) throw error;
 
+      // 설문 상태 자동 업데이트 (응답 완료 체크)
+      try {
+        const { SurveyService } = await import('../services/surveyService');
+        await SurveyService.updateSurveyStatusByCompletion(surveyId);
+      } catch (error) {
+        console.error('설문 상태 자동 업데이트 오류:', error);
+      }
+
       // 완료 알림 표시
       alert(
         `🎉 ${selectedStudent.name}님, 설문 응답이 완료되었습니다!\n\n📝 응답 내용이 성공적으로 저장되었습니다.\n👋 감사합니다!`,
