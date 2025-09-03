@@ -11,15 +11,23 @@ export class SurveyService {
     try {
       console.log('🔍 SurveyService.getAllSurveys 호출:', { schoolId });
       
-      // 설문 데이터와 응답 수를 함께 조회
-      const { data, error } = await supabase
+      let query = supabase
         .from('surveys')
         .select(`
           *,
           survey_responses(count)
         `)
-        .eq('school_id', schoolId)
         .order('created_at', { ascending: false });
+
+      // schoolId가 유효한 경우에만 필터링 적용
+      if (schoolId && schoolId !== '' && schoolId !== 'undefined' && schoolId !== 'null') {
+        console.log('🔍 학교 ID 필터링 적용:', { schoolId });
+        query = query.eq('school_id', schoolId);
+      } else {
+        console.log('🔍 학교 ID 필터링 제외 (전체 설문 조회):', { schoolId });
+      }
+
+      const { data, error } = await query;
 
       console.log('🔍 Supabase 조회 결과:', { data, error });
 
@@ -50,15 +58,26 @@ export class SurveyService {
     status: 'draft' | 'active' | 'completed' | 'archived'
   ): Promise<SurveyWithStats[]> {
     try {
-      const { data, error } = await supabase
+      console.log('🔍 SurveyService.getSurveysByStatus 호출:', { schoolId, status });
+      
+      let query = supabase
         .from('surveys')
         .select(`
           *,
           survey_responses(count)
         `)
-        .eq('school_id', schoolId)
         .eq('status', status)
         .order('created_at', { ascending: false });
+
+      // schoolId가 유효한 경우에만 필터링 적용
+      if (schoolId && schoolId !== '' && schoolId !== 'undefined' && schoolId !== 'null') {
+        console.log('🔍 학교 ID 필터링 적용:', { schoolId });
+        query = query.eq('school_id', schoolId);
+      } else {
+        console.log('🔍 학교 ID 필터링 제외 (전체 설문 조회):', { schoolId });
+      }
+
+      const { data, error } = await query;
 
       if (error) {
         console.error('Error fetching surveys by status:', error);
@@ -94,19 +113,21 @@ export class SurveyService {
         classNumberType: typeof classNumber
       });
       
-      // 학교 ID 유효성 검사
-      if (!schoolId || schoolId === 'undefined' || schoolId === 'null') {
-        throw new Error(`잘못된 학교 ID: ${schoolId}`);
-      }
-      
       let query = supabase
         .from('surveys')
         .select(`
           *,
           survey_responses(count)
         `)
-        .eq('school_id', schoolId)
         .order('created_at', { ascending: false });
+
+      // 학교 ID 유효성 검사 및 필터링
+      if (schoolId && schoolId !== '' && schoolId !== 'undefined' && schoolId !== 'null') {
+        console.log('🔍 학교 ID 필터링 적용:', { schoolId });
+        query = query.eq('school_id', schoolId);
+      } else {
+        console.log('🔍 학교 ID 필터링 제외 (전체 설문 조회):', { schoolId });
+      }
 
       console.log('🔍 기본 쿼리 구성:', { schoolId, query: 'surveys 테이블에서 school_id로 필터링' });
 

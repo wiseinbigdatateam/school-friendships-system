@@ -6,6 +6,7 @@ import EditSurveyModal from "../components/EditSurveyModal";
 // import CreateSurveyModal from '../components/CreateSurveyModal'; // 새 설문 생성 주석 처리
 import MobileSendModal from "../components/MobileSendModal";
 import { NotificationService } from "../services/notificationService";
+import { useAuth } from "../contexts/AuthContext";
 
 // 설문 상태 표시를 위한 설정
 const surveyStatusConfig = {
@@ -208,6 +209,7 @@ const SurveyItem: React.FC<{
 // 설문 생성 모달 컴포넌트 - 이제 별도 파일로 분리됨
 
 const SurveyManagement: React.FC = () => {
+  const { user } = useAuth();
   const [surveys, setSurveys] = useState<SurveyWithStats[]>([]);
   const [loading, setLoading] = useState(true);
   // const [isCreateModalOpen, setIsCreateModalOpen] = useState(false); // 새 설문 생성 주석 처리
@@ -240,17 +242,22 @@ const SurveyManagement: React.FC = () => {
   useEffect(() => {
     const fetchCurrentUser = async () => {
       try {
-        // 로컬 스토리지에서 사용자 정보 확인
-        const userStr = localStorage.getItem("wiseon_user");
-        const authToken = localStorage.getItem("wiseon_auth_token");
-
-        if (!userStr || !authToken) {
-          console.log("🔍 로그인 정보가 없습니다. 로그인 페이지로 이동합니다.");
+        if (!user) {
+          console.log("🔍 사용자 정보가 없습니다. 로그인 페이지로 이동합니다.");
           window.location.href = "/login";
           return;
         }
 
-        const user = JSON.parse(userStr);
+        console.log("🔍 사용자 정보:", {
+          id: user.id,
+          name: user.name,
+          role: user.role,
+          schoolId: user.schoolId,
+          school_id: user.school_id,
+          grade: user.grade,
+          class: user.class
+        });
+
         setCurrentUser(user);
 
         // 사용자의 학교 정보 조회
@@ -266,15 +273,42 @@ const SurveyManagement: React.FC = () => {
         setTeacherInfo(userData);
         console.log("🔍 teacherInfo 설정 완료:", userData);
 
-        // 학교 ID 설정
-        if (userData.school_id) {
-          setUserSchoolId(userData.school_id);
+        // 학교 ID 설정 (사용자 권한에 따라)
+        let schoolId = "";
+        
+        if (user.role === 'homeroom_teacher' || user.role === 'grade_teacher' || user.role === 'school_admin') {
+          // 담임교사, 학년담당, 학교 관리자는 특정 학교에 속함
+          schoolId = user.school_id || user.schoolId || "";
+          
+          if (!schoolId) {
+            throw new Error("학교 정보가 설정되지 않았습니다. 관리자에게 문의하세요.");
+          }
+        } else if (user.role === 'district_admin') {
+          // 교육청 관리자는 특정 교육청에 속함
+          // district_id는 userData에서 가져와야 함
+          const districtId = userData.district_id || "";
+          
+          if (!districtId) {
+            throw new Error("교육청 정보가 설정되지 않았습니다. 관리자에게 문의하세요.");
+          }
+          
+          // 교육청 관리자의 경우 모든 학교의 설문을 볼 수 있도록 빈 문자열로 설정
+          schoolId = "";
+        } else if (user.role === 'main_admin') {
+          // 시스템 관리자는 모든 설문을 볼 수 있도록 빈 문자열로 설정
+          schoolId = "";
         } else {
-          // 기본 학교 ID (개발용)
-          setUserSchoolId("00000000-0000-0000-0000-000000000011");
+          throw new Error("알 수 없는 사용자 권한입니다.");
         }
 
-        console.log("🔍 사용자 정보 설정 완료:", { user, userData });
+        setUserSchoolId(schoolId);
+
+        console.log("🔍 사용자 정보 설정 완료:", { 
+          user, 
+          userData,
+          schoolId,
+          userRole: user.role 
+        });
       } catch (error) {
         console.error("사용자 정보 조회 오류:", error);
         // 에러 발생 시 로그인 페이지로 이동
@@ -283,7 +317,7 @@ const SurveyManagement: React.FC = () => {
     };
 
     fetchCurrentUser();
-  }, []);
+  }, [user]);
 
   // 설문 데이터 로드 함수
   const loadSurveys = async () => {
@@ -310,33 +344,35 @@ const SurveyManagement: React.FC = () => {
           class: teacherInfo?.class_number,
           school: teacherInfo?.school_id,
         },
+        user: {
+          role: user?.role,
+          grade: user?.grade,
+          class: user?.class,
+          schoolId: user?.school_id || user?.schoolId,
+        }
       });
 
       let surveysData: SurveyWithStats[];
 
-      // 학교 ID와 학년/반으로 설문 데이터 가져오기
-      if (
-        teacherInfo?.role === "homeroom_teacher" &&
-        teacherInfo.grade_level &&
-        teacherInfo.class_number
-      ) {
-        // 담임교사: 해당 학교, 학년, 반의 설문만
-        console.log("🔍 담임교사용 설문 조회:", {
+      // 사용자 권한에 따른 설문 데이터 가져오기
+      if (user?.role === 'homeroom_teacher' && user?.grade && user?.class) {
+        // 담임선생님: 자신의 담당 학년/반의 설문만
+        console.log("🔍 담임선생님용 설문 조회:", {
           schoolId: userSchoolId,
-          grade: teacherInfo.grade_level,
-          class: teacherInfo.class_number,
+          grade: user.grade,
+          class: user.class,
         });
 
         surveysData = await SurveyService.getSurveysBySchoolGradeClass(
           userSchoolId,
-          teacherInfo.grade_level.toString(),
-          teacherInfo.class_number.toString(),
+          user.grade,
+          user.class,
         );
 
-        console.log("🔍 담임교사용 설문 데이터 로드 완료:", {
+        console.log("🔍 담임선생님용 설문 데이터 로드 완료:", {
           schoolId: userSchoolId,
-          grade: teacherInfo.grade_level,
-          class: teacherInfo.class_number,
+          grade: user.grade,
+          class: user.class,
           count: surveysData.length,
           surveys: surveysData.map((s) => ({
             id: s.id,
@@ -344,24 +380,21 @@ const SurveyManagement: React.FC = () => {
             status: s.status,
           })),
         });
-      } else if (
-        teacherInfo?.role === "grade_teacher" &&
-        teacherInfo.grade_level
-      ) {
-        // 학년부장: 해당 학교, 학년의 설문
-        console.log("🔍 학년부장용 설문 조회:", {
+      } else if (user?.role === 'grade_teacher' && user?.grade) {
+        // 학년담당: 해당 학년의 설문
+        console.log("🔍 학년담당용 설문 조회:", {
           schoolId: userSchoolId,
-          grade: teacherInfo.grade_level,
+          grade: user.grade,
         });
 
         surveysData = await SurveyService.getSurveysBySchoolGradeClass(
           userSchoolId,
-          teacherInfo.grade_level.toString(),
+          user.grade,
         );
 
-        console.log("🔍 학년부장용 설문 데이터 로드 완료:", {
+        console.log("🔍 학년담당용 설문 데이터 로드 완료:", {
           schoolId: userSchoolId,
-          grade: teacherInfo.grade_level,
+          grade: user.grade,
           count: surveysData.length,
           surveys: surveysData.map((s) => ({
             id: s.id,
@@ -369,7 +402,7 @@ const SurveyManagement: React.FC = () => {
             status: s.status,
           })),
         });
-      } else if (teacherInfo?.role === "school_admin") {
+      } else if (user?.role === 'school_admin') {
         // 학교 관리자: 해당 학교의 모든 설문
         console.log("🔍 학교 관리자용 설문 조회:", { schoolId: userSchoolId });
 
@@ -391,21 +424,41 @@ const SurveyManagement: React.FC = () => {
             status: s.status,
           })),
         });
-      } else if (teacherInfo?.role === "district_admin") {
-        // 교육청 관리자: 전체 학교의 모든 설문
+      } else if (user?.role === 'district_admin') {
+        // 교육청 관리자: 해당 교육청의 모든 학교 설문
         console.log("🔍 교육청 관리자용 설문 조회: 전체 학교");
 
         if (statusFilter !== "all") {
           surveysData = await SurveyService.getSurveysByStatus(
-            userSchoolId,
+            "", // 빈 문자열로 모든 학교의 설문 조회
             statusFilter as "draft" | "active" | "completed" | "archived",
           );
         } else {
-          surveysData = await SurveyService.getAllSurveys(userSchoolId);
+          surveysData = await SurveyService.getAllSurveys(""); // 빈 문자열로 모든 학교의 설문 조회
         }
 
         console.log("🔍 교육청 관리자용 설문 데이터 로드 완료:", {
-          schoolId: userSchoolId,
+          count: surveysData.length,
+          surveys: surveysData.map((s) => ({
+            id: s.id,
+            title: s.title,
+            status: s.status,
+          })),
+        });
+      } else if (user?.role === 'main_admin') {
+        // 시스템 관리자: 모든 설문
+        console.log("🔍 시스템 관리자용 설문 조회: 전체 시스템");
+
+        if (statusFilter !== "all") {
+          surveysData = await SurveyService.getSurveysByStatus(
+            "", // 빈 문자열로 모든 설문 조회
+            statusFilter as "draft" | "active" | "completed" | "archived",
+          );
+        } else {
+          surveysData = await SurveyService.getAllSurveys(""); // 빈 문자열로 모든 설문 조회
+        }
+
+        console.log("🔍 시스템 관리자용 설문 데이터 로드 완료:", {
           count: surveysData.length,
           surveys: surveysData.map((s) => ({
             id: s.id,
@@ -523,9 +576,9 @@ const SurveyManagement: React.FC = () => {
 
   // 설문 데이터 로드
   useEffect(() => {
-    if (!userSchoolId) return; // 학교 ID가 없으면 로드하지 않음
+    if (!userSchoolId && user?.role !== 'district_admin' && user?.role !== 'main_admin') return; // 학교 ID가 없으면 로드하지 않음 (단, 관리자는 제외)
     loadSurveys();
-  }, [userSchoolId, statusFilter, currentUser?.id]);
+  }, [userSchoolId, statusFilter, user]);
 
   // const handleCreateSurvey = async (surveyData: any) => {
   //   try {
@@ -977,6 +1030,40 @@ const SurveyManagement: React.FC = () => {
         <p className="text-gray-600">
           교우관계 분석을 위한 설문조사를 생성하고 관리합니다.
         </p>
+        {/* 사용자 권한 정보 표시 */}
+        {user?.role === 'homeroom_teacher' && user?.grade && user?.class && (
+          <div>
+            
+          </div>
+        )}
+        {user?.role === 'grade_teacher' && user?.grade && (
+          <div className="mt-2 rounded-lg bg-green-50 p-3">
+            <p className="text-sm text-green-800">
+              <span className="font-semibold">학년담당 권한:</span> {user.grade}학년 담당
+            </p>
+          </div>
+        )}
+        {user?.role === 'school_admin' && (
+          <div className="mt-2 rounded-lg bg-purple-50 p-3">
+            <p className="text-sm text-purple-800">
+              <span className="font-semibold">학교 관리자 권한:</span> 전체 학교 설문 관리
+            </p>
+          </div>
+        )}
+        {user?.role === 'district_admin' && (
+          <div className="mt-2 rounded-lg bg-orange-50 p-3">
+            <p className="text-sm text-orange-800">
+              <span className="font-semibold">교육청 관리자 권한:</span> 전체 교육청 설문 관리
+            </p>
+          </div>
+        )}
+        {user?.role === 'main_admin' && (
+          <div className="mt-2 rounded-lg bg-red-50 p-3">
+            <p className="text-sm text-red-800">
+              <span className="font-semibold">시스템 관리자 권한:</span> 전체 시스템 설문 관리
+            </p>
+          </div>
+        )}
       </div>
 
       {/* 에러 메시지 */}

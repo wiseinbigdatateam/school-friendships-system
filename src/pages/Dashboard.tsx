@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { supabase } from "../lib/supabase";
 import { NotificationService } from "../services/notificationService";
 import BarChart from "../components/BarChart";
+import { useAuth } from "../contexts/AuthContext";
 
 interface SurveyProject {
   id: string;
@@ -26,6 +27,7 @@ interface SurveyTemplate {
 }
 
 const Dashboard: React.FC = () => {
+  const { user } = useAuth();
   const [loading, setLoading] = useState(true);
   const [schoolId, setSchoolId] = useState("");
   const [schoolName, setSchoolName] = useState("");
@@ -217,46 +219,182 @@ const Dashboard: React.FC = () => {
   useEffect(() => {
     const loadRealData = async () => {
       try {
-        // 1. 로그인한 사용자 확인 (선택적)
-        const userStr = localStorage.getItem("user");
-        let user = null;
-
-        if (userStr) {
-          try {
-            user = JSON.parse(userStr);
-          } catch (e) {
-            // 사용자 정보 파싱 실패 시 기본 데이터로 진행
-          }
-        } else {
-          // 로그인 정보가 없을 시 기본 데이터로 진행
+        if (!user) {
+          console.log("🔍 사용자 정보가 없습니다.");
+          setLoading(false);
+          return;
         }
 
-        // 2. 기본 정보 설정 (실제 DB 데이터 기반)
-        const schoolId = "ab466857-5c16-4329-a9f6-f2d081c864f0"; // 와이즈인컴퍼니
-        const gradeLevel = "1";
-        const classNumber = "1";
+        // 최신 사용자 정보 조회 (grade_level, class_number 포함)
+        const { data: userData, error: userError } = await supabase
+          .from("users")
+          .select("*, schools(name), districts(name)")
+          .eq("id", user.id)
+          .single();
+
+        if (userError) {
+          console.error("❌ 사용자 정보 조회 실패:", userError);
+          setLoading(false);
+          return;
+        }
+
+        console.log("🔍 대시보드 데이터 로드 시작:", {
+          userRole: user.role,
+          userGrade: userData.grade_level,
+          userClass: userData.class_number,
+          userSchoolId: userData.school_id
+        });
+
+        // 사용자 권한에 따른 데이터 설정
+        let schoolId = "";
+        let gradeLevel = "";
+        let classNumber = "";
+        let schoolName = "";
+        let teacherName = userData.name || "담임선생님";
+
+        if (user.role === 'homeroom_teacher' && userData.grade_level && userData.class_number) {
+          // 담임선생님: 자신의 담당 학년/반
+          schoolId = userData.school_id || "";
+          gradeLevel = userData.grade_level.toString();
+          classNumber = userData.class_number.toString();
+          
+          if (!schoolId) {
+            throw new Error("학교 정보가 설정되지 않았습니다.");
+          }
+          
+          // 학교 이름 조회
+          const { data: schoolData } = await supabase
+            .from("schools")
+            .select("name")
+            .eq("id", schoolId)
+            .single();
+          
+          schoolName = schoolData?.name || "알 수 없는 학교";
+          
+        } else if (user.role === 'grade_teacher' && userData.grade_level) {
+          // 학년담당: 해당 학년 전체
+          schoolId = userData.school_id || "";
+          gradeLevel = userData.grade_level.toString();
+          
+          if (!schoolId) {
+            throw new Error("학교 정보가 설정되지 않았습니다.");
+          }
+          
+          // 학교 이름 조회
+          const { data: schoolData } = await supabase
+            .from("schools")
+            .select("name")
+            .eq("id", schoolId)
+            .single();
+          
+          schoolName = schoolData?.name || "알 수 없는 학교";
+          
+        } else if (user.role === 'school_admin') {
+          // 학교 관리자: 해당 학교 전체
+          schoolId = userData.school_id || "";
+          
+          if (!schoolId) {
+            throw new Error("학교 정보가 설정되지 않았습니다.");
+          }
+          
+          // 학교 이름 조회
+          const { data: schoolData } = await supabase
+            .from("schools")
+            .select("name")
+            .eq("id", schoolId)
+            .single();
+          
+          schoolName = schoolData?.name || "알 수 없는 학교";
+          
+                         } else if (user.role === 'district_admin') {
+          // 교육청 관리자: 해당 교육청 전체
+          // district_id는 userData에서 가져와야 함
+          const districtId = userData.district_id || "";
+           
+           if (!districtId) {
+             throw new Error("교육청 정보가 설정되지 않았습니다.");
+           }
+           
+           // 교육청 이름 조회
+           const { data: districtData } = await supabase
+             .from("districts")
+             .select("name")
+             .eq("id", districtId)
+             .single();
+           
+           schoolName = districtData?.name || "알 수 없는 교육청";
+          
+        } else if (user.role === 'main_admin') {
+          // 시스템 관리자: 전체 시스템
+          schoolName = "전체 시스템";
+          
+        } else {
+          throw new Error("알 수 없는 사용자 권한입니다.");
+        }
 
         setSchoolId(schoolId);
         setGradeLevel(gradeLevel);
         setClassNumber(classNumber);
-        setCurrentUser(
-          user || { id: "default", name: "김담임", role: "homeroom_teacher" }
-        );
+        setSchoolName(schoolName);
+        setCurrentUser(user);
         setTeacherInfo({
-          name: "김담임",
-          role: "homeroom_teacher",
+          name: teacherName,
+          role: user.role,
         });
 
-        // 3. 학교 이름 설정
-        setSchoolName("와이즈인컴퍼니");
+        console.log("🔍 사용자 권한별 설정 완료:", {
+          schoolId,
+          gradeLevel,
+          classNumber,
+          schoolName,
+          userRole: user.role
+        });
 
-        // 4. 학생 목록 조회
-        const { data: studentsData, error: studentsError } = await supabase
+        // 학생 목록 조회 (권한에 따라)
+        let studentsQuery = supabase
           .from("students")
           .select("*")
-          .eq("current_school_id", schoolId)
-          .eq("grade", gradeLevel)
-          .eq("class", classNumber);
+          .eq("is_active", true);
+
+        if (user.role === 'homeroom_teacher' && schoolId && gradeLevel && classNumber) {
+          // 담임선생님: 자신의 담당 학년/반 학생만
+          studentsQuery = studentsQuery
+            .eq("current_school_id", schoolId)
+            .eq("grade", gradeLevel)
+            .eq("class", classNumber);
+            
+        } else if (user.role === 'grade_teacher' && schoolId && gradeLevel) {
+          // 학년담당: 해당 학년 전체 학생
+          studentsQuery = studentsQuery
+            .eq("current_school_id", schoolId)
+            .eq("grade", gradeLevel);
+            
+        } else if (user.role === 'school_admin' && schoolId) {
+          // 학교 관리자: 해당 학교 전체 학생
+          studentsQuery = studentsQuery.eq("current_school_id", schoolId);
+          
+        } else if (user.role === 'district_admin') {
+          // 교육청 관리자: 해당 교육청 전체 학생
+          const districtId = userData.district_id || "";
+          if (districtId) {
+            // 교육청에 속한 학교들의 학생들 조회
+            const { data: schoolIds } = await supabase
+              .from("schools")
+              .select("id")
+              .eq("district_id", districtId);
+            
+            if (schoolIds && schoolIds.length > 0) {
+              const schoolIdList = schoolIds.map(s => s.id);
+              studentsQuery = studentsQuery.in("current_school_id", schoolIdList);
+            }
+          }
+          
+        } else if (user.role === 'main_admin') {
+          // 시스템 관리자: 전체 학생
+          // 필터링 없이 전체 조회
+        }
+
+        const { data: studentsData, error: studentsError } = await studentsQuery;
 
         if (studentsError) {
           console.error("❌ 학생 조회 실패:", studentsError);
@@ -267,32 +405,63 @@ const Dashboard: React.FC = () => {
         setStudents(studentsData || []);
 
         if (studentsData && studentsData.length > 0) {
-          // 5. 설문 목록 조회 (active와 completed 상태만 포함)
-          console.log("🔍 설문 조회 시작:", { schoolId });
-          const { data: surveys, error: surveysError } = await supabase
+          // 설문 목록 조회 (권한에 따라)
+          console.log("🔍 설문 조회 시작:", { schoolId, userRole: user.role });
+          
+          let surveysQuery = supabase
             .from("surveys")
             .select("*")
-            .eq("school_id", schoolId)
-            .in("status", ["active", "completed"]) // draft 제외
+            .in("status", ["active", "completed"])
             .order("created_at", { ascending: false });
+
+          if (user.role === 'homeroom_teacher' && schoolId) {
+            // 담임선생님: 해당 학교의 자신 담당 학년/반 설문
+            surveysQuery = surveysQuery.eq("school_id", schoolId);
+            
+          } else if (user.role === 'grade_teacher' && schoolId) {
+            // 학년담당: 해당 학교의 해당 학년 설문
+            surveysQuery = surveysQuery.eq("school_id", schoolId);
+            
+          } else if (user.role === 'school_admin' && schoolId) {
+            // 학교 관리자: 해당 학교 전체 설문
+            surveysQuery = surveysQuery.eq("school_id", schoolId);
+            
+          } else if (user.role === 'district_admin') {
+            // 교육청 관리자: 해당 교육청 전체 설문
+            const districtId = userData.district_id || "";
+            if (districtId) {
+              const { data: schoolIds } = await supabase
+                .from("schools")
+                .select("id")
+                .eq("district_id", districtId);
+              
+              if (schoolIds && schoolIds.length > 0) {
+                const schoolIdList = schoolIds.map(s => s.id);
+                surveysQuery = surveysQuery.in("school_id", schoolIdList);
+              }
+            }
+            
+          } else if (user.role === 'main_admin') {
+            // 시스템 관리자: 전체 설문
+            // 필터링 없이 전체 조회
+          }
+
+          const { data: surveys, error: surveysError } = await surveysQuery;
 
           if (surveysError) {
             console.error("❌ 설문 조회 실패:", surveysError);
           } else {
             console.log("✅ 원본 설문 데이터:", surveys);
             console.log("📊 총 설문 개수:", surveys?.length || 0);
-            // target_grades와 target_classes가 일치하는 설문만 필터링
-            const filteredSurveys =
-              surveys?.filter((survey) => {
+            
+            // 권한에 따른 추가 필터링
+            let filteredSurveys = surveys || [];
+
+            if (user.role === 'homeroom_teacher' && gradeLevel && classNumber) {
+              // 담임선생님: 자신의 담당 학년/반 설문만
+              filteredSurveys = surveys?.filter((survey) => {
                 const targetGrades = survey.target_grades;
                 const targetClasses = survey.target_classes;
-
-                console.log(`🔍 설문 "${survey.title}" 필터링 체크:`, {
-                  gradeLevel,
-                  classNumber,
-                  targetGrades,
-                  targetClasses,
-                });
 
                 const gradeMatch = Array.isArray(targetGrades)
                   ? targetGrades.includes(gradeLevel)
@@ -302,15 +471,19 @@ const Dashboard: React.FC = () => {
                   ? targetClasses.includes(classNumber)
                   : targetClasses === classNumber;
 
-                const isMatch = gradeMatch && classMatch;
-                console.log(`📋 설문 "${survey.title}" 매칭 결과:`, {
-                  gradeMatch,
-                  classMatch,
-                  isMatch,
-                });
-
-                return isMatch;
+                return gradeMatch && classMatch;
               }) || [];
+              
+            } else if (user.role === 'grade_teacher' && gradeLevel) {
+              // 학년담당: 해당 학년 설문만
+              filteredSurveys = surveys?.filter((survey) => {
+                const targetGrades = survey.target_grades;
+                const gradeMatch = Array.isArray(targetGrades)
+                  ? targetGrades.includes(gradeLevel)
+                  : targetGrades === gradeLevel;
+                return gradeMatch;
+              }) || [];
+            }
 
             console.log("🎯 필터링 후 설문 개수:", filteredSurveys.length);
             console.log(
@@ -606,7 +779,7 @@ const Dashboard: React.FC = () => {
     };
 
     loadRealData();
-  }, []);
+  }, [user]);
 
   if (loading) {
     return (
@@ -650,6 +823,38 @@ const Dashboard: React.FC = () => {
                       ?.status || ""
                   )
                 : "상태 없음"}
+            </div>
+          </div>
+          
+          {/* 사용자 권한 정보 표시 */}
+          <div className="mt-4 px-6">
+            <div className="flex items-center justify-center space-x-4 text-sm text-gray-600">
+              <span>학교: {schoolName}</span>
+              {user?.role === 'homeroom_teacher' && gradeLevel && classNumber && (
+                <span className="px-2 py-1 bg-blue-100 text-blue-800 rounded-full">
+                  {gradeLevel}학년 {classNumber}반 담임
+                </span>
+              )}
+              {user?.role === 'grade_teacher' && gradeLevel && (
+                <span className="px-2 py-1 bg-green-100 text-green-800 rounded-full">
+                  {gradeLevel}학년 담당
+                </span>
+              )}
+              {user?.role === 'school_admin' && (
+                <span className="px-2 py-1 bg-purple-100 text-purple-800 rounded-full">
+                  학교 관리자
+                </span>
+              )}
+              {user?.role === 'district_admin' && (
+                <span className="px-2 py-1 bg-orange-100 text-orange-800 rounded-full">
+                  교육청 관리자
+                </span>
+              )}
+              {user?.role === 'main_admin' && (
+                <span className="px-2 py-1 bg-red-100 text-red-800 rounded-full">
+                  시스템 관리자
+                </span>
+              )}
             </div>
           </div>
         </div>
