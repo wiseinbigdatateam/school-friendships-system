@@ -514,11 +514,11 @@ const IndividualAnalysis: React.FC = () => {
                             </p>
                           </div>
                         ) : individualNetworkData.length > 0 ? (
-                          <div className="">
+                          <div className="mx-auto w-fit">
                             {/* <div className="text-sm text-gray-600">
-                              개별 학생 네트워크 분석 (선택된 학생의 친구 관계만
-                              표시)
-                            </div> */}
+                               개별 학생 네트워크 분석 (선택된 학생의 친구 관계만
+                               표시)
+                             </div> */}
                             <NetworkGraph
                               students={individualNetworkData}
                               maxSelections={
