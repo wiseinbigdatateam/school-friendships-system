@@ -154,7 +154,65 @@ setup_permissions() {
     log_success "권한 설정 프로세스 완료"
 }
 
-# ===== Nginx 설정 확인 =====
+# ===== 메일서버 설정 =====
+setup_mail_server() {
+    log_info "🔧 메일서버 설정 중..."
+    
+    # 1단계: proxy-server.js 파일 업로드
+    log_info "  1단계: proxy-server.js 파일 업로드..."
+    if scp -i $KEY_FILE proxy-server.js $REMOTE_USER@$EC2_IP:~/school-friendships-system-main/; then
+        log_success "  proxy-server.js 파일 업로드 완료"
+    else
+        log_warning "  proxy-server.js 파일이 로컬에 없습니다 (수동 업로드 필요)"
+    fi
+    
+    # 2단계: 환경변수 파일 업로드
+    log_info "  2단계: 환경변수 파일 업로드..."
+    if scp -i $KEY_FILE .env $REMOTE_USER@$EC2_IP:~/school-friendships-system-main/ 2>/dev/null; then
+        log_success "  .env 파일 업로드 완료"
+    else
+        log_warning "  .env 파일이 로컬에 없습니다 (수동 설정 필요)"
+    fi
+    
+    # 3단계: 기존 메일서버 프로세스 종료
+    log_info "  3단계: 기존 메일서버 프로세스 종료..."
+    if ssh -i $KEY_FILE $REMOTE_USER@$EC2_IP "pkill -f 'node.*proxy-server.js'" 2>/dev/null; then
+        log_success "  기존 메일서버 프로세스 종료 완료"
+    else
+        log_info "  실행 중인 메일서버 프로세스가 없습니다"
+    fi
+    
+    # 4단계: 의존성 패키지 설치 확인
+    log_info "  4단계: 의존성 패키지 설치 확인..."
+    ssh -i $KEY_FILE $REMOTE_USER@$EC2_IP "cd ~/school-friendships-system-main && npm list express cors axios nodemailer dotenv >/dev/null 2>&1 || npm install express cors axios nodemailer dotenv"
+    log_success "  의존성 패키지 설치 완료"
+    
+    # 5단계: 메일서버 실행
+    log_info "  5단계: 메일서버 실행..."
+    if ssh -i $KEY_FILE $REMOTE_USER@$EC2_IP "cd ~/school-friendships-system-main && nohup node proxy-server.js > proxy-server.log 2>&1 &"; then
+        log_success "  메일서버 실행 완료"
+    else
+        log_error "  메일서버 실행 실패"
+        return 1
+    fi
+    
+    # 6단계: 메일서버 상태 확인
+    log_info "  6단계: 메일서버 상태 확인..."
+    sleep 3
+    if ssh -i $KEY_FILE $REMOTE_USER@$EC2_IP "ps aux | grep 'node.*proxy-server.js' | grep -v grep"; then
+        log_success "  메일서버가 정상적으로 실행 중입니다"
+    else
+        log_error "  메일서버 실행 상태를 확인할 수 없습니다"
+        return 1
+    fi
+    
+    # 7단계: 메일서버 로그 확인
+    log_info "  7단계: 메일서버 로그 확인..."
+    ssh -i $KEY_FILE $REMOTE_USER@$EC2_IP "tail -5 ~/school-friendships-system-main/proxy-server.log"
+    
+    log_success "메일서버 설정 완료"
+    return 0
+}
 check_nginx_config() {
     log_info "Nginx 설정 확인 중..."
     
@@ -226,6 +284,15 @@ main() {
     
     # 6. 배포 완료 메시지
     log_success "🎉 학교 친구관계 시스템 배포 완료!"
+    
+    # 7. 메일서버 설정
+    log_step "4. 메일서버 설정 중..."
+    if setup_mail_server; then
+        log_success "메일서버 설정 완료"
+    else
+        log_warning "메일서버 설정에 문제가 있습니다 (수동 설정 필요)"
+    fi
+    
     echo ""
     log_info "📋 접속 정보:"
     echo "   웹사이트: http://$EC2_IP"
@@ -240,6 +307,9 @@ main() {
     echo "   백업 목록: ssh -i $KEY_FILE $REMOTE_USER@$EC2_IP 'ls -la ~/backup/'"
     echo "   권한 확인: ssh -i $KEY_FILE $REMOTE_USER@$EC2_IP 'ls -la $REMOTE_PATH/'"
     echo "   프로세스 확인: ssh -i $KEY_FILE $REMOTE_USER@$EC2_IP 'ps aux | grep nginx'"
+    echo "   메일서버 상태: ssh -i $KEY_FILE $REMOTE_USER@$EC2_IP 'ps aux | grep proxy-server'"
+    echo "   메일서버 로그: ssh -i $KEY_FILE $REMOTE_USER@$EC2_IP 'tail -f ~/school-friendships-system-main/proxy-server.log'"
+    echo "   메일서버 재시작: ssh -i $KEY_FILE $REMOTE_USER@$EC2_IP 'cd ~/school-friendships-system-main && pkill -f proxy-server && nohup node proxy-server.js > proxy-server.log 2>&1 &'"
     echo ""
     log_info "📊 배포 정보:"
     echo "   배포 시간: $(date)"
