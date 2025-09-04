@@ -339,6 +339,9 @@ const SurveyManagement: React.FC = () => {
       await SurveyService.updateAllSurveyStatuses();
       console.log("🔍 설문 상태 자동 업데이트 완료");
 
+      // 상태 업데이트 후 잠시 대기 (데이터베이스 반영 시간)
+      await new Promise(resolve => setTimeout(resolve, 1000));
+
       console.log("🔍 설문 데이터 로드 시작:", {
         userSchoolId,
         statusFilter,
@@ -585,6 +588,18 @@ const SurveyManagement: React.FC = () => {
     // 페이지네이션 초기화
     setCurrentPage(1);
   }, [userSchoolId, statusFilter, user]);
+
+  // 실시간 상태 업데이트 (5분마다)
+  useEffect(() => {
+    if (!userSchoolId && user?.role !== 'district_admin' && user?.role !== 'main_admin') return;
+    
+    const interval = setInterval(() => {
+      console.log("🔍 실시간 상태 업데이트 실행");
+      loadSurveys();
+    }, 5 * 60 * 1000); // 5분마다
+
+    return () => clearInterval(interval);
+  }, [userSchoolId, user]);
 
   // const handleCreateSurvey = async (surveyData: any) => {
   //   try {

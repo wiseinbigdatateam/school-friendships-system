@@ -523,7 +523,7 @@ export class SurveyService {
   }
 
   // 모든 설문 상태 자동 업데이트
-  static async updateAllSurveyStatuses(): Promise<void> {
+  static async updateAllSurveyStatuses(): Promise<SurveyWithStats[]> {
     try {
       console.log('🔍 설문 상태 자동 업데이트 시작');
       
@@ -535,7 +535,7 @@ export class SurveyService {
 
       if (fetchError) {
         console.error('설문 조회 오류:', fetchError);
-        return;
+        return [];
       }
 
       const now = new Date();
@@ -592,6 +592,9 @@ export class SurveyService {
       }
       
       console.log('🔍 모든 설문 상태 자동 업데이트 완료');
+      
+      // 업데이트된 모든 설문 데이터 반환
+      return await this.getAllSurveys('');
     } catch (error) {
       console.error('SurveyService.updateAllSurveyStatuses error:', error);
       throw error;
