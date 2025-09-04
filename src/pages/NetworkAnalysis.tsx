@@ -2056,107 +2056,6 @@ const NetworkAnalysis: React.FC = () => {
             </div>
 
             <div className="p-6">
-              {/* 범례 섹션 */}
-              <div className="mb-6 rounded-lg bg-gray-50 p-4">
-                <h4 className="mb-3 text-sm font-medium text-gray-900">
-                  학생 유형별 분류
-                </h4>
-                <div className="grid grid-cols-2 gap-3 md:grid-cols-5">
-                  {/* 외톨이형 */}
-                  <div className="flex items-center space-x-2">
-                    <div className="h-4 w-4 rounded-full bg-red-500"></div>
-                    <div className="text-xs">
-                      <div className="font-medium text-gray-900">외톨이형</div>
-                      <div className="text-gray-600">
-                        {
-                          analysisResults.nodes.filter(
-                            (n) => n.centrality < 0.2,
-                          ).length
-                        }
-                        명
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* 소수 친구 학생 */}
-                  <div className="flex items-center space-x-2">
-                    <div className="h-4 w-4 rounded-full bg-yellow-500"></div>
-                    <div className="text-xs">
-                      <div className="font-medium text-gray-900">
-                        소수 친구 학생
-                      </div>
-                      <div className="text-gray-600">
-                        {
-                          analysisResults.nodes.filter(
-                            (n) => n.centrality >= 0.2 && n.centrality < 0.4,
-                          ).length
-                        }
-                        명
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* 평균적인 학생 */}
-                  <div className="flex items-center space-x-2">
-                    <div className="h-4 w-4 rounded-full bg-blue-400"></div>
-                    <div className="text-xs">
-                      <div className="font-medium text-gray-900">
-                        평균적인 학생
-                      </div>
-                      <div className="text-gray-600">
-                        {
-                          analysisResults.nodes.filter(
-                            (n) => n.centrality >= 0.4 && n.centrality < 0.6,
-                          ).length
-                        }
-                        명
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* 친구 많은 학생 */}
-                  <div className="flex items-center space-x-2">
-                    <div className="h-4 w-4 rounded-full bg-blue-700"></div>
-                    <div className="text-xs">
-                      <div className="font-medium text-gray-900">
-                        친구 많은 학생
-                      </div>
-                      <div className="text-gray-600">
-                        {
-                          analysisResults.nodes.filter(
-                            (n) => n.centrality >= 0.6 && n.centrality < 0.8,
-                          ).length
-                        }
-                        명
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* 사교 스타 */}
-                  <div className="flex items-center space-x-2">
-                    <div className="h-4 w-4 rounded-full bg-green-500"></div>
-                    <div className="text-xs">
-                      <div className="font-medium text-gray-900">사교 스타</div>
-                      <div className="text-gray-600">
-                        {
-                          analysisResults.nodes.filter(
-                            (n) => n.centrality >= 0.8,
-                          ).length
-                        }
-                        명
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="mt-3 border-t border-gray-200 pt-3">
-                  <div className="text-xs text-gray-600">
-                    💡 <strong>시각화 가이드:</strong> 노드 크기는 중심성 점수에
-                    비례하며, 색상은 학생의 사회적 관계 유형을 나타냅니다.
-                  </div>
-                </div>
-              </div>
-
               {/* 네트워크 시각화 */}
               <div className="rounded-lg border bg-white p-4">
                 <NetworkVisualization
@@ -2174,8 +2073,8 @@ const NetworkAnalysis: React.FC = () => {
                     edges: analysisResults.edges,
                   }}
                   period="현재"
-                  width={800}
-                  height={600}
+                  width={900}
+                  height={750}
                   onNodeClick={(node) => {
                     console.log("🔍 노드 클릭:", node);
                     const student = students.find((s) => s.id === node.id);
@@ -2184,48 +2083,6 @@ const NetworkAnalysis: React.FC = () => {
                     }
                   }}
                 />
-              </div>
-
-              {/* 네트워크 요약 정보 */}
-              <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-4">
-                <div className="rounded-lg bg-blue-50 p-3 text-center">
-                  <div className="text-lg font-bold text-blue-600">
-                    {
-                      analysisResults.nodes.filter((n) => n.centrality < 0.2)
-                        .length
-                    }
-                  </div>
-                  <div className="text-xs text-blue-800">외톨이형</div>
-                </div>
-                <div className="rounded-lg bg-yellow-50 p-3 text-center">
-                  <div className="text-lg font-bold text-yellow-600">
-                    {
-                      analysisResults.nodes.filter(
-                        (n) => n.centrality >= 0.2 && n.centrality < 0.4,
-                      ).length
-                    }
-                  </div>
-                  <div className="text-xs text-yellow-800">소수 친구</div>
-                </div>
-                <div className="rounded-lg bg-blue-50 p-3 text-center">
-                  <div className="text-lg font-bold text-blue-600">
-                    {
-                      analysisResults.nodes.filter(
-                        (n) => n.centrality >= 0.4 && n.centrality < 0.6,
-                      ).length
-                    }
-                  </div>
-                  <div className="text-xs text-blue-800">평균적</div>
-                </div>
-                <div className="rounded-lg bg-green-50 p-3 text-center">
-                  <div className="text-lg font-bold text-green-600">
-                    {
-                      analysisResults.nodes.filter((n) => n.centrality >= 0.6)
-                        .length
-                    }
-                  </div>
-                  <div className="text-xs text-green-800">친구 많음</div>
-                </div>
               </div>
             </div>
           </div>
