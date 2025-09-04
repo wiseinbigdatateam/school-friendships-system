@@ -772,7 +772,7 @@ const Dashboard: React.FC = () => {
                         0
                       </text>
                       <text
-                        x="83"
+                        x="78"
                         y="52"
                         textAnchor="start"
                         className="fill-gray-500 text-[8px]"
