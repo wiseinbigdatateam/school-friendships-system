@@ -87,7 +87,7 @@ CREATE TABLE survey (
     questions JSONB NOT NULL DEFAULT '[]',
     start_date DATE NOT NULL,
     end_date DATE NOT NULL,
-    status VARCHAR(20) DEFAULT 'draft' CHECK (status IN ('draft', 'active', 'completed', 'archived')),
+    status VARCHAR(20) DEFAULT 'waiting' CHECK (status IN ('waiting', 'active', 'completed', 'archived')),
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
