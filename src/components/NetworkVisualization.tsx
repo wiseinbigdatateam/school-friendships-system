@@ -47,7 +47,36 @@ const NetworkVisualization: React.FC<NetworkVisualizationProps> = ({
   const [selectedNode, setSelectedNode] = useState<NetworkNode | null>(null);
 
   useEffect(() => {
-    if (!data || !data.nodes || !data.edges || !svgRef.current) return;
+    if (!data || !data.nodes || !data.edges || !svgRef.current) {
+      console.warn('NetworkVisualization: 유효하지 않은 데이터 또는 SVG 참조');
+      return;
+    }
+
+    // 노드 데이터 검증
+    if (data.nodes.length === 0) {
+      console.warn('NetworkVisualization: 빈 노드 데이터');
+      return;
+    }
+
+    // 노드 ID 집합 생성
+    const nodeIds = new Set(data.nodes.map(node => node.id));
+    
+    // 유효한 엣지만 필터링 (source와 target이 모두 존재하는 노드인 경우)
+    const validEdges = data.edges.filter(edge => {
+      const sourceId = typeof edge.source === 'string' ? edge.source : (edge.source as any)?.id;
+      const targetId = typeof edge.target === 'string' ? edge.target : (edge.target as any)?.id;
+      return sourceId && targetId && nodeIds.has(sourceId) && nodeIds.has(targetId);
+    });
+
+    if (validEdges.length !== data.edges.length) {
+      console.warn(`NetworkVisualization: ${data.edges.length - validEdges.length}개의 유효하지 않은 엣지 제거됨`);
+    }
+
+    // 유효한 데이터로 업데이트
+    const validData = {
+      ...data,
+      edges: validEdges
+    };
 
     // 기존 SVG 내용 클리어
     d3.select(svgRef.current).selectAll("*").remove();
@@ -71,8 +100,8 @@ const NetworkVisualization: React.FC<NetworkVisualizationProps> = ({
       .range([1, 3]);
 
     // 시뮬레이션 설정
-    const simulation = d3.forceSimulation(data.nodes as any)
-      .force("link", d3.forceLink(data.edges).id((d: any) => d.id).distance(80))
+    const simulation = d3.forceSimulation(validData.nodes as any)
+      .force("link", d3.forceLink(validData.edges).id((d: any) => d.id).distance(80))
       .force("charge", d3.forceManyBody().strength(-300))
       .force("center", d3.forceCenter(width / 2, height / 2))
       .force("collision", d3.forceCollide().radius((d: any) => sizeScale(d.centrality) + 8));
@@ -81,7 +110,7 @@ const NetworkVisualization: React.FC<NetworkVisualizationProps> = ({
     const links = g.append("g")
       .attr("class", "links")
       .selectAll("line")
-      .data(data.edges)
+      .data(validData.edges)
       .enter().append("line")
       .attr("stroke", "#94a3b8")
       .attr("stroke-opacity", 0.4)
@@ -92,7 +121,7 @@ const NetworkVisualization: React.FC<NetworkVisualizationProps> = ({
     const nodes = g.append("g")
       .attr("class", "nodes")
       .selectAll("circle")
-      .data(data.nodes)
+      .data(validData.nodes)
       .enter().append("circle")
       .attr("r", d => sizeScale(d.centrality))
       .attr("fill", d => colorScale(d.friendship_type))
@@ -137,7 +166,7 @@ const NetworkVisualization: React.FC<NetworkVisualizationProps> = ({
     const labels = g.append("g")
       .attr("class", "labels")
       .selectAll("text")
-      .data(data.nodes)
+      .data(validData.nodes)
       .enter().append("text")
       .text(d => d.name)
       .attr("font-size", "11px")
