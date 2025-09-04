@@ -142,6 +142,32 @@ const SurveyResponse: React.FC = () => {
             // 수정된 질문 배열로 surveyData 업데이트
             surveyData.questions = questionsWithMaxSelections;
             
+            // 학교폭력/만족도 카테고리의 경우 answer_options 적용
+            if (templateData?.metadata?.category !== "교우관계" && 
+                templateData?.metadata?.answer_options) {
+              surveyData.questions = surveyData.questions.map((question: any, index: number) => {
+                // answer_options가 객체인 경우 (학교폭력, 만족도)
+                if (templateData.metadata.answer_options && 
+                    typeof templateData.metadata.answer_options === 'object' && 
+                    !Array.isArray(templateData.metadata.answer_options)) {
+                  return {
+                    ...question,
+                    answer_options: templateData.metadata.answer_options
+                  };
+                }
+                // answer_options가 배열인 경우 (기타 카테고리)
+                else if (templateData.metadata.answer_options && 
+                         Array.isArray(templateData.metadata.answer_options) &&
+                         templateData.metadata.answer_options[index]) {
+                  return {
+                    ...question,
+                    answer_options: templateData.metadata.answer_options[index]
+                  };
+                }
+                return question;
+              });
+            }
+            
             surveyData.questions.forEach((question: any) => {
               if (question.type === "multiple_choice") {
                 // 카테고리에 따라 초기값 설정
@@ -833,13 +859,7 @@ const SurveyResponse: React.FC = () => {
 
             {/* 제출 버튼 */}
             <div className="flex justify-between border-t border-gray-200 pt-6">
-              <button
-                type="button"
-                onClick={() => setCurrentStep("verify")}
-                className="rounded-lg border border-gray-300 px-6 py-3 text-gray-700 hover:bg-gray-50"
-              >
-                이전으로
-              </button>
+              
               <button
                 type="submit"
                 disabled={submitting}
