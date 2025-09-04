@@ -536,11 +536,11 @@ const Header: React.FC<HeaderProps> = ({ logo, navigationItems }) => {
                     <div className="my-1 border-t border-gray-100"></div>
                     <button
                       onClick={() => handleUserMenuClick("logout")}
-                      className="block w-full px-4 py-3 text-left text-sm text-red-600 transition-colors hover:bg-red-50"
+                      className="block w-full px-4 py-3 text-left text-sm text-gray-700 transition-colors hover:bg-red-50"
                     >
                       <div className="flex items-center">
                         <svg
-                          className="mr-3 h-4 w-4 text-red-500"
+                          className="mr-3 h-4 w-4 text-gray-400"
                           fill="none"
                           stroke="currentColor"
                           viewBox="0 0 24 24"

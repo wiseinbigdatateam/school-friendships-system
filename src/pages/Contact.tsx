@@ -367,7 +367,7 @@ const Contact: React.FC = () => {
             </div>
 
             <div className="grid gap-6 md:grid-cols-2">
-              <div>
+              {/* <div>
                 <label
                   htmlFor="category"
                   className="mb-2 block text-sm font-medium text-gray-700"
@@ -388,7 +388,7 @@ const Contact: React.FC = () => {
                     </option>
                   ))}
                 </select>
-              </div>
+              </div> */}
 
               <div>
                 <label
