@@ -55,7 +55,7 @@ export class SurveyService {
     // 상태별 설문 조회
   static async getSurveysByStatus(
     schoolId: string,
-    status: 'draft' | 'active' | 'completed' | 'archived'
+    status: 'waiting' | 'active' | 'completed' | 'archived'
   ): Promise<SurveyWithStats[]> {
     try {
       console.log('🔍 SurveyService.getSurveysByStatus 호출:', { schoolId, status });
@@ -527,11 +527,11 @@ export class SurveyService {
     try {
       console.log('🔍 설문 상태 자동 업데이트 시작');
       
-      // 모든 설문 조회 (draft, waiting, active 상태만)
+      // 모든 설문 조회 (waiting, active 상태만)
       const { data: surveys, error: fetchError } = await supabase
         .from('surveys')
         .select('id, start_date, end_date, status')
-        .in('status', ['draft', 'waiting', 'active']);
+        .in('status', ['waiting', 'active']);
 
       if (fetchError) {
         console.error('설문 조회 오류:', fetchError);

@@ -10,7 +10,6 @@ import { useAuth } from "../contexts/AuthContext";
 
 // 설문 상태 표시를 위한 설정
 const surveyStatusConfig = {
-  draft: { label: "초안", color: "bg-gray-100 text-gray-800" },
   waiting: { label: "대기중", color: "bg-yellow-100 text-yellow-800" },
   active: { label: "진행중", color: "bg-blue-100 text-blue-800" },
   completed: { label: "완료", color: "bg-green-100 text-green-800" },
@@ -86,7 +85,6 @@ const SurveyItem: React.FC<{
                 : "cursor-pointer"
             } ${statusConfig?.color || "bg-gray-100 text-gray-800"}`}
           >
-            <option value="draft">초안</option>
             <option value="waiting">대기중</option>
             <option value="active">진행중</option>
             <option value="completed">완료</option>
@@ -415,7 +413,7 @@ const SurveyManagement: React.FC = () => {
         if (statusFilter !== "all") {
           surveysData = await SurveyService.getSurveysByStatus(
             userSchoolId,
-            statusFilter as "draft" | "active" | "completed" | "archived",
+            statusFilter as "waiting" | "active" | "completed" | "archived",
           );
         } else {
           surveysData = await SurveyService.getAllSurveys(userSchoolId);
@@ -437,7 +435,7 @@ const SurveyManagement: React.FC = () => {
         if (statusFilter !== "all") {
           surveysData = await SurveyService.getSurveysByStatus(
             "", // 빈 문자열로 모든 학교의 설문 조회
-            statusFilter as "draft" | "active" | "completed" | "archived",
+            statusFilter as "waiting" | "active" | "completed" | "archived",
           );
         } else {
           surveysData = await SurveyService.getAllSurveys(""); // 빈 문자열로 모든 학교의 설문 조회
@@ -458,7 +456,7 @@ const SurveyManagement: React.FC = () => {
         if (statusFilter !== "all") {
           surveysData = await SurveyService.getSurveysByStatus(
             "all", // "all" 문자열로 모든 설문 조회
-            statusFilter as "draft" | "active" | "completed" | "archived",
+            statusFilter as "waiting" | "active" | "completed" | "archived",
           );
         } else {
           surveysData = await SurveyService.getAllSurveys("all"); // "all" 문자열로 모든 설문 조회
@@ -479,7 +477,7 @@ const SurveyManagement: React.FC = () => {
         if (statusFilter !== "all") {
           surveysData = await SurveyService.getSurveysByStatus(
             userSchoolId,
-            statusFilter as "draft" | "active" | "completed" | "archived",
+            statusFilter as "waiting" | "active" | "completed" | "archived",
           );
         } else {
           surveysData = await SurveyService.getAllSurveys(userSchoolId);
