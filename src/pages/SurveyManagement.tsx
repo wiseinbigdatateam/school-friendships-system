@@ -10,7 +10,8 @@ import { useAuth } from "../contexts/AuthContext";
 
 // 설문 상태 표시를 위한 설정
 const surveyStatusConfig = {
-  draft: { label: "대기중", color: "bg-gray-100 text-gray-800" },
+  draft: { label: "초안", color: "bg-gray-100 text-gray-800" },
+  waiting: { label: "대기중", color: "bg-yellow-100 text-yellow-800" },
   active: { label: "진행중", color: "bg-blue-100 text-blue-800" },
   completed: { label: "완료", color: "bg-green-100 text-green-800" },
 };
@@ -85,7 +86,8 @@ const SurveyItem: React.FC<{
                 : "cursor-pointer"
             } ${statusConfig?.color || "bg-gray-100 text-gray-800"}`}
           >
-            <option value="draft">대기중</option>
+            <option value="draft">초안</option>
+            <option value="waiting">대기중</option>
             <option value="active">진행중</option>
             <option value="completed">완료</option>
           </select>
@@ -228,6 +230,10 @@ const SurveyManagement: React.FC = () => {
     useState<SurveyWithStats | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
+
+  // 페이지네이션 관련 상태
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(5);
 
   // 상태 필터 초기화 확인
   useEffect(() => {
@@ -578,6 +584,8 @@ const SurveyManagement: React.FC = () => {
   useEffect(() => {
     if (!userSchoolId && user?.role !== 'district_admin' && user?.role !== 'main_admin') return; // 학교 ID가 없으면 로드하지 않음 (단, 관리자는 제외)
     loadSurveys();
+    // 페이지네이션 초기화
+    setCurrentPage(1);
   }, [userSchoolId, statusFilter, user]);
 
   // const handleCreateSurvey = async (surveyData: any) => {
@@ -1007,12 +1015,119 @@ const SurveyManagement: React.FC = () => {
     return matchesSearch && matchesStatus;
   });
 
-  console.log("🔍 필터링 결과:", {
-    전체: surveys.length,
-    필터링됨: filteredSurveys.length,
-    검색어: searchTerm,
-    상태필터: statusFilter,
-  });
+  // 페이지네이션 계산
+  const totalPages = Math.ceil(filteredSurveys.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const currentSurveys = filteredSurveys.slice(startIndex, endIndex);
+
+  // 페이지 변경 핸들러
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+    // 페이지 변경 시 스크롤을 맨 위로
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  // 페이지네이션 컴포넌트
+  const Pagination = () => {
+    if (totalPages <= 1) return null;
+
+    const getPageNumbers = () => {
+      const pages = [];
+      const maxVisiblePages = 5;
+      
+      if (totalPages <= maxVisiblePages) {
+        // 전체 페이지가 5개 이하면 모두 표시
+        for (let i = 1; i <= totalPages; i++) {
+          pages.push(i);
+        }
+      } else {
+        // 현재 페이지 주변의 페이지들 표시
+        let startPage = Math.max(1, currentPage - 2);
+        let endPage = Math.min(totalPages, startPage + maxVisiblePages - 1);
+        
+        // 끝 페이지가 totalPages에 가까우면 시작 페이지 조정
+        if (endPage === totalPages) {
+          startPage = Math.max(1, endPage - maxVisiblePages + 1);
+        }
+        
+        for (let i = startPage; i <= endPage; i++) {
+          pages.push(i);
+        }
+      }
+      
+      return pages;
+    };
+
+    return (
+      <div className="flex items-center justify-between border-t border-gray-200 bg-white px-4 py-3 sm:px-6">
+        <div className="flex flex-1 justify-between sm:hidden">
+          <button
+            onClick={() => handlePageChange(currentPage - 1)}
+            disabled={currentPage === 1}
+            className="relative inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            이전
+          </button>
+          <button
+            onClick={() => handlePageChange(currentPage + 1)}
+            disabled={currentPage === totalPages}
+            className="relative ml-3 inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            다음
+          </button>
+        </div>
+        <div className="hidden sm:flex sm:flex-1 sm:items-center sm:justify-between">
+          <div>
+            <p className="text-sm text-gray-700">
+              <span className="font-medium">{startIndex + 1}</span> -{" "}
+              <span className="font-medium">{Math.min(endIndex, filteredSurveys.length)}</span> /{" "}
+              <span className="font-medium">{filteredSurveys.length}</span> 개의 설문
+            </p>
+          </div>
+          <div>
+            <nav className="isolate inline-flex -space-x-px rounded-md shadow-sm" aria-label="Pagination">
+              <button
+                onClick={() => handlePageChange(currentPage - 1)}
+                disabled={currentPage === 1}
+                className="relative inline-flex items-center rounded-l-md px-2 py-2 text-gray-400 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-20 focus:outline-offset-0 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <span className="sr-only">이전</span>
+                <svg className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                  <path fillRule="evenodd" d="M12.79 5.23a.75.75 0 01-.02 1.06L8.832 10l3.938 3.71a.75.75 0 11-1.04 1.08l-4.5-4.25a.75.75 0 010-1.08l4.5-4.25a.75.75 0 011.06.02z" clipRule="evenodd" />
+                </svg>
+              </button>
+              
+              {getPageNumbers().map((page) => (
+                <button
+                  key={page}
+                  onClick={() => handlePageChange(page)}
+                  className={`relative inline-flex items-center px-4 py-2 text-sm font-semibold ${
+                    page === currentPage
+                      ? "z-10 bg-blue-600 text-white focus:z-20 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600"
+                      : "text-gray-900 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-20 focus:outline-offset-0"
+                  }`}
+                >
+                  {page}
+                </button>
+              ))}
+              
+              <button
+                onClick={() => handlePageChange(currentPage + 1)}
+                disabled={currentPage === totalPages}
+                className="relative inline-flex items-center rounded-r-md px-2 py-2 text-gray-400 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-20 focus:outline-offset-0 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <span className="sr-only">다음</span>
+                <svg className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                  <path fillRule="evenodd" d="M7.21 14.77a.75.75 0 01-.02-1.06L11.168 10 7.23 6.29a.75.75 0 111.04-1.08l4.5 4.25a.75.75 0 010 1.08l-4.5 4.25a.75.75 0 01-1.06-.02z" clipRule="evenodd" />
+                </svg>
+              </button>
+            </nav>
+          </div>
+        </div>
+      </div>
+    );
+  };
 
   if (loading) {
     return (
@@ -1130,6 +1245,21 @@ const SurveyManagement: React.FC = () => {
               <option value="active">진행중</option>
               <option value="completed">완료</option>
             </select>
+
+            {/* 페이지당 항목 수 선택 */}
+            <select
+              value={itemsPerPage}
+              onChange={(e) => {
+                setItemsPerPage(Number(e.target.value));
+                setCurrentPage(1); // 페이지당 항목 수 변경 시 첫 페이지로
+              }}
+              className="rounded-lg border border-gray-300 px-4 py-2 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <option value={5}>5개씩</option>
+              <option value={10}>10개씩</option>
+              <option value={20}>20개씩</option>
+              <option value={50}>50개씩</option>
+            </select>
           </div>
 
           {/* 새 설문 생성 버튼 - 주석 처리 */}
@@ -1177,18 +1307,26 @@ const SurveyManagement: React.FC = () => {
               </button> */}
           </div>
         ) : (
-          filteredSurveys.map((survey) => (
-            <SurveyItem
-              key={survey.id}
-              survey={survey}
-              onEdit={handleEditSurvey}
-              onDelete={handleDeleteSurvey}
-              // onSendMobile={handleSendMobileSurvey} // 모바일 발송 주석 처리
-              onGetSurveyLink={handleGetSurveyLink}
-              onMonitor={handleMonitorSurvey}
-              onStatusChange={handleStatusChange}
-            />
-          ))
+          <>
+            {/* 설문 목록 */}
+            <div className="space-y-4">
+              {currentSurveys.map((survey) => (
+                <SurveyItem
+                  key={survey.id}
+                  survey={survey}
+                  onEdit={handleEditSurvey}
+                  onDelete={handleDeleteSurvey}
+                  // onSendMobile={handleSendMobileSurvey} // 모바일 발송 주석 처리
+                  onGetSurveyLink={handleGetSurveyLink}
+                  onMonitor={handleMonitorSurvey}
+                  onStatusChange={handleStatusChange}
+                />
+              ))}
+            </div>
+            
+            {/* 페이지네이션 */}
+            <Pagination />
+          </>
         )}
       </div>
 

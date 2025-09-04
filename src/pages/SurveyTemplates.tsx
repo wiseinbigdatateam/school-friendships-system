@@ -145,6 +145,26 @@ const SurveyTemplates: React.FC = () => {
     setShowSurveyConfigModal(true);
   };
 
+  // 설문 상태 결정 함수
+  const getSurveyStatus = (startDate: string, endDate: string): string => {
+    const now = new Date();
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+    
+    // 현재 날짜가 시작일보다 이전이면 "대기중"
+    if (now < start) {
+      return "waiting";
+    }
+    
+    // 현재 날짜가 시작일과 종료일 사이에 있으면 "진행중"
+    if (now >= start && now <= end) {
+      return "active";
+    }
+    
+    // 현재 날짜가 종료일보다 이후면 "종료"
+    return "completed";
+  };
+
   const handleCreateSurvey = async (surveyConfig: any) => {
     try {
       setIsCreating(true);
@@ -210,7 +230,7 @@ const SurveyTemplates: React.FC = () => {
         target_classes: [teacherInfo.class_number], // 대상 반
         start_date: surveyConfig.startDate,
         end_date: surveyConfig.endDate,
-        status: "draft",
+        status: getSurveyStatus(surveyConfig.startDate, surveyConfig.endDate), // 기간에 따른 상태 설정
         questions: selectedTemplate.questions.map((question, index) => {
           const maxSelections = selectedTemplate.maxSelections[index] || 1;
           console.log(`질문 ${index + 1} maxSelections:`, maxSelections);
@@ -278,8 +298,14 @@ const SurveyTemplates: React.FC = () => {
       }
 
       // 성공 메시지
+      const statusText = getSurveyStatus(surveyConfig.startDate, surveyConfig.endDate) === 'waiting' 
+        ? '대기중' 
+        : getSurveyStatus(surveyConfig.startDate, surveyConfig.endDate) === 'active' 
+          ? '진행중' 
+          : '완료';
+          
       alert(
-        `✅ "${selectedTemplate.title}" 템플릿으로 새 설문이 생성되었습니다!\n\n📚 대상: ${teacherInfo.grade_level}학년 ${teacherInfo.class_number}반\n👥 대상 학생: ${students.length}명\n\n📝 참고: 대상 학생 정보는 설문 응답 시 자동으로 필터링됩니다.\n\n설문 관리 페이지로 이동합니다.`,
+        `✅ "${selectedTemplate.title}" 템플릿으로 새 설문이 생성되었습니다!\n\n📚 대상: ${teacherInfo.grade_level}학년 ${teacherInfo.class_number}반\n👥 대상 학생: ${students.length}명\n📅 기간: ${surveyConfig.startDate} ~ ${surveyConfig.endDate}\n📊 상태: ${statusText}\n\n📝 참고: 대상 학생 정보는 설문 응답 시 자동으로 필터링됩니다.\n\n설문 관리 페이지로 이동합니다.`,
       );
 
       // 모달 닫기

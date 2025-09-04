@@ -525,8 +525,65 @@ export class SurveyService {
   // 모든 설문 상태 자동 업데이트
   static async updateAllSurveyStatuses(): Promise<void> {
     try {
-      // 날짜 기한 체크
-      await this.updateSurveyStatusByDate();
+      console.log('🔍 설문 상태 자동 업데이트 시작');
+      
+      // 모든 설문 조회 (draft, waiting, active 상태만)
+      const { data: surveys, error: fetchError } = await supabase
+        .from('surveys')
+        .select('id, start_date, end_date, status')
+        .in('status', ['draft', 'waiting', 'active']);
+
+      if (fetchError) {
+        console.error('설문 조회 오류:', fetchError);
+        return;
+      }
+
+      const now = new Date();
+      const updates: { id: string; status: string }[] = [];
+
+      surveys?.forEach(survey => {
+        const startDate = new Date(survey.start_date);
+        const endDate = new Date(survey.end_date);
+        
+        let newStatus = survey.status;
+        
+        // 현재 날짜가 시작일보다 이전이면 "대기중"
+        if (now < startDate && survey.status !== 'waiting') {
+          newStatus = 'waiting';
+        }
+        // 현재 날짜가 시작일과 종료일 사이에 있으면 "진행중"
+        else if (now >= startDate && now <= endDate && survey.status !== 'active') {
+          newStatus = 'active';
+        }
+        // 현재 날짜가 종료일보다 이후면 "완료"
+        else if (now > endDate && survey.status !== 'completed') {
+          newStatus = 'completed';
+        }
+        
+        if (newStatus !== survey.status) {
+          updates.push({ id: survey.id, status: newStatus });
+        }
+      });
+
+      // 상태 변경이 필요한 설문들 업데이트
+      if (updates.length > 0) {
+        console.log('🔍 상태 변경이 필요한 설문들:', updates);
+        
+        for (const update of updates) {
+          const { error: updateError } = await supabase
+            .from('surveys')
+            .update({ status: update.status })
+            .eq('id', update.id);
+            
+          if (updateError) {
+            console.error(`설문 ${update.id} 상태 업데이트 오류:`, updateError);
+          } else {
+            console.log(`설문 ${update.id} 상태 업데이트 완료: ${update.status}`);
+          }
+        }
+      } else {
+        console.log('🔍 상태 변경이 필요한 설문이 없습니다.');
+      }
       
       // 활성화된 설문들의 응답 완료 체크
       const activeSurveys = await this.getSurveysByStatus('', 'active');

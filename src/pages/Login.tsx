@@ -406,12 +406,12 @@ const Login: React.FC = () => {
                 회원가입
               </Link>
             </p>
-            <p className="text-sm text-gray-600">
+            {/* <p className="text-sm text-gray-600">
               문의사항이 있으신가요?{' '}
               <Link to="/contact" className="text-blue-600 hover:text-blue-700 font-medium">
                 문의하기
               </Link>
-            </p>
+            </p> */}
           </div>
         </div>
 
@@ -501,13 +501,13 @@ const Login: React.FC = () => {
 
         {/* 하단 정보 */}
         <div className="mt-8 text-center text-sm text-gray-500 space-y-2">
-          <p>
+          {/* <p>
             로그인하시면{' '}
             <button className="text-blue-600 hover:text-blue-700 underline">이용약관</button>
             {' '}및{' '}
             <button className="text-blue-600 hover:text-blue-700 underline">개인정보처리방침</button>
             에 동의하는 것으로 간주됩니다.
-          </p>
+          </p> */}
           <p className="text-xs">
             시스템 도입 문의:{' '}
             <Link to="/contact" className="text-blue-600 hover:text-blue-700 underline">

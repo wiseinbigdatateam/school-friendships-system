@@ -367,12 +367,12 @@ const SurveyMonitoring: React.FC = () => {
             >
               새로고침
             </button>
-            <button
+            {/* <button
               onClick={handleExportData}
               className="rounded-lg bg-green-600 px-3 py-2 text-white hover:bg-green-700"
             >
               데이터 내보내기
-            </button>
+            </button> */}
           </div>
         </div>
       </div>

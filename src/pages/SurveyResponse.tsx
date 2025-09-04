@@ -74,6 +74,19 @@ const SurveyResponse: React.FC = () => {
         if (surveyError) throw surveyError;
 
         if (surveyData) {
+          // 설문 상태 확인
+          if (surveyData.status === "waiting") {
+            setError("이 설문은 아직 시작되지 않았습니다. 설문 시작일을 확인해주세요.");
+            setLoading(false);
+            return;
+          }
+          
+          if (surveyData.status === "completed") {
+            setError("이 설문은 이미 종료되었습니다.");
+            setLoading(false);
+            return;
+          }
+
           // 설문 데이터에 이미 max_selections이 포함되어 있음
           setSurvey(surveyData);
 

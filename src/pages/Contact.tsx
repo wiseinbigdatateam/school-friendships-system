@@ -338,7 +338,7 @@ const Contact: React.FC = () => {
               </div>
             </div>
 
-            <div>
+            {/* <div>
               <label htmlFor="subject" className="block text-sm font-medium text-gray-700 mb-2">
                 문의 제목 *
               </label>
@@ -352,7 +352,7 @@ const Contact: React.FC = () => {
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 placeholder="문의하실 내용을 간략히 요약해주세요"
               />
-            </div>
+            </div> */}
 
             <div>
               <label htmlFor="message" className="block text-sm font-medium text-gray-700 mb-2">
@@ -375,10 +375,10 @@ const Contact: React.FC = () => {
 
             <div className="flex space-x-4">
               <Link
-                to="/login"
+                to="/"
                 className="flex-1 py-3 px-4 border border-gray-300 text-sm font-medium rounded-lg text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors text-center"
               >
-                돌아가기
+                취소
               </Link>
               
               <button

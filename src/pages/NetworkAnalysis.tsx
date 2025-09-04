@@ -2364,7 +2364,7 @@ const NetworkAnalysis: React.FC = () => {
       )}
 
       {/* 분석 전 안내 */}
-      {!analysisResults && !analysisError && (
+      {/* {!analysisResults && !analysisError && (
         <div className="rounded-lg border border-blue-200 bg-blue-50 p-6 text-center">
           <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-blue-100">
             <ChartBarIcon className="h-6 w-6 text-blue-600" />
@@ -2377,7 +2377,7 @@ const NetworkAnalysis: React.FC = () => {
             분석을 시작하세요.
           </p>
         </div>
-      )}
+      )} */}
 
       {/* 개별 학생 네트워크 모달 */}
       {selectedStudentModal.isOpen &&
