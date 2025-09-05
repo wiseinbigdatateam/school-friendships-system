@@ -834,6 +834,215 @@ const NetworkAnalysis: React.FC = () => {
     }
   };
 
+  // 네트워크 분석을 위한 헬퍼 함수들
+  const calculateClusteringCoefficient = (nodes: NetworkNode[], edges: NetworkEdge[]): number => {
+    if (nodes.length === 0 || edges.length === 0) return 0;
+    
+    let totalCoefficient = 0;
+    let validNodes = 0;
+    
+    nodes.forEach(node => {
+      const neighbors = edges
+        .filter(edge => edge.source === node.id || edge.target === node.id)
+        .map(edge => edge.source === node.id ? edge.target : edge.source);
+      
+      if (neighbors.length < 2) {
+        totalCoefficient += 0;
+        validNodes++;
+        return;
+      }
+      
+      let triangles = 0;
+      let possibleTriangles = 0;
+      
+      for (let i = 0; i < neighbors.length; i++) {
+        for (let j = i + 1; j < neighbors.length; j++) {
+          possibleTriangles++;
+          const hasEdge = edges.some(edge => 
+            (edge.source === neighbors[i] && edge.target === neighbors[j]) ||
+            (edge.source === neighbors[j] && edge.target === neighbors[i])
+          );
+          if (hasEdge) triangles++;
+        }
+      }
+      
+      const coefficient = possibleTriangles > 0 ? triangles / possibleTriangles : 0;
+      totalCoefficient += coefficient;
+      validNodes++;
+    });
+    
+    return validNodes > 0 ? totalCoefficient / validNodes : 0;
+  };
+
+  const calculateAveragePathLength = (nodes: NetworkNode[], edges: NetworkEdge[]): number => {
+    if (nodes.length === 0 || edges.length === 0) return 0;
+    
+    // Floyd-Warshall 알고리즘으로 최단 경로 계산
+    const distances: { [key: string]: { [key: string]: number } } = {};
+    
+    // 초기화
+    nodes.forEach(node => {
+      distances[node.id] = {};
+      nodes.forEach(otherNode => {
+        distances[node.id][otherNode.id] = node.id === otherNode.id ? 0 : Infinity;
+      });
+    });
+    
+    // 직접 연결된 노드들
+    edges.forEach(edge => {
+      distances[edge.source][edge.target] = 1;
+      distances[edge.target][edge.source] = 1;
+    });
+    
+    // Floyd-Warshall
+    nodes.forEach(k => {
+      nodes.forEach(i => {
+        nodes.forEach(j => {
+          if (distances[i.id][k.id] + distances[k.id][j.id] < distances[i.id][j.id]) {
+            distances[i.id][j.id] = distances[i.id][k.id] + distances[k.id][j.id];
+          }
+        });
+      });
+    });
+    
+    // 평균 경로 길이 계산
+    let totalDistance = 0;
+    let pathCount = 0;
+    
+    nodes.forEach(i => {
+      nodes.forEach(j => {
+        if (i.id !== j.id && distances[i.id][j.id] !== Infinity) {
+          totalDistance += distances[i.id][j.id];
+          pathCount++;
+        }
+      });
+    });
+    
+    return pathCount > 0 ? totalDistance / pathCount : 0;
+  };
+
+  const calculateModularity = (nodes: NetworkNode[], edges: NetworkEdge[], communities: Community[]): number => {
+    if (nodes.length === 0 || edges.length === 0 || communities.length === 0) return 0;
+    
+    const m = edges.length;
+    let modularity = 0;
+    
+    edges.forEach(edge => {
+      const sourceCommunity = communities.find(c => c.members.includes(edge.source));
+      const targetCommunity = communities.find(c => c.members.includes(edge.target));
+      
+      if (sourceCommunity && targetCommunity && sourceCommunity.id === targetCommunity.id) {
+        const ki = edges.filter(e => e.source === edge.source || e.target === edge.source).length;
+        const kj = edges.filter(e => e.source === edge.target || e.target === edge.target).length;
+        modularity += 1 - (ki * kj) / (2 * m);
+      }
+    });
+    
+    return m > 0 ? modularity / (2 * m) : 0;
+  };
+
+  // 네트워크 분석 결과를 기반으로 개선 권장사항 생성
+  const generateImprovementRecommendations = (analysisResults: NetworkAnalysisResult) => {
+    const recommendations = {
+      friendshipDevelopment: [] as string[],
+      communityIntegration: [] as string[],
+      priority: 'normal' as 'high' | 'normal' | 'low'
+    };
+
+    // 연결 수가 적은 학생 비율 계산
+    const lowConnectionStudents = analysisResults.nodes.filter(n => {
+      const connections = analysisResults.edges.filter(e => e.source === n.id || e.target === n.id).length;
+      return connections <= 2;
+    }).length;
+    const lowConnectionRatio = lowConnectionStudents / analysisResults.nodes.length;
+
+    // 커뮤니티 수와 평균 크기
+    const avgCommunitySize = analysisResults.nodes.length / analysisResults.communities.length;
+    const smallCommunities = analysisResults.communities.filter(c => c.size < avgCommunitySize * 0.5).length;
+
+    // 네트워크 밀도 기반 권장사항
+    if (analysisResults.metrics.density < 0.1) {
+      recommendations.friendshipDevelopment.push('전체적으로 낮은 네트워크 밀도로 인해 친구 관계 확장 프로그램이 필요합니다');
+      recommendations.priority = 'high';
+    } else if (analysisResults.metrics.density < 0.3) {
+      recommendations.friendshipDevelopment.push('네트워크 밀도 개선을 위한 그룹 활동 프로그램 운영이 권장됩니다');
+    }
+
+    // 연결 수가 적은 학생들에 대한 권장사항
+    if (lowConnectionRatio > 0.3) {
+      recommendations.friendshipDevelopment.push(`${Math.round(lowConnectionRatio * 100)}%의 학생이 연결 수가 적어 개별 상담 프로그램이 필요합니다`);
+      recommendations.priority = 'high';
+    } else if (lowConnectionRatio > 0.1) {
+      recommendations.friendshipDevelopment.push('연결 수가 적은 학생들을 위한 그룹 활동 프로그램 운영');
+    }
+
+    // 클러스터링 계수 기반 권장사항
+    if (analysisResults.metrics.clustering_coefficient < 0.2) {
+      recommendations.friendshipDevelopment.push('낮은 클러스터링 계수로 인해 친구들의 친구 관계 형성을 위한 활동이 필요합니다');
+    }
+
+    // 커뮤니티 통합 관련 권장사항
+    if (analysisResults.communities.length > 3) {
+      recommendations.communityIntegration.push('커뮤니티가 많아 통합 활동 프로그램이 필요합니다');
+      recommendations.priority = 'high';
+    } else if (smallCommunities > 0) {
+      recommendations.communityIntegration.push('작은 커뮤니티들이 있어 통합 활동을 통한 네트워크 확장이 필요합니다');
+    }
+
+    // 모듈성 기반 권장사항
+    if (analysisResults.metrics.modularity > 0.5) {
+      recommendations.communityIntegration.push('높은 모듈성으로 인해 커뮤니티 간 교류 프로그램이 필요합니다');
+    }
+
+    // 기본 권장사항 추가
+    if (recommendations.friendshipDevelopment.length === 0) {
+      recommendations.friendshipDevelopment.push('현재 친구 관계는 양호하나 지속적인 개선을 위한 활동 프로그램 운영');
+    }
+    if (recommendations.communityIntegration.length === 0) {
+      recommendations.communityIntegration.push('커뮤니티 간 자연스러운 교류를 위한 활동 기회 제공');
+    }
+
+    return recommendations;
+  };
+
+  // 개별 학생 개선방안 생성
+  const generateIndividualRecommendations = (node: NetworkNode, analysisResults: NetworkAnalysisResult) => {
+    const recommendations = [] as string[];
+    const connections = analysisResults.edges.filter(e => e.source === node.id || e.target === node.id).length;
+    const totalStudents = analysisResults.nodes.length;
+    const connectionRatio = connections / (totalStudents - 1);
+
+    // 중심성 기반 권장사항
+    if (node.centrality < 0.3) {
+      recommendations.push('친구 관계 확장 프로그램 참여 권장');
+      recommendations.push('그룹 활동 및 팀워크 활동 적극 참여');
+      recommendations.push('담임교사와의 정기적인 상담 진행');
+      if (connectionRatio < 0.2) {
+        recommendations.push('새로운 친구들과의 교류 기회 적극 마련');
+      }
+    } else if (node.centrality < 0.6) {
+      recommendations.push('현재 친구 관계 유지 및 발전');
+      recommendations.push('다양한 그룹 활동 참여로 네트워크 확장');
+      recommendations.push('리더십 역할 기회 적극 활용');
+      if (connectionRatio < 0.5) {
+        recommendations.push('새로운 학생들과의 친교 도움');
+      }
+    } else {
+      recommendations.push('우수한 네트워크 상태 유지');
+      recommendations.push('다른 학생들의 롤모델 역할 수행');
+      recommendations.push('새로운 학생들과의 친교 적극 도움');
+      recommendations.push('네트워크 확장을 위한 리더십 발휘');
+    }
+
+    // 커뮤니티 관련 권장사항
+    const community = analysisResults.communities.find(c => c.id === node.community);
+    if (community && community.size < 3) {
+      recommendations.push('작은 커뮤니티 소속으로 다른 그룹과의 교류 확대');
+    }
+
+    return recommendations;
+  };
+
   // Python 분석 시뮬레이션
   const simulatePythonAnalysis = async (
     surveyId: string,
@@ -930,6 +1139,27 @@ const NetworkAnalysis: React.FC = () => {
       };
     });
 
+    // 커뮤니티 감지 (실제 데이터 기반으로 단순화)
+    const communities: Community[] = [];
+    if (edges.length > 0) {
+      // 간단한 커뮤니티 분할 (실제로는 더 복잡한 알고리즘 필요)
+      const halfSize = Math.floor(students.length / 2);
+      communities.push({
+        id: 0,
+        members: students.slice(0, halfSize).map((s) => s.id),
+        size: halfSize,
+        internal_density: 0.5,
+      });
+      if (students.length > halfSize) {
+        communities.push({
+          id: 1,
+          members: students.slice(halfSize).map((s) => s.id),
+          size: students.length - halfSize,
+          internal_density: 0.5,
+        });
+      }
+    }
+
     // 네트워크 메트릭 계산 (실제 데이터 기반)
     const metrics: NetworkMetrics = {
       total_students: students.length,
@@ -940,13 +1170,12 @@ const NetworkAnalysis: React.FC = () => {
           : 0,
       average_degree:
         students.length > 0 ? (edges.length * 2) / students.length : 0,
-      clustering_coefficient: edges.length > 0 ? 0.5 : 0, // 실제 데이터 기반으로 계산 필요
-      average_path_length: edges.length > 0 ? 2.0 : 0, // 실제 데이터 기반으로 계산 필요
-      modularity: edges.length > 0 ? 0.3 : 0, // 실제 데이터 기반으로 계산 필요
+      clustering_coefficient: calculateClusteringCoefficient(nodes, edges),
+      average_path_length: calculateAveragePathLength(nodes, edges),
+      modularity: calculateModularity(nodes, edges, communities),
     };
 
     // 커뮤니티 감지 (실제 데이터 기반으로 단순화)
-    const communities: Community[] = [];
     if (edges.length > 0) {
       // 간단한 커뮤니티 분할 (실제로는 더 복잡한 알고리즘 필요)
       const halfSize = Math.floor(students.length / 2);
@@ -1106,7 +1335,7 @@ const NetworkAnalysis: React.FC = () => {
                     </div>
 
                     {/* 대상 정보 */}
-                    <div className="space-y-1 text-sm text-gray-600">
+                    {/* <div className="space-y-1 text-sm text-gray-600">
                       {survey.target_grades &&
                       survey.target_grades.length > 0 ? (
                         <div>
@@ -1120,7 +1349,7 @@ const NetworkAnalysis: React.FC = () => {
                       ) : (
                         <div className="text-gray-500">대상: 모든 학년/반</div>
                       )}
-                    </div>
+                    </div> */}
 
                     {/* 날짜 정보 */}
                     <div className="mt-2 space-y-1 text-sm text-gray-500">
@@ -1144,9 +1373,9 @@ const NetworkAnalysis: React.FC = () => {
 
                     {/* 추가 정보 */}
                     <div className="mt-3 space-y-1 border-t border-gray-100 pt-3">
-                      <div className="text-xs text-gray-500">
+                      {/* <div className="text-xs text-gray-500">
                         설문 ID: {survey.id.slice(0, 8)}...
-                      </div>
+                      </div> */}
                       {survey.description && (
                         <div className="truncate text-xs text-gray-600">
                           {survey.description}
@@ -1307,11 +1536,11 @@ const NetworkAnalysis: React.FC = () => {
       {/* 전체 현황 뷰 */}
       {analysisView === "overview" && analysisResults && (
         <div className="space-y-4">
-          {/* 네트워크 메트릭 */}
+          {/* 네트워크 메트릭스 */}
           <div className="rounded-lg bg-white shadow">
             <div className="border-b border-gray-200 px-6 py-4">
               <h3 className="text-lg font-medium text-gray-900">
-                네트워크 메트릭
+                네트워크 메트릭스
               </h3>
               <p className="text-sm text-gray-600">
                 전체 네트워크의 구조적 특성을 분석합니다.
@@ -1713,12 +1942,9 @@ const NetworkAnalysis: React.FC = () => {
                     친구관계 발전
                   </h4>
                   <ul className="list-inside list-disc space-y-2 text-sm text-blue-800">
-                    <li>
-                      연결 수가 적은 학생들을 위한 그룹 활동 프로그램 운영
-                    </li>
-                    <li>다양한 학급 간 교류 활동을 통한 네트워크 확장</li>
-                    <li>친구 관계 개선을 위한 상담 및 멘토링 프로그램</li>
-                    <li>팀워크 중심의 수업 및 활동 강화</li>
+                    {generateImprovementRecommendations(analysisResults).friendshipDevelopment.map((recommendation, index) => (
+                      <li key={index}>{recommendation}</li>
+                    ))}
                   </ul>
                 </div>
 
@@ -1728,13 +1954,25 @@ const NetworkAnalysis: React.FC = () => {
                     커뮤니티 통합
                   </h4>
                   <ul className="list-inside list-disc space-y-2 text-sm text-green-800">
-                    <li>커뮤니티 간 교류를 위한 통합 활동 프로그램</li>
-                    <li>다양한 배경의 학생들이 함께하는 프로젝트 기회 제공</li>
-                    <li>학급 간 경쟁보다는 협력을 강조하는 문화 조성</li>
-                    <li>공통 관심사를 바탕으로 한 동아리 활동 지원</li>
+                    {generateImprovementRecommendations(analysisResults).communityIntegration.map((recommendation, index) => (
+                      <li key={index}>{recommendation}</li>
+                    ))}
                   </ul>
                 </div>
               </div>
+              
+              {/* 우선순위 표시 */}
+              {generateImprovementRecommendations(analysisResults).priority === 'high' && (
+                <div className="mt-4 rounded-lg border border-red-200 bg-red-50 p-4">
+                  <div className="flex items-center">
+                    <span className="mr-2 text-red-600">⚠️</span>
+                    <span className="font-medium text-red-800">높은 우선순위</span>
+                  </div>
+                  <p className="mt-1 text-sm text-red-700">
+                    네트워크 분석 결과에 따라 즉시 개선 조치가 필요한 상황입니다.
+                  </p>
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -2617,28 +2855,9 @@ const NetworkAnalysis: React.FC = () => {
                     </h5>
                     <div className="rounded-lg bg-gray-50 p-4">
                       <ul className="list-inside list-disc space-y-1 text-sm text-gray-700">
-                        {selectedStudentModal.node.centrality < 0.3 ? (
-                          <>
-                            <li>친구 관계 확장 프로그램 참여 권장</li>
-                            <li>그룹 활동 및 팀워크 활동 적극 참여</li>
-                            <li>담임교사와의 정기적인 상담 진행</li>
-                            <li>새로운 친구들과의 교류 기회 마련</li>
-                          </>
-                        ) : selectedStudentModal.node.centrality < 0.6 ? (
-                          <>
-                            <li>현재 친구 관계 유지 및 발전</li>
-                            <li>다양한 그룹 활동 참여로 네트워크 확장</li>
-                            <li>리더십 역할 기회 적극 활용</li>
-                            <li>새로운 학생들과의 친교 도움</li>
-                          </>
-                        ) : (
-                          <>
-                            <li>우수한 네트워크 상태 유지</li>
-                            <li>다른 학생들의 롤모델 역할 수행</li>
-                            <li>새로운 학생들과의 친교 적극 도움</li>
-                            <li>네트워크 확장을 위한 리더십 발휘</li>
-                          </>
-                        )}
+                        {generateIndividualRecommendations(selectedStudentModal.node, analysisResults).map((recommendation, index) => (
+                          <li key={index}>{recommendation}</li>
+                        ))}
                       </ul>
                     </div>
                   </div>
@@ -2707,40 +2926,50 @@ const NetworkAnalysis: React.FC = () => {
                   </h4>
                   <div className="rounded-lg border border-yellow-200 bg-yellow-50 p-4">
                     <div className="text-sm text-yellow-800">
-                      {selectedStudentModal.node.centrality < 0.3 ? (
-                        <div>
-                          <p className="mb-2 font-medium">
-                            ⚠️ 주의가 필요한 학생
-                          </p>
-                          <ul className="list-inside list-disc space-y-1">
-                            <li>친구 관계를 더 발전시킬 필요가 있습니다</li>
-                            <li>그룹 활동 참여를 권장합니다</li>
-                            <li>담임교사와의 상담이 필요할 수 있습니다</li>
-                          </ul>
-                        </div>
-                      ) : selectedStudentModal.node.centrality < 0.6 ? (
-                        <div>
-                          <p className="mb-2 font-medium">
-                            📈 개선 여지가 있는 학생
-                          </p>
-                          <ul className="list-inside list-disc space-y-1">
-                            <li>현재 친구 관계는 양호합니다</li>
-                            <li>더 다양한 친구들과의 교류를 권장합니다</li>
-                            <li>리더십 역할을 맡아볼 수 있습니다</li>
-                          </ul>
-                        </div>
-                      ) : (
-                        <div>
-                          <p className="mb-2 font-medium">
-                            🌟 우수한 네트워크를 가진 학생
-                          </p>
-                          <ul className="list-inside list-disc space-y-1">
-                            <li>매우 좋은 친구 관계를 유지하고 있습니다</li>
-                            <li>다른 학생들의 롤모델이 될 수 있습니다</li>
-                            <li>새로운 학생들과의 친교를 도울 수 있습니다</li>
-                          </ul>
-                        </div>
-                      )}
+                      {(() => {
+                        const centrality = selectedStudentModal.node.centrality;
+                        const connections = analysisResults.edges.filter(e => e.source === selectedStudentModal.student!.id || e.target === selectedStudentModal.student!.id).length;
+                        const totalStudents = analysisResults.nodes.length;
+                        const connectionRatio = connections / (totalStudents - 1);
+                        
+                        if (centrality < 0.3) {
+                          return (
+                            <div>
+                              <p className="mb-2 font-medium">⚠️ 주의가 필요한 학생</p>
+                              <ul className="list-inside list-disc space-y-1">
+                                <li>친구 관계를 더 발전시킬 필요가 있습니다</li>
+                                <li>그룹 활동 참여를 권장합니다</li>
+                                <li>담임교사와의 상담이 필요할 수 있습니다</li>
+                                {connectionRatio < 0.2 && <li>연결 수가 매우 적어 즉시 개선 조치가 필요합니다</li>}
+                              </ul>
+                            </div>
+                          );
+                        } else if (centrality < 0.6) {
+                          return (
+                            <div>
+                              <p className="mb-2 font-medium">📈 개선 여지가 있는 학생</p>
+                              <ul className="list-inside list-disc space-y-1">
+                                <li>현재 친구 관계는 양호합니다</li>
+                                <li>더 다양한 친구들과의 교류를 권장합니다</li>
+                                <li>리더십 역할을 맡아볼 수 있습니다</li>
+                                {connectionRatio < 0.5 && <li>연결 수를 늘려 네트워크를 확장할 수 있습니다</li>}
+                              </ul>
+                            </div>
+                          );
+                        } else {
+                          return (
+                            <div>
+                              <p className="mb-2 font-medium">🌟 우수한 네트워크를 가진 학생</p>
+                              <ul className="list-inside list-disc space-y-1">
+                                <li>매우 좋은 친구 관계를 유지하고 있습니다</li>
+                                <li>다른 학생들의 롤모델이 될 수 있습니다</li>
+                                <li>새로운 학생들과의 친교를 도울 수 있습니다</li>
+                                {connectionRatio > 0.7 && <li>네트워크 영향력을 활용하여 다른 학생들을 도울 수 있습니다</li>}
+                              </ul>
+                            </div>
+                          );
+                        }
+                      })()}
                     </div>
                   </div>
                 </div>
