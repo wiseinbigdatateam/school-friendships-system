@@ -39,12 +39,12 @@ const Landing: React.FC = () => {
             <br />
             AI 플랫폼
           </h1>
-          <p className="text-base text-blue-100 max-md:text-sm">
+          <p className="text-base max-md:text-sm">
             과학적 방법론과 표준화된 학생 개인별 맞춤 관리
           </p>
           <button
             onClick={handleSolutionClick}
-            className="w-[191px] rounded-[50px] bg-sky-700 px-8 py-4 text-xl font-semibold text-white transition-all duration-200 hover:bg-sky-500 max-md:w-[150px] max-md:px-6 max-md:py-3 max-md:text-base"
+            className="w-[191px] rounded-[50px] bg-sky-700 px-8 py-4 text-xl text-white transition-all duration-200 hover:bg-sky-500 max-md:w-[150px] max-md:px-6 max-md:py-3 max-md:text-base"
           >
             솔루션 체험하기
           </button>

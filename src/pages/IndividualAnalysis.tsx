@@ -499,9 +499,9 @@ const IndividualAnalysis: React.FC = () => {
                   {/* 관계 네트워크 그래프 */}
                   <div className="mb-6 rounded-lg border border-gray-200 bg-white p-6">
                     {/* 관계 네트워크 그래프 제목 */}
-                    <h3 className="mb-4 text-lg font-medium text-gray-900">
+                    {/* <h3 className="mb-4 text-lg font-medium text-gray-900">
                       관계 네트워크 그래프
-                    </h3>
+                    </h3> */}
 
                     {/* 탭 내용 */}
                     {activeTab === "core" && (
@@ -514,11 +514,11 @@ const IndividualAnalysis: React.FC = () => {
                             </p>
                           </div>
                         ) : individualNetworkData.length > 0 ? (
-                          <div className="space-y-4">
-                            <div className="text-sm text-gray-600">
-                              개별 학생 네트워크 분석 (선택된 학생의 친구 관계만
-                              표시)
-                            </div>
+                          <div className="mx-auto w-fit">
+                            {/* <div className="text-sm text-gray-600">
+                               개별 학생 네트워크 분석 (선택된 학생의 친구 관계만
+                               표시)
+                             </div> */}
                             <NetworkGraph
                               students={individualNetworkData}
                               maxSelections={

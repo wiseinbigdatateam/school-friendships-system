@@ -32,7 +32,7 @@ function MobileGuideSupportContent() {
           )}
           onClick={() => handleAccordion(1)}
         >
-          <h3 className="text-base md:text-xl">1. AI 심리 진단 분석</h3>
+          <p className="text-base md:text-xl">1. AI 심리 진단 분석</p>
           {openItem === 1 && isToggleActive ? (
             <img
               src="/landing/toggle_up.svg"
@@ -84,7 +84,7 @@ function MobileGuideSupportContent() {
           )}
           onClick={() => handleAccordion(2)}
         >
-          <h3 className="text-base md:text-xl">2. 맞춤형 대화 가이드 제공</h3>
+          <p className="text-base md:text-xl">2. 맞춤형 대화 가이드 제공</p>
           {openItem === 2 && isToggleActive ? (
             <img
               src="/landing/toggle_up.svg"
@@ -136,7 +136,7 @@ function MobileGuideSupportContent() {
           )}
           onClick={() => handleAccordion(3)}
         >
-          <h3 className="text-base md:text-xl">3. 편지/메시지 자동 작성</h3>
+          <p className="text-base md:text-xl">3. 편지/메시지 자동 작성</p>
           {openItem === 3 && isToggleActive ? (
             <img
               src="/landing/toggle_up.svg"
@@ -188,7 +188,7 @@ function MobileGuideSupportContent() {
           )}
           onClick={() => handleAccordion(4)}
         >
-          <h3 className="text-base md:text-xl">4. 소그룹 친구&활동 계획</h3>
+          <p className="text-base md:text-xl">4. 소그룹 친구&활동 계획</p>
           {openItem === 4 && isToggleActive ? (
             <img
               src="/landing/toggle_up.svg"

@@ -130,6 +130,7 @@ const ClassSurvey: React.FC = () => {
 
   const lineChartOptions = {
     responsive: true,
+    maintainAspectRatio: false,
     plugins: {
       legend: {
         position: "top" as const,

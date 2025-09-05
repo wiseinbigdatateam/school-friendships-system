@@ -995,7 +995,7 @@ const NetworkAnalysis: React.FC = () => {
   return (
     <div className="mx-auto min-h-screen max-w-7xl bg-gray-50 px-4 pb-16 sm:px-6 lg:px-8">
       <div className="mb-6">
-        <h1 className="mb-2 text-3xl font-bold text-gray-900">
+        <h1 className="mb-2 text-2xl font-bold text-gray-900">
           교우관계 네트워크 분석
         </h1>
         <p className="mb-4 text-gray-600">
@@ -1243,7 +1243,7 @@ const NetworkAnalysis: React.FC = () => {
                   </button>
 
                   {/* 지도 리포트 페이지로 이동 버튼 */}
-                  {/* <button
+            {/* <button
                     onClick={() => {
                       toast.success("지도 리포트 페이지로 이동합니다!");
                       // 분석 결과를 localStorage에 임시 저장하여 Reports 페이지에서 사용

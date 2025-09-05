@@ -45,8 +45,8 @@ const NetworkGraph: React.FC<NetworkGraphProps> = ({
     d3.select(svgRef.current).selectAll("*").remove();
 
     const svg = d3.select(svgRef.current);
-    const width = 800;
-    const height = 600;
+    const width = 500;
+    const height = 360;
 
     // SVG 크기 설정
     svg.attr("width", width).attr("height", height);
@@ -279,16 +279,16 @@ const NetworkGraph: React.FC<NetworkGraphProps> = ({
   }, [students, maxSelections, onStudentSelect, isInteractive]);
 
   return (
-    <div className="flex h-full w-full flex-col items-center">
-      <div className="overflow-hidden rounded-lg border border-gray-200 bg-white">
+    <div className="flex h-fit w-fit flex-col items-center">
+      <div className="rounded-lg bg-white">
         <svg
           ref={svgRef}
           className="h-full w-full"
-          style={{ minHeight: "600px" }}
+          style={{ minHeight: "360px" }}
         />
       </div>
 
-      <div className="mt-4 flex items-center space-x-6 text-sm">
+      <div className="mt-7 flex items-center space-x-6 text-sm">
         <div className="flex items-center space-x-2">
           <div className="h-3 w-3 rounded-full bg-red-500"></div>
           <span className="text-gray-700">중심 학생</span>

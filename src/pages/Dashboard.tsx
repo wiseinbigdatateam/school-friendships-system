@@ -2,7 +2,6 @@ import React, { useState, useEffect } from "react";
 import { supabase } from "../lib/supabase";
 import { NotificationService } from "../services/notificationService";
 import BarChart from "../components/BarChart";
-import { useAuth } from "../contexts/AuthContext";
 
 interface SurveyProject {
   id: string;
@@ -27,7 +26,6 @@ interface SurveyTemplate {
 }
 
 const Dashboard: React.FC = () => {
-  const { user } = useAuth();
   const [loading, setLoading] = useState(true);
   const [schoolId, setSchoolId] = useState("");
   const [schoolName, setSchoolName] = useState("");
@@ -37,10 +35,10 @@ const Dashboard: React.FC = () => {
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [selectedProject, setSelectedProject] = useState("");
   const [surveyProjects, setSurveyProjects] = useState<Array<SurveyProject>>(
-    []
+    [],
   );
   const [surveyTemplates, setSurveyTemplates] = useState<Array<SurveyTemplate>>(
-    []
+    [],
   );
   const [participationData, setParticipationData] = useState({
     totalStudents: 0,
@@ -123,7 +121,7 @@ const Dashboard: React.FC = () => {
           const totalStudents = students.length;
           const participatedStudents = responsesData
             ? responsesData.filter((r) =>
-                students.some((s) => s.id === r.student_id)
+                students.some((s) => s.id === r.student_id),
               ).length
             : 0;
           const nonParticipatedStudents = totalStudents - participatedStudents;
@@ -142,7 +140,7 @@ const Dashboard: React.FC = () => {
           // 학생 참여 리스트 업데이트
           const studentList = students.map((student, index) => {
             const response = responsesData?.find(
-              (r) => r.student_id === student.id
+              (r) => r.student_id === student.id,
             );
             const participated = !!response;
 
@@ -206,7 +204,7 @@ const Dashboard: React.FC = () => {
 
           console.log(
             "✅ 설문 변경에 따른 일별 참여 데이터 업데이트:",
-            dailyData
+            dailyData,
           );
         }
       } catch (error) {
@@ -219,182 +217,46 @@ const Dashboard: React.FC = () => {
   useEffect(() => {
     const loadRealData = async () => {
       try {
-        if (!user) {
-          console.log("🔍 사용자 정보가 없습니다.");
-          setLoading(false);
-          return;
-        }
+        // 1. 로그인한 사용자 확인 (선택적)
+        const userStr = localStorage.getItem("user");
+        let user = null;
 
-        // 최신 사용자 정보 조회 (grade_level, class_number 포함)
-        const { data: userData, error: userError } = await supabase
-          .from("users")
-          .select("*, schools(name), districts(name)")
-          .eq("id", user.id)
-          .single();
-
-        if (userError) {
-          console.error("❌ 사용자 정보 조회 실패:", userError);
-          setLoading(false);
-          return;
-        }
-
-        console.log("🔍 대시보드 데이터 로드 시작:", {
-          userRole: user.role,
-          userGrade: userData.grade_level,
-          userClass: userData.class_number,
-          userSchoolId: userData.school_id
-        });
-
-        // 사용자 권한에 따른 데이터 설정
-        let schoolId = "";
-        let gradeLevel = "";
-        let classNumber = "";
-        let schoolName = "";
-        let teacherName = userData.name || "담임선생님";
-
-        if (user.role === 'homeroom_teacher' && userData.grade_level && userData.class_number) {
-          // 담임선생님: 자신의 담당 학년/반
-          schoolId = userData.school_id || "";
-          gradeLevel = userData.grade_level.toString();
-          classNumber = userData.class_number.toString();
-          
-          if (!schoolId) {
-            throw new Error("학교 정보가 설정되지 않았습니다.");
+        if (userStr) {
+          try {
+            user = JSON.parse(userStr);
+          } catch (e) {
+            // 사용자 정보 파싱 실패 시 기본 데이터로 진행
           }
-          
-          // 학교 이름 조회
-          const { data: schoolData } = await supabase
-            .from("schools")
-            .select("name")
-            .eq("id", schoolId)
-            .single();
-          
-          schoolName = schoolData?.name || "알 수 없는 학교";
-          
-        } else if (user.role === 'grade_teacher' && userData.grade_level) {
-          // 학년담당: 해당 학년 전체
-          schoolId = userData.school_id || "";
-          gradeLevel = userData.grade_level.toString();
-          
-          if (!schoolId) {
-            throw new Error("학교 정보가 설정되지 않았습니다.");
-          }
-          
-          // 학교 이름 조회
-          const { data: schoolData } = await supabase
-            .from("schools")
-            .select("name")
-            .eq("id", schoolId)
-            .single();
-          
-          schoolName = schoolData?.name || "알 수 없는 학교";
-          
-        } else if (user.role === 'school_admin') {
-          // 학교 관리자: 해당 학교 전체
-          schoolId = userData.school_id || "";
-          
-          if (!schoolId) {
-            throw new Error("학교 정보가 설정되지 않았습니다.");
-          }
-          
-          // 학교 이름 조회
-          const { data: schoolData } = await supabase
-            .from("schools")
-            .select("name")
-            .eq("id", schoolId)
-            .single();
-          
-          schoolName = schoolData?.name || "알 수 없는 학교";
-          
-                         } else if (user.role === 'district_admin') {
-          // 교육청 관리자: 해당 교육청 전체
-          // district_id는 userData에서 가져와야 함
-          const districtId = userData.district_id || "";
-           
-           if (!districtId) {
-             throw new Error("교육청 정보가 설정되지 않았습니다.");
-           }
-           
-           // 교육청 이름 조회
-           const { data: districtData } = await supabase
-             .from("districts")
-             .select("name")
-             .eq("id", districtId)
-             .single();
-           
-           schoolName = districtData?.name || "알 수 없는 교육청";
-          
-        } else if (user.role === 'main_admin') {
-          // 시스템 관리자: 전체 시스템
-          schoolName = "전체 시스템";
-          
         } else {
-          throw new Error("알 수 없는 사용자 권한입니다.");
+          // 로그인 정보가 없을 시 기본 데이터로 진행
         }
+
+        // 2. 기본 정보 설정 (실제 DB 데이터 기반)
+        const schoolId = "ab466857-5c16-4329-a9f6-f2d081c864f0"; // 와이즈인컴퍼니
+        const gradeLevel = "1";
+        const classNumber = "1";
 
         setSchoolId(schoolId);
         setGradeLevel(gradeLevel);
         setClassNumber(classNumber);
-        setSchoolName(schoolName);
-        setCurrentUser(user);
+        setCurrentUser(
+          user || { id: "default", name: "김담임", role: "homeroom_teacher" },
+        );
         setTeacherInfo({
-          name: teacherName,
-          role: user.role,
+          name: "김담임",
+          role: "homeroom_teacher",
         });
 
-        console.log("🔍 사용자 권한별 설정 완료:", {
-          schoolId,
-          gradeLevel,
-          classNumber,
-          schoolName,
-          userRole: user.role
-        });
+        // 3. 학교 이름 설정
+        setSchoolName("와이즈인컴퍼니");
 
-        // 학생 목록 조회 (권한에 따라)
-        let studentsQuery = supabase
+        // 4. 학생 목록 조회
+        const { data: studentsData, error: studentsError } = await supabase
           .from("students")
           .select("*")
-          .eq("is_active", true);
-
-        if (user.role === 'homeroom_teacher' && schoolId && gradeLevel && classNumber) {
-          // 담임선생님: 자신의 담당 학년/반 학생만
-          studentsQuery = studentsQuery
-            .eq("current_school_id", schoolId)
-            .eq("grade", gradeLevel)
-            .eq("class", classNumber);
-            
-        } else if (user.role === 'grade_teacher' && schoolId && gradeLevel) {
-          // 학년담당: 해당 학년 전체 학생
-          studentsQuery = studentsQuery
-            .eq("current_school_id", schoolId)
-            .eq("grade", gradeLevel);
-            
-        } else if (user.role === 'school_admin' && schoolId) {
-          // 학교 관리자: 해당 학교 전체 학생
-          studentsQuery = studentsQuery.eq("current_school_id", schoolId);
-          
-        } else if (user.role === 'district_admin') {
-          // 교육청 관리자: 해당 교육청 전체 학생
-          const districtId = userData.district_id || "";
-          if (districtId) {
-            // 교육청에 속한 학교들의 학생들 조회
-            const { data: schoolIds } = await supabase
-              .from("schools")
-              .select("id")
-              .eq("district_id", districtId);
-            
-            if (schoolIds && schoolIds.length > 0) {
-              const schoolIdList = schoolIds.map(s => s.id);
-              studentsQuery = studentsQuery.in("current_school_id", schoolIdList);
-            }
-          }
-          
-        } else if (user.role === 'main_admin') {
-          // 시스템 관리자: 전체 학생
-          // 필터링 없이 전체 조회
-        }
-
-        const { data: studentsData, error: studentsError } = await studentsQuery;
+          .eq("current_school_id", schoolId)
+          .eq("grade", gradeLevel)
+          .eq("class", classNumber);
 
         if (studentsError) {
           console.error("❌ 학생 조회 실패:", studentsError);
@@ -405,63 +267,32 @@ const Dashboard: React.FC = () => {
         setStudents(studentsData || []);
 
         if (studentsData && studentsData.length > 0) {
-          // 설문 목록 조회 (권한에 따라)
-          console.log("🔍 설문 조회 시작:", { schoolId, userRole: user.role });
-          
-          let surveysQuery = supabase
+          // 5. 설문 목록 조회 (active와 completed 상태만 포함)
+          console.log("🔍 설문 조회 시작:", { schoolId });
+          const { data: surveys, error: surveysError } = await supabase
             .from("surveys")
             .select("*")
-            .in("status", ["active", "completed"])
+            .eq("school_id", schoolId)
+            .in("status", ["active", "completed"]) // draft 제외
             .order("created_at", { ascending: false });
-
-          if (user.role === 'homeroom_teacher' && schoolId) {
-            // 담임선생님: 해당 학교의 자신 담당 학년/반 설문
-            surveysQuery = surveysQuery.eq("school_id", schoolId);
-            
-          } else if (user.role === 'grade_teacher' && schoolId) {
-            // 학년담당: 해당 학교의 해당 학년 설문
-            surveysQuery = surveysQuery.eq("school_id", schoolId);
-            
-          } else if (user.role === 'school_admin' && schoolId) {
-            // 학교 관리자: 해당 학교 전체 설문
-            surveysQuery = surveysQuery.eq("school_id", schoolId);
-            
-          } else if (user.role === 'district_admin') {
-            // 교육청 관리자: 해당 교육청 전체 설문
-            const districtId = userData.district_id || "";
-            if (districtId) {
-              const { data: schoolIds } = await supabase
-                .from("schools")
-                .select("id")
-                .eq("district_id", districtId);
-              
-              if (schoolIds && schoolIds.length > 0) {
-                const schoolIdList = schoolIds.map(s => s.id);
-                surveysQuery = surveysQuery.in("school_id", schoolIdList);
-              }
-            }
-            
-          } else if (user.role === 'main_admin') {
-            // 시스템 관리자: 전체 설문
-            // 필터링 없이 전체 조회
-          }
-
-          const { data: surveys, error: surveysError } = await surveysQuery;
 
           if (surveysError) {
             console.error("❌ 설문 조회 실패:", surveysError);
           } else {
             console.log("✅ 원본 설문 데이터:", surveys);
             console.log("📊 총 설문 개수:", surveys?.length || 0);
-            
-            // 권한에 따른 추가 필터링
-            let filteredSurveys = surveys || [];
-
-            if (user.role === 'homeroom_teacher' && gradeLevel && classNumber) {
-              // 담임선생님: 자신의 담당 학년/반 설문만
-              filteredSurveys = surveys?.filter((survey) => {
+            // target_grades와 target_classes가 일치하는 설문만 필터링
+            const filteredSurveys =
+              surveys?.filter((survey) => {
                 const targetGrades = survey.target_grades;
                 const targetClasses = survey.target_classes;
+
+                console.log(`🔍 설문 "${survey.title}" 필터링 체크:`, {
+                  gradeLevel,
+                  classNumber,
+                  targetGrades,
+                  targetClasses,
+                });
 
                 const gradeMatch = Array.isArray(targetGrades)
                   ? targetGrades.includes(gradeLevel)
@@ -471,24 +302,23 @@ const Dashboard: React.FC = () => {
                   ? targetClasses.includes(classNumber)
                   : targetClasses === classNumber;
 
-                return gradeMatch && classMatch;
+                const isMatch = gradeMatch && classMatch;
+                console.log(`📋 설문 "${survey.title}" 매칭 결과:`, {
+                  gradeMatch,
+                  classMatch,
+                  isMatch,
+                });
+
+                return isMatch;
               }) || [];
-              
-            } else if (user.role === 'grade_teacher' && gradeLevel) {
-              // 학년담당: 해당 학년 설문만
-              filteredSurveys = surveys?.filter((survey) => {
-                const targetGrades = survey.target_grades;
-                const gradeMatch = Array.isArray(targetGrades)
-                  ? targetGrades.includes(gradeLevel)
-                  : targetGrades === gradeLevel;
-                return gradeMatch;
-              }) || [];
-            }
 
             console.log("🎯 필터링 후 설문 개수:", filteredSurveys.length);
             console.log(
               "📝 필터링 된 설문들:",
-              filteredSurveys.map((s) => ({ title: s.title, status: s.status }))
+              filteredSurveys.map((s) => ({
+                title: s.title,
+                status: s.status,
+              })),
             );
 
             // 설문 프로젝트 목록 설정 (더 자세한 정보 포함)
@@ -535,7 +365,7 @@ const Dashboard: React.FC = () => {
                   endDate: survey.end_date || "",
                   isSelected: false,
                 };
-              })
+              }),
             );
 
             setSurveyProjects(projects);
@@ -591,7 +421,7 @@ const Dashboard: React.FC = () => {
                 const totalStudents = studentsData.length;
                 const participatedStudents = responsesData
                   ? responsesData.filter((r) =>
-                      studentsData.some((s) => s.id === r.student_id)
+                      studentsData.some((s) => s.id === r.student_id),
                     ).length
                   : 0;
                 const nonParticipatedStudents =
@@ -611,7 +441,7 @@ const Dashboard: React.FC = () => {
                 // 학생 참여 리스트 설정 (실제 응답 데이터 기반, 더 정확한 파싱)
                 const studentList = studentsData.map((student, index) => {
                   const response = responsesData?.find(
-                    (r) => r.student_id === student.id
+                    (r) => r.student_id === student.id,
                   );
                   const participated = !!response;
 
@@ -629,7 +459,7 @@ const Dashboard: React.FC = () => {
                         const friendNames = responseData.q1
                           .map((friendId: string) => {
                             const friend = studentsData.find(
-                              (s) => s.id === friendId
+                              (s) => s.id === friendId,
                             );
                             return friend ? friend.name : "알 수 없음";
                           })
@@ -642,7 +472,7 @@ const Dashboard: React.FC = () => {
                         const friendNames = responseData.q2
                           .map((friendId: string) => {
                             const friend = studentsData.find(
-                              (s) => s.id === friendId
+                              (s) => s.id === friendId,
                             );
                             return friend ? friend.name : "알 수 없음";
                           })
@@ -655,7 +485,7 @@ const Dashboard: React.FC = () => {
                         const friendNames = responseData.q3
                           .map((friendId: string) => {
                             const friend = studentsData.find(
-                              (s) => s.id === friendId
+                              (s) => s.id === friendId,
                             );
                             return friend ? friend.name : "알 수 없음";
                           })
@@ -668,7 +498,7 @@ const Dashboard: React.FC = () => {
                         const friendNames = responseData.q4
                           .map((friendId: string) => {
                             const friend = studentsData.find(
-                              (s) => s.id === friendId
+                              (s) => s.id === friendId,
                             );
                             return friend ? friend.name : "알 수 없음";
                           })
@@ -713,14 +543,14 @@ const Dashboard: React.FC = () => {
                         const date = `${month}/${day}`;
 
                         console.log(
-                          `🔍 응답 날짜 처리: ${response.submitted_at} → ${date}`
+                          `🔍 응답 날짜 처리: ${response.submitted_at} → ${date}`,
                         );
 
                         const existingDate = acc.find((d) => d.date === date);
                         if (existingDate) {
                           existingDate.count += 1;
                           console.log(
-                            `✅ 기존 날짜 ${date} 업데이트: ${existingDate.count}명`
+                            `✅ 기존 날짜 ${date} 업데이트: ${existingDate.count}명`,
                           );
                         } else {
                           acc.push({
@@ -740,7 +570,7 @@ const Dashboard: React.FC = () => {
                               acc[index - 1].cumulative + dayData.count;
                           }
                           console.log(
-                            `📊 ${dayData.date}: 응답수 ${dayData.count}명, 누적 ${dayData.cumulative}명`
+                            `📊 ${dayData.date}: 응답수 ${dayData.count}명, 누적 ${dayData.cumulative}명`,
                           );
                         });
 
@@ -779,12 +609,12 @@ const Dashboard: React.FC = () => {
     };
 
     loadRealData();
-  }, [user]);
+  }, []);
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600"></div>
+      <div className="flex min-h-screen items-center justify-center bg-gray-50">
+        <div className="h-32 w-32 animate-spin rounded-full border-b-2 border-blue-600"></div>
       </div>
     );
   }
@@ -792,12 +622,12 @@ const Dashboard: React.FC = () => {
   // dashboardData 조건문 제거 - 테스트 데이터가 정상적으로 로드됨
 
   return (
-    <div className="max-w-7xl pb-16 mx-auto min-h-screen bg-gray-50 px-4 sm:px-6 lg:px-8">
+    <div className="mx-auto min-h-screen max-w-7xl bg-gray-50 px-4 pb-16 sm:px-6 lg:px-8">
       {/* 페이지 제목 */}
-      <div className="bg-white rounded-lg border border-gray-200">
+      <div className="rounded-lg border border-gray-200 bg-white">
         <div className="py-6">
           <div className="flex items-center justify-center space-x-6">
-            <h1 className="text-3xl font-bold text-gray-900">
+            <h1 className="text-2xl font-bold text-gray-900">
               {selectedProject
                 ? surveyProjects.find((p) => p.id === selectedProject)?.title ||
                   "교우관계 조사"
@@ -806,12 +636,12 @@ const Dashboard: React.FC = () => {
 
             {/* 설문 상태 */}
             <div
-              className={`px-3 py-1 rounded-full text-sm font-medium ${
+              className={`rounded-full px-3 py-1 text-sm font-medium ${
                 selectedProject &&
                 surveyProjects.find((p) => p.id === selectedProject)?.status
                   ? getStatusStyle(
                       surveyProjects.find((p) => p.id === selectedProject)
-                        ?.status || ""
+                        ?.status || "",
                     )
                   : "bg-gray-100 text-gray-800"
               }`}
@@ -820,41 +650,9 @@ const Dashboard: React.FC = () => {
               surveyProjects.find((p) => p.id === selectedProject)?.status
                 ? getStatusLabel(
                     surveyProjects.find((p) => p.id === selectedProject)
-                      ?.status || ""
+                      ?.status || "",
                   )
                 : "상태 없음"}
-            </div>
-          </div>
-          
-          {/* 사용자 권한 정보 표시 */}
-          <div className="mt-4 px-6">
-            <div className="flex items-center justify-center space-x-4 text-sm text-gray-600">
-              <span>학교: {schoolName}</span>
-              {user?.role === 'homeroom_teacher' && gradeLevel && classNumber && (
-                <span className="px-2 py-1 bg-blue-100 text-blue-800 rounded-full">
-                  {gradeLevel}학년 {classNumber}반 담임
-                </span>
-              )}
-              {user?.role === 'grade_teacher' && gradeLevel && (
-                <span className="px-2 py-1 bg-green-100 text-green-800 rounded-full">
-                  {gradeLevel}학년 담당
-                </span>
-              )}
-              {user?.role === 'school_admin' && (
-                <span className="px-2 py-1 bg-purple-100 text-purple-800 rounded-full">
-                  학교 관리자
-                </span>
-              )}
-              {user?.role === 'district_admin' && (
-                <span className="px-2 py-1 bg-orange-100 text-orange-800 rounded-full">
-                  교육청 관리자
-                </span>
-              )}
-              {user?.role === 'main_admin' && (
-                <span className="px-2 py-1 bg-red-100 text-red-800 rounded-full">
-                  시스템 관리자
-                </span>
-              )}
             </div>
           </div>
         </div>
@@ -864,33 +662,33 @@ const Dashboard: React.FC = () => {
       <div className="pt-6">
         <div className="flex-row gap-6">
           {/* 상단 사이드바 - 설문 프로젝트 목록 */}
-          <div className="w-full mb-6">
-            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">
+          <div className="mb-6 w-full">
+            <div className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
+              <h3 className="mb-4 text-lg font-semibold text-gray-900">
                 설문 프로젝트 총 {surveyProjects.length}개
               </h3>
-              <div className="flex gap-2 w-full h-fit overflow-x-auto">
+              <div className="flex h-fit w-full gap-2 overflow-x-auto">
                 {surveyProjects.map((project) => (
                   <div
                     key={project.id}
-                    className={`p-4 min-w-72 h-36 border rounded-lg cursor-pointer transition-all duration-200 ${
+                    className={`h-36 min-w-72 cursor-pointer rounded-lg border p-4 transition-all duration-200 ${
                       project.isSelected
                         ? "border-blue-500 bg-blue-50 shadow-md"
                         : "border-gray-200 hover:border-gray-300 hover:shadow-sm"
                     }`}
                     onClick={() => handleProjectSelect(project.id)}
                   >
-                    <div className="flex items-start justify-between mb-2">
+                    <div className="mb-2 flex items-start justify-between">
                       <h3
-                        className={`w-3/4 font-medium truncate text-sm ${
+                        className={`w-3/4 truncate text-sm font-medium ${
                           project.isSelected ? "text-blue-900" : "text-gray-900"
                         }`}
                       >
                         {project.title}
                       </h3>
                       <span
-                        className={`px-2 py-1 text-xs rounded-full ${getStatusStyle(
-                          project.status
+                        className={`rounded-full px-2 py-1 text-xs ${getStatusStyle(
+                          project.status,
                         )}`}
                       >
                         {getStatusLabel(project.status)}
@@ -903,9 +701,9 @@ const Dashboard: React.FC = () => {
                     </div>
 
                     {project.isSelected && (
-                      <div className="mt-3 pt-2 border-t border-blue-200">
+                      <div className="mt-3 border-t border-blue-200 pt-2">
                         <div className="flex items-center text-xs text-blue-600">
-                          <div className="w-2 h-2 bg-blue-500 rounded-full mr-2"></div>
+                          <div className="mr-2 h-2 w-2 rounded-full bg-blue-500"></div>
                           선택됨
                         </div>
                       </div>
@@ -919,18 +717,18 @@ const Dashboard: React.FC = () => {
           {/* 현황 파악 */}
           <div className="flex-row">
             {/* 설문 참여 현황 요약 */}
-            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
-              <h3 className="text-lg font-semibold text-gray-900 mb-6 text-center">
+            <div className="mb-6 rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
+              <h3 className="mb-6 text-center text-lg font-semibold text-gray-900">
                 {schoolName || "와이즈 초등학교"} [{gradeLevel}학년{" "}
                 {classNumber}반]
               </h3>
               <div className="grid grid-cols-4 gap-8">
                 {/* 설문 참여 예상 학생 수 */}
                 <div className="flex flex-col items-center">
-                  <div className="text-4xl font-bold text-[#3F80EA] mb-2">
+                  <div className="mb-2 text-4xl font-bold text-[#3F80EA]">
                     {participationData.totalStudents}
                   </div>
-                  <div className="text-sm text-gray-600 text-center leading-tight">
+                  <div className="text-center text-sm leading-tight text-gray-600">
                     설문 참여 예상
                     <br />
                     학생 수
@@ -939,8 +737,8 @@ const Dashboard: React.FC = () => {
 
                 {/* 참여 학생 반원형 프로그레스 */}
                 <div className="flex flex-col items-center">
-                  <div className="relative w-40 h-24 mb-2">
-                    <svg className="w-full h-full" viewBox="0 0 100 50">
+                  <div className="relative mb-2 h-24 w-40">
+                    <svg className="h-full w-full" viewBox="0 0 100 50">
                       {/* 배경 반원 */}
                       <path
                         d="M 10 40 A 40 40 0 0 1 90 40"
@@ -969,15 +767,15 @@ const Dashboard: React.FC = () => {
                         x="7"
                         y="52"
                         textAnchor="start"
-                        className="text-[8px] fill-gray-500"
+                        className="fill-gray-500 text-[8px]"
                       >
                         0
                       </text>
                       <text
-                        x="83"
+                        x="78"
                         y="52"
                         textAnchor="start"
-                        className="text-[8px] fill-gray-500"
+                        className="fill-gray-500 text-[8px]"
                       >
                         {participationData.participatedStudents}/
                         {participationData.totalStudents}
@@ -990,15 +788,15 @@ const Dashboard: React.FC = () => {
                       </span>
                     </div>
                   </div>
-                  <div className="text-sm text-gray-600 text-center">
+                  <div className="text-center text-sm text-gray-600">
                     참여 학생
                   </div>
                 </div>
 
                 {/* 미참여 학생 반원형 프로그레스 */}
                 <div className="flex flex-col items-center">
-                  <div className="relative w-40 h-24 mb-2">
-                    <svg className="w-full h-full" viewBox="0 0 100 50">
+                  <div className="relative mb-2 h-24 w-40">
+                    <svg className="h-full w-full" viewBox="0 0 100 50">
                       {/* 배경 반원 */}
                       <path
                         d="M 10 40 A 40 40 0 0 1 90 40"
@@ -1027,7 +825,7 @@ const Dashboard: React.FC = () => {
                         x="7"
                         y="52"
                         textAnchor="start"
-                        className="text-[8px] fill-gray-500"
+                        className="fill-gray-500 text-[8px]"
                       >
                         0
                       </text>
@@ -1035,7 +833,7 @@ const Dashboard: React.FC = () => {
                         x="79"
                         y="52"
                         textAnchor="start"
-                        className="text-[8px] fill-gray-500"
+                        className="fill-gray-500 text-[8px]"
                       >
                         {participationData.nonParticipatedStudents}/
                         {participationData.totalStudents}
@@ -1048,15 +846,15 @@ const Dashboard: React.FC = () => {
                       </span>
                     </div>
                   </div>
-                  <div className="text-sm text-gray-600 text-center">
+                  <div className="text-center text-sm text-gray-600">
                     미참여 학생
                   </div>
                 </div>
 
                 {/* 진행 상태 반원형 프로그레스 */}
                 <div className="flex flex-col items-center">
-                  <div className="relative w-40 h-24 mb-2">
-                    <svg className="w-full h-full" viewBox="0 0 100 50">
+                  <div className="relative mb-2 h-24 w-40">
+                    <svg className="h-full w-full" viewBox="0 0 100 50">
                       {/* 배경 반원 */}
                       <path
                         d="M 10 40 A 40 40 0 0 1 90 40"
@@ -1083,7 +881,7 @@ const Dashboard: React.FC = () => {
                         x="7"
                         y="52"
                         textAnchor="start"
-                        className="text-[8px] fill-gray-500"
+                        className="fill-gray-500 text-[8px]"
                       >
                         0
                       </text>
@@ -1091,7 +889,7 @@ const Dashboard: React.FC = () => {
                         x="80"
                         y="52"
                         textAnchor="start"
-                        className="text-[8px] fill-gray-500"
+                        className="fill-gray-500 text-[8px]"
                       >
                         {participationData.completionRate}%
                       </text>
@@ -1103,7 +901,7 @@ const Dashboard: React.FC = () => {
                       </span>
                     </div>
                   </div>
-                  <div className="text-sm text-gray-600 text-center">
+                  <div className="text-center text-sm text-gray-600">
                     진행 상태
                   </div>
                 </div>
@@ -1111,21 +909,21 @@ const Dashboard: React.FC = () => {
             </div>
 
             {/* 참여 현황 리스트 */}
-            <div className="bg-white w-full rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">
+            <div className="mb-6 w-full rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
+              <h3 className="mb-4 text-lg font-semibold text-gray-900">
                 참여 현황 리스트
               </h3>
               <div className="w-full overflow-x-auto">
                 <table className="w-full divide-y divide-gray-200">
                   <thead className="bg-gray-50">
                     <tr>
-                      <th className="min-w-[70px] max-w-[70px] px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <th className="min-w-[70px] max-w-[70px] px-3 py-3 text-center text-xs font-medium uppercase tracking-wider text-gray-500">
                         번호
                       </th>
-                      <th className="min-w-[94px] max-w-[94px] px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <th className="min-w-[94px] max-w-[94px] px-3 py-3 text-center text-xs font-medium uppercase tracking-wider text-gray-500">
                         이름
                       </th>
-                      <th className="min-w-[118px] max-w-[118px] px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <th className="min-w-[118px] max-w-[118px] px-3 py-3 text-center text-xs font-medium uppercase tracking-wider text-gray-500">
                         참여상태
                       </th>
                       {selectedProject &&
@@ -1134,26 +932,26 @@ const Dashboard: React.FC = () => {
                           ?.questions?.map((question: any, index: number) => (
                             <th
                               key={question.id || index}
-                              className="min-w-[176px] max-w-[176px] px-3 py-3 truncate text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                              className="min-w-[176px] max-w-[176px] truncate px-3 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500"
                             >
                               {question.text || `질문 ${index + 1}`}
                             </th>
                           ))}
                     </tr>
                   </thead>
-                  <tbody className="bg-white divide-y divide-gray-200">
+                  <tbody className="divide-y divide-gray-200 bg-white">
                     {studentParticipationList.map((student) => (
                       <tr key={student.id} className="hover:bg-gray-50">
-                        <td className="px-3 py-3 text-center whitespace-nowrap text-xs text-gray-900">
+                        <td className="whitespace-nowrap px-3 py-3 text-center text-xs text-gray-900">
                           {student.id}
                         </td>
-                        <td className="px-3 py-3 whitespace-nowrap text-xs font-medium text-gray-900">
+                        <td className="whitespace-nowrap px-3 py-3 text-xs font-medium text-gray-900">
                           {student.name}
                         </td>
-                        <td className="px-3 py-3 text-center whitespace-nowrap">
-                          <div className="flex  items-center">
+                        <td className="whitespace-nowrap px-3 py-3 text-center">
+                          <div className="flex items-center">
                             <div
-                              className={`w-3.5 h-3.5 mx-auto rounded-full ${
+                              className={`mx-auto h-3.5 w-3.5 rounded-full ${
                                 student.participated
                                   ? "bg-green-500"
                                   : "bg-gray-300"
@@ -1171,11 +969,11 @@ const Dashboard: React.FC = () => {
                               if (student.participated) {
                                 // survey_responses 테이블에서 해당 설문과 학생의 응답 찾기
                                 const actualStudentId = students?.find(
-                                  (s) => s.name === student.name
+                                  (s) => s.name === student.name,
                                 )?.id;
 
                                 const studentResponse = responses?.find(
-                                  (r: any) => r.student_id === actualStudentId
+                                  (r: any) => r.student_id === actualStudentId,
                                 );
 
                                 if (
@@ -1185,29 +983,41 @@ const Dashboard: React.FC = () => {
                                   try {
                                     const responseData =
                                       studentResponse.responses as any;
-                                    const answerValue = responseData[question.id];
-                                    
+                                    const answerValue =
+                                      responseData[question.id];
+
                                     if (answerValue) {
                                       // UUID를 이름으로 변환하는 함수
-                                      const convertUuidToName = (value: any): string => {
+                                      const convertUuidToName = (
+                                        value: any,
+                                      ): string => {
                                         if (Array.isArray(value)) {
                                           // 배열인 경우: 각 UUID를 이름으로 변환
-                                          const names = value.map((uuid: string) => {
-                                            const student = students?.find((s: any) => s.id === uuid);
-                                            return student ? student.name : uuid;
-                                          });
+                                          const names = value.map(
+                                            (uuid: string) => {
+                                              const student = students?.find(
+                                                (s: any) => s.id === uuid,
+                                              );
+                                              return student
+                                                ? student.name
+                                                : uuid;
+                                            },
+                                          );
                                           return names.join(", ");
-                                        } else if (typeof value === 'string') {
+                                        } else if (typeof value === "string") {
                                           // 문자열인 경우: UUID인지 확인하고 이름으로 변환
-                                          const student = students?.find((s: any) => s.id === value);
+                                          const student = students?.find(
+                                            (s: any) => s.id === value,
+                                          );
                                           return student ? student.name : value;
                                         } else {
                                           // 기타 타입은 그대로 반환
                                           return String(value);
                                         }
                                       };
-                                      
-                                      questionResponse = convertUuidToName(answerValue);
+
+                                      questionResponse =
+                                        convertUuidToName(answerValue);
                                     } else {
                                       questionResponse = "응답 없음";
                                     }
@@ -1223,7 +1033,7 @@ const Dashboard: React.FC = () => {
                               return (
                                 <td
                                   key={question.id || index}
-                                  className="px-3 py-3 whitespace-nowrap text-xs text-gray-900"
+                                  className="whitespace-nowrap px-3 py-3 text-xs text-gray-900"
                                 >
                                   {questionResponse ||
                                     (student.participated ? "응답 없음" : "")}
@@ -1238,8 +1048,8 @@ const Dashboard: React.FC = () => {
             </div>
 
             {/* 일별 참여 현황 */}
-            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">
+            <div className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
+              <h3 className="mb-4 text-lg font-semibold text-gray-900">
                 일별 참여 현황
               </h3>
               <BarChart data={dailyParticipationData} />

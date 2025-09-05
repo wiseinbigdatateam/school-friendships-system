@@ -243,11 +243,21 @@ function PeerRelationShipsAndDiagnosticAssessment() {
               </div>
             </div>
 
-            <img
-              src="/landing/tab1/section3_4.svg"
-              alt="section3 네 번째 이미지"
-              className="hidden h-[389px] xl:block"
-            />
+            <div className="hidden flex-col gap-3 rounded-xl bg-gray-100 px-6 py-8 xl:flex">
+              <span className="w-full rounded-xl bg-gray-700 px-5 py-2 text-center text-base font-semibold text-white lg:px-6">
+                AL LLM 자동 가이드
+              </span>
+              <div className="flex flex-col gap-3">
+                <p className="text-base font-semibold">
+                  • 개인화된 학생관리 자동생성
+                </p>
+                <img
+                  src="/landing/tab1/section3_4.svg"
+                  alt="section3 네 번째 이미지"
+                  className=""
+                />
+              </div>
+            </div>
           </div>
         </div>
       </div>

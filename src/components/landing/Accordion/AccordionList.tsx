@@ -54,7 +54,7 @@ function AccordionList({ tabMenu, onItemSelect }: AccordionListProps) {
             )}
             onClick={() => handleAccordion(item.id)}
           >
-            <h3 className="text-xl font-semibold">{`${idx + 1}. ${item.id}`}</h3>
+            <p className="text-xl">{`${idx + 1}. ${item.id}`}</p>
             {openItem === item.id && isToggleActive ? (
               <img
                 src="/landing/toggle_up.svg"

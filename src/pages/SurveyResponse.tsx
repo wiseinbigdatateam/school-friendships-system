@@ -405,7 +405,7 @@ const SurveyResponse: React.FC = () => {
         <div className="mx-auto max-w-2xl px-4">
           {/* 설문 헤더 */}
           <div className="mb-6 rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
-            <h1 className="mb-4 text-3xl font-bold text-gray-900">
+            <h1 className="mb-4 text-center text-2xl font-bold text-gray-900">
               {survey.title}
             </h1>
             {survey.description && (
@@ -427,9 +427,6 @@ const SurveyResponse: React.FC = () => {
             <h2 className="mb-4 text-center text-xl font-semibold text-gray-900">
               본인 확인
             </h2>
-            <p className="mb-6 text-center text-sm text-gray-600">
-              이름과 생년월일을 입력하여 본인을 확인해주세요
-            </p>
 
             {/* 이름 입력 */}
             <div className="mb-4">
@@ -562,7 +559,7 @@ const SurveyResponse: React.FC = () => {
             )}
 
             {/* 도움말 */}
-            <div className="text-center text-xs text-gray-500">
+            <div className="text-left text-xs text-gray-500">
               <p>• 정확한 이름과 생년월일을 입력해주세요</p>
               <p>• 생년월일은 직접 입력하거나 달력 아이콘을 클릭하여 선택할 수 있습니다</p>
               <p>• 입력 형식: YYYY-MM-DD (예: 2005-03-15)</p>
@@ -583,7 +580,7 @@ const SurveyResponse: React.FC = () => {
           <div className="mb-6 rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
             <div className="mb-4 flex items-center justify-between">
               <div>
-                <h1 className="text-3xl font-bold text-gray-900">
+                <h1 className="text-2xl font-bold text-gray-900">
                   {survey.title}
                 </h1>
                 {survey.description && (
