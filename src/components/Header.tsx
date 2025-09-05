@@ -253,7 +253,7 @@ const Header: React.FC<HeaderProps> = ({ logo, navigationItems }) => {
                           : "text-gray-700 hover:bg-gray-50 hover:text-gray-900"
                       }`}
                     >
-                      학습별 분석결과
+                      학급별 분석결과
                     </button>
                     <button
                       onClick={() =>

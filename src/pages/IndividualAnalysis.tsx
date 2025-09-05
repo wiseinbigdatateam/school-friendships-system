@@ -553,7 +553,7 @@ const IndividualAnalysis: React.FC = () => {
                               AI 리포트를 생성하는 중...
                             </p>
                             <p className="mt-2 text-sm text-gray-500">
-                              ChatGPT가 개인별 분석 결과를 바탕으로 리포트를
+                              진단 전문 LLM으로 개인별 분석 결과를 바탕으로 리포트를
                               작성하고 있습니다.
                             </p>
                           </div>

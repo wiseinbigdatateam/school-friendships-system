@@ -45,8 +45,11 @@ const StudentManagement: React.FC = () => {
   // 모달 상태
   const [detailModalOpen, setDetailModalOpen] = useState(false);
   const [memoModalOpen, setMemoModalOpen] = useState(false);
+  const [editMemoModalOpen, setEditMemoModalOpen] = useState(false);
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
+  const [selectedMemo, setSelectedMemo] = useState<TeacherMemo | null>(null);
   const [newMemoContent, setNewMemoContent] = useState("");
+  const [editMemoContent, setEditMemoContent] = useState("");
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [uploadTotal, setUploadTotal] = useState(0);
@@ -266,10 +269,16 @@ const StudentManagement: React.FC = () => {
 
       if (networkError) throw networkError;
 
-      // 교사 메모 조회
+      // 교사 메모 조회 (users 테이블과 조인하여 teacher_name 가져오기)
       const { data: memosData, error: memosError } = await supabase
         .from("teacher_memos")
-        .select("*");
+        .select(`
+          *,
+          users!teacher_memos_teacher_id_fkey (
+            name,
+            email
+          )
+        `);
 
       if (memosError) throw memosError;
 
@@ -312,15 +321,22 @@ const StudentManagement: React.FC = () => {
           }
         }
 
-        const memos =
-          memosData?.filter((m) => m.student_id === student.id) || [];
+        // 메모 데이터 매핑
+        const studentMemos = memosData?.filter((m) => m.student_id === student.id) || [];
+        const mappedMemos: TeacherMemo[] = studentMemos.map((memo) => ({
+          id: memo.id,
+          content: memo.content,
+          created_at: memo.created_at || new Date().toISOString(),
+          teacher_name: memo.users?.name || memo.users?.email || "교사",
+        }));
+
         const interventions =
           interventionData?.filter((i) => i.student_id === student.id) || [];
 
         return {
           ...student,
           network_metrics: metrics,
-          teacher_memos: memos,
+          teacher_memos: mappedMemos,
           intervention_logs: interventions,
         };
       });
@@ -1159,32 +1175,155 @@ const StudentManagement: React.FC = () => {
     }
 
     try {
-      // 실제로는 Supabase에 저장
+      // Supabase에 메모 저장
+      const memoData = {
+        student_id: selectedStudent.id,
+        teacher_id: teacherInfo.id,
+        content: newMemoContent.trim(),
+        memo_type: "general", // 기본값으로 설정
+        visibility: "private", // 기본값으로 설정
+        tags: [], // 빈 배열로 설정
+      };
+
+      const { data: savedMemo, error } = await supabase
+        .from("teacher_memos")
+        .insert([memoData])
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      // 로컬 상태 업데이트
       const newMemo: TeacherMemo = {
-        id: Date.now().toString(),
-        content: newMemoContent,
-        created_at: new Date().toISOString(),
-        teacher_name: "현재 교사",
+        id: savedMemo.id,
+        content: savedMemo.content,
+        created_at: savedMemo.created_at || new Date().toISOString(),
+        teacher_name: teacherInfo.name || currentUser?.email || "현재 교사",
       };
 
       // 로컬 상태 업데이트
-      setStudents((prev) =>
-        prev.map((student) =>
-          student.id === selectedStudent.id
-            ? {
-                ...student,
-                teacher_memos: [...(student.teacher_memos || []), newMemo],
-              }
-            : student,
-        ),
+      const updatedStudents = students.map((student) =>
+        student.id === selectedStudent.id
+          ? {
+              ...student,
+              teacher_memos: [...(student.teacher_memos || []), newMemo],
+            }
+          : student,
       );
+      setStudents(updatedStudents);
+      
+      // 현재 선택된 학생의 상태도 업데이트
+      const updatedStudent = updatedStudents.find(s => s.id === selectedStudent.id);
+      if (updatedStudent) {
+        setSelectedStudent(updatedStudent);
+      }
 
       toast.success("메모가 성공적으로 저장되었습니다.");
       setMemoModalOpen(false);
       setNewMemoContent("");
       setSelectedStudent(null);
     } catch (error) {
+      console.error("메모 저장 오류:", error);
       toast.error("메모 저장 중 오류가 발생했습니다.");
+    }
+  };
+
+  const handleEditMemo = (memo: TeacherMemo) => {
+    setSelectedMemo(memo);
+    setEditMemoContent(memo.content);
+    setEditMemoModalOpen(true);
+  };
+
+  const handleUpdateMemo = async () => {
+    if (!selectedMemo || !editMemoContent.trim()) {
+      toast.error("메모 내용을 입력해주세요.");
+      return;
+    }
+
+    try {
+      // Supabase에서 메모 수정
+      const { data: updatedMemo, error } = await supabase
+        .from("teacher_memos")
+        .update({
+          content: editMemoContent.trim(),
+          updated_at: new Date().toISOString()
+        })
+        .eq("id", selectedMemo.id)
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      // 로컬 상태 업데이트
+      const updatedStudents = students.map((student) =>
+        student.id === selectedStudent?.id
+          ? {
+              ...student,
+              teacher_memos: student.teacher_memos?.map((memo) =>
+                memo.id === selectedMemo.id
+                  ? { ...memo, content: editMemoContent }
+                  : memo,
+              ),
+            }
+          : student,
+      );
+      setStudents(updatedStudents);
+      
+      // 현재 선택된 학생의 상태도 업데이트
+      const updatedStudent = updatedStudents.find(s => s.id === selectedStudent?.id);
+      if (updatedStudent) {
+        setSelectedStudent(updatedStudent);
+      }
+
+      toast.success("메모가 성공적으로 수정되었습니다.");
+      setEditMemoModalOpen(false);
+      setEditMemoContent("");
+      setSelectedMemo(null);
+    } catch (error) {
+      console.error("메모 수정 오류:", error);
+      toast.error("메모 수정 중 오류가 발생했습니다.");
+    }
+  };
+
+  const handleDeleteMemo = async (memo: TeacherMemo) => {
+    if (!window.confirm("정말로 이 메모를 삭제하시겠습니까?")) {
+      return;
+    }
+
+    try {
+      // Supabase에서 메모 삭제
+      const { error } = await supabase
+        .from("teacher_memos")
+        .delete()
+        .eq("id", memo.id);
+
+      if (error) throw error;
+
+      // 로컬 상태 업데이트
+      const updatedStudents = students.map((student) =>
+        student.id === selectedStudent?.id
+          ? {
+              ...student,
+              teacher_memos: student.teacher_memos?.filter(
+                (m) => m.id !== memo.id,
+              ),
+            }
+          : student,
+      );
+      setStudents(updatedStudents);
+      
+      // 현재 선택된 학생의 상태도 업데이트
+      const updatedStudent = updatedStudents.find(s => s.id === selectedStudent?.id);
+      if (updatedStudent) {
+        setSelectedStudent(updatedStudent);
+      }
+
+      toast.success("메모가 성공적으로 삭제되었습니다.");
+      setEditMemoModalOpen(false);
+      setSelectedMemo(null);
+    } catch (error) {
+      console.error("메모 삭제 오류:", error);
+      toast.error("메모 삭제 중 오류가 발생했습니다.");
     }
   };
 
@@ -1197,6 +1336,12 @@ const StudentManagement: React.FC = () => {
     setMemoModalOpen(false);
     setNewMemoContent("");
     setSelectedStudent(null);
+  };
+
+  const closeEditMemoModal = () => {
+    setEditMemoModalOpen(false);
+    setEditMemoContent("");
+    setSelectedMemo(null);
   };
 
   if (loading) {
@@ -1783,37 +1928,33 @@ const StudentManagement: React.FC = () => {
                 {selectedStudent.teacher_memos &&
                 Array.isArray(selectedStudent.teacher_memos) &&
                 selectedStudent.teacher_memos.length > 0 ? (
-                  <div className="space-y-3">
+                  <div className="max-h-32 space-y-2 overflow-y-auto">
                     {selectedStudent.teacher_memos.map((memo, index) => (
                       <div
                         key={memo.id || index}
-                        className="rounded-lg bg-gray-50 p-4"
+                        className="cursor-pointer rounded-lg bg-gray-50 p-3 transition-colors hover:bg-gray-100"
+                        onClick={() => handleEditMemo(memo)}
                       >
-                        <div className="mb-2 flex items-start justify-between">
-                          <span className="text-sm text-gray-600">
+                        <div className="flex items-center space-x-2">
+                          <span className="text-sm text-gray-600 whitespace-nowrap">
                             {memo.created_at
                               ? new Date(memo.created_at).toLocaleDateString()
                               : "날짜 없음"}
                           </span>
-                          {memo.teacher_name && (
-                            <span className="text-sm text-gray-500">
-                              {memo.teacher_name}
-                            </span>
-                          )}
+                          <span className="text-gray-900 truncate">
+                            {(() => {
+                              try {
+                                const content = memo.content;
+                                return content !== undefined && content !== null
+                                  ? content
+                                  : "내용 없음";
+                              } catch (error) {
+                                console.error("메모 내용 파싱 오류:", error);
+                                return "내용 없음";
+                              }
+                            })()}
+                          </span>
                         </div>
-                        <p className="text-gray-900">
-                          {(() => {
-                            try {
-                              const content = memo.content;
-                              return content !== undefined && content !== null
-                                ? content
-                                : "내용 없음";
-                            } catch (error) {
-                              console.error("메모 내용 파싱 오류:", error);
-                              return "내용 없음";
-                            }
-                          })()}
-                        </p>
                       </div>
                     ))}
                   </div>
@@ -2005,6 +2146,69 @@ const StudentManagement: React.FC = () => {
                 >
                   저장
                 </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 메모 수정/삭제 모달 */}
+      {editMemoModalOpen && selectedMemo && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4">
+          <div className="w-full max-w-2xl rounded-lg bg-white">
+            {/* 모달 헤더 */}
+            <div className="flex items-center justify-between border-b border-gray-200 p-6">
+              <h2 className="text-xl font-bold text-gray-900">
+                메모 수정/삭제
+              </h2>
+              <button
+                onClick={closeEditMemoModal}
+                className="text-gray-400 transition-colors hover:text-gray-600"
+              >
+                <XMarkIcon className="h-6 w-6" />
+              </button>
+            </div>
+
+            {/* 모달 내용 */}
+            <div className="p-6">
+              <div className="mb-4">
+                <label
+                  htmlFor="editMemoContent"
+                  className="mb-2 block text-sm font-medium text-gray-700"
+                >
+                  메모 내용
+                </label>
+                <textarea
+                  id="editMemoContent"
+                  value={editMemoContent}
+                  onChange={(e) => setEditMemoContent(e.target.value)}
+                  rows={6}
+                  className="w-full rounded-md border border-gray-300 px-3 py-2 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="메모 내용을 수정하세요..."
+                />
+              </div>
+
+              <div className="flex justify-between">
+                <button
+                  onClick={() => handleDeleteMemo(selectedMemo)}
+                  className="rounded-md bg-red-600 px-4 py-2 text-white transition-colors hover:bg-red-700"
+                >
+                  삭제
+                </button>
+                <div className="flex space-x-3">
+                  <button
+                    onClick={handleUpdateMemo}
+                    className="rounded-md bg-[#3F80EA] px-4 py-2 text-white transition-colors hover:bg-blue-600"
+                  >
+                    수정
+                  </button>
+                  <button
+                    onClick={closeEditMemoModal}
+                    className="rounded-md bg-gray-100 px-4 py-2 text-gray-700 transition-colors hover:bg-gray-200"
+                  >
+                    닫기
+                  </button>
+                </div>
               </div>
             </div>
           </div>
