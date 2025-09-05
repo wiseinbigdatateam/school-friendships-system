@@ -35,11 +35,11 @@ const Landing: React.FC = () => {
 
         <div className="z-20 mx-auto flex w-full flex-col items-center gap-3 px-4 text-center text-white">
           <h1 className="text-5xl font-bold leading-[120%] max-md:text-4xl">
-            학생 진단·평가
+            <span className="animate-fade-in-up delay-100">학생 진단·평가</span>
             <br />
-            AI 플랫폼
+            <span className="animate-fade-in-up delay-300">AI 플랫폼</span>
           </h1>
-          <p className="text-base max-md:text-sm">
+          <p className="animate-fade-in-up text-base delay-500 max-md:text-sm">
             과학적 방법론과 표준화된 학생 개인별 맞춤 관리
           </p>
           <button
