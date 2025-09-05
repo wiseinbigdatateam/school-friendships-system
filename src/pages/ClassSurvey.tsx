@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { supabase } from "../lib/supabase";
+import { useAuth } from "../contexts/AuthContext";
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -48,6 +49,7 @@ interface ChartData {
 }
 
 const ClassSurvey: React.FC = () => {
+  const { user } = useAuth();
   const [surveys, setSurveys] = useState<SurveyData[]>([]);
   const [selectedSurvey, setSelectedSurvey] = useState<string>("");
   const [viewMode, setViewMode] = useState<"names" | "graphs">("graphs");
@@ -239,8 +241,10 @@ const ClassSurvey: React.FC = () => {
   };
 
   useEffect(() => {
-    fetchSurveys();
-  }, []);
+    if (user) {
+      fetchSurveys();
+    }
+  }, [user]);
 
   // 페이지가 포커스될 때마다 설문 목록 새로고침 (삭제된 설문 제거)
   useEffect(() => {
@@ -264,7 +268,14 @@ const ClassSurvey: React.FC = () => {
 
   const fetchSurveys = async () => {
     try {
-      console.log("Fetching surveys...");
+      console.log("Fetching surveys for user:", user);
+
+      if (!user) {
+        console.log("No user found");
+        setSurveys([]);
+        setLoading(false);
+        return;
+      }
 
       // 먼저 설문 템플릿에서 카테고리 정보 확인
       const { data: templates, error: templateError } = await supabase
@@ -301,25 +312,59 @@ const ClassSurvey: React.FC = () => {
         return;
       }
 
-      // 해당 템플릿을 사용하는 설문들 가져오기 (active와 completed 상태만)
-      // 삭제된 설문은 데이터베이스에서 완전히 제거되므로 자동으로 제외됨
-      const { data, error } = await supabase
+      // 사용자 권한에 따른 설문 필터링
+      let query = supabase
         .from("surveys")
-        .select("id, title, created_at, template_id, status")
+        .select("id, title, created_at, template_id, status, school_id, target_grades, target_classes")
         .in("template_id", targetTemplateIds)
         .in("status", ["active", "completed"]) // draft와 archived 제외
         .order("created_at", { ascending: false });
+
+      // 학교 ID 필터링
+      if (user.school_id) {
+        query = query.eq("school_id", user.school_id);
+        console.log("Filtering by school_id:", user.school_id);
+      }
+
+      const { data, error } = await query;
 
       if (error) {
         console.error("Survey error:", error);
         throw error;
       }
 
-      console.log("Surveys found:", data);
+      console.log("All surveys found:", data);
 
-      if (data && data.length > 0) {
+      // 사용자 권한에 따른 추가 필터링
+      let filteredSurveys = data || [];
+
+      if (user.role === 'homeroom_teacher' && user.grade && user.class) {
+        // 담임교사: 자신의 담당 학급만
+        console.log("Filtering for homeroom teacher:", { grade: user.grade, class: user.class });
+        filteredSurveys = filteredSurveys.filter((survey: any) => {
+          const gradeMatch = survey.target_grades && survey.target_grades.includes(user.grade);
+          const classMatch = survey.target_classes && survey.target_classes.includes(user.class);
+          console.log(`Survey "${survey.title}" grade/class match:`, { gradeMatch, classMatch });
+          return gradeMatch && classMatch;
+        });
+      } else if (user.role === 'grade_teacher' && user.grade) {
+        // 학년담당: 해당 학년만
+        console.log("Filtering for grade teacher:", { grade: user.grade });
+        filteredSurveys = filteredSurveys.filter((survey: any) => {
+          const gradeMatch = survey.target_grades && survey.target_grades.includes(user.grade);
+          console.log(`Survey "${survey.title}" grade match:`, { gradeMatch });
+          return gradeMatch;
+        });
+      } else if (user.role === 'school_admin' || user.role === 'district_admin' || user.role === 'main_admin') {
+        // 관리자: 학교의 모든 설문 (이미 school_id로 필터링됨)
+        console.log("Admin user - showing all surveys for school");
+      }
+
+      console.log("Filtered surveys:", filteredSurveys);
+
+      if (filteredSurveys.length > 0) {
         // 템플릿 정보와 함께 데이터 구성
-        const surveysWithTemplates = data.map((survey: any) => {
+        const surveysWithTemplates = filteredSurveys.map((survey: any) => {
           const template = templates.find(
             (t: any) => t.id === survey.template_id,
           );
