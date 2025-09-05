@@ -189,8 +189,6 @@ export const emailService = {
       content
     };
   }
-}
+};
 
-const emailService = new EmailService();
-export { emailService };
 export default emailService;

@@ -3,7 +3,7 @@ import { useNavigate, useLocation, Link } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 import { supabase } from "../lib/supabase";
 import { toast } from "react-hot-toast";
-import emailService from "../services/emailService";
+import { emailService } from "../services/emailService";
 
 interface LoginFormData {
   email: string;
