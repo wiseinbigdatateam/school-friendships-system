@@ -312,11 +312,63 @@ const SurveyResponse: React.FC = () => {
     }
   };
 
+  // 필수 항목 검증
+  const validateRequiredFields = () => {
+    if (!survey || !survey.questions) return { isValid: true, firstMissingQuestionId: null };
+
+    const requiredQuestions = survey.questions.filter((question: any) => question.required);
+    
+    for (const question of requiredQuestions) {
+      const response = responses[question.id];
+      
+      if (question.type === "multiple_choice") {
+        // 교우관계 카테고리인 경우 배열이 비어있으면 안됨
+        if (surveyTemplate?.metadata?.category === "교우관계") {
+          if (!response || !Array.isArray(response) || response.length === 0) {
+            return { isValid: false, firstMissingQuestionId: question.id };
+          }
+        } else {
+          // 다른 카테고리인 경우 빈 문자열이면 안됨
+          if (!response || response === "") {
+            return { isValid: false, firstMissingQuestionId: question.id };
+          }
+        }
+      } else if (question.type === "text") {
+        // 텍스트 답변인 경우 빈 문자열이면 안됨
+        if (!response || response.trim() === "") {
+          return { isValid: false, firstMissingQuestionId: question.id };
+        }
+      }
+    }
+    
+    return { isValid: true, firstMissingQuestionId: null };
+  };
+
   // 설문 제출
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!survey || !surveyId || !selectedStudent) return;
+
+    // 필수 항목 검증
+    const validation = validateRequiredFields();
+    if (!validation.isValid) {
+      alert("필수 항목을 모두 입력해주세요.");
+      
+      // 누락된 질문으로 스크롤
+      if (validation.firstMissingQuestionId) {
+        const element = document.getElementById(`question-${validation.firstMissingQuestionId}`);
+        if (element) {
+          element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          // 시각적 강조를 위해 잠시 하이라이트
+          element.classList.add('ring-2', 'ring-red-500', 'ring-opacity-50');
+          setTimeout(() => {
+            element.classList.remove('ring-2', 'ring-red-500', 'ring-opacity-50');
+          }, 3000);
+        }
+      }
+      return;
+    }
 
     try {
       setSubmitting(true);
@@ -608,7 +660,7 @@ const SurveyResponse: React.FC = () => {
             {survey.questions &&
               Array.isArray(survey.questions) &&
               survey.questions.map((question: any, index) => (
-                <div key={question.id} className="mb-8">
+                <div key={question.id} id={`question-${question.id}`} className="mb-8">
                   <h3 className="mb-3 text-lg font-medium text-gray-900">
                     {index + 1}. {question.text || question.question}
                     {question.required && (
