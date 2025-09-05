@@ -242,6 +242,20 @@ const ClassSurvey: React.FC = () => {
     fetchSurveys();
   }, []);
 
+  // 페이지가 포커스될 때마다 설문 목록 새로고침 (삭제된 설문 제거)
+  useEffect(() => {
+    const handleFocus = () => {
+      console.log("페이지 포커스 - 설문 목록 새로고침");
+      fetchSurveys();
+    };
+
+    window.addEventListener('focus', handleFocus);
+    
+    return () => {
+      window.removeEventListener('focus', handleFocus);
+    };
+  }, []);
+
   useEffect(() => {
     if (selectedSurvey) {
       fetchChartData();
@@ -288,6 +302,7 @@ const ClassSurvey: React.FC = () => {
       }
 
       // 해당 템플릿을 사용하는 설문들 가져오기 (active와 completed 상태만)
+      // 삭제된 설문은 데이터베이스에서 완전히 제거되므로 자동으로 제외됨
       const { data, error } = await supabase
         .from("surveys")
         .select("id, title, created_at, template_id, status")
@@ -318,13 +333,19 @@ const ClassSurvey: React.FC = () => {
 
         console.log("Final surveys data:", surveysWithTemplates);
         setSurveys(surveysWithTemplates);
-        setSelectedSurvey(surveysWithTemplates[0].id);
+        
+        // 현재 선택된 설문이 삭제되었을 경우 첫 번째 설문으로 변경
+        if (!surveysWithTemplates.find(s => s.id === selectedSurvey)) {
+          setSelectedSurvey(surveysWithTemplates[0].id);
+        }
       } else {
         setSurveys([]);
+        setSelectedSurvey("");
       }
     } catch (error) {
       console.error("Error fetching surveys:", error);
       setSurveys([]);
+      setSelectedSurvey("");
     } finally {
       setLoading(false);
     }
