@@ -146,4 +146,6 @@ class EmailService {
   }
 }
 
-export const emailService = new EmailService();
+const emailService = new EmailService();
+export { emailService };
+export default emailService;
