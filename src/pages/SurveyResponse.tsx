@@ -312,7 +312,39 @@ const SurveyResponse: React.FC = () => {
     }
   };
 
-  // 필수 항목 검증
+  // 필수 항목 검증 (실시간 버튼 활성화용)
+  const isAllRequiredFieldsCompleted = () => {
+    if (!survey || !survey.questions) return true;
+
+    const requiredQuestions = survey.questions.filter((question: any) => question.required);
+    
+    for (const question of requiredQuestions) {
+      const response = responses[question.id];
+      
+      if (question.type === "multiple_choice") {
+        // 교우관계 카테고리인 경우 배열이 비어있으면 안됨
+        if (surveyTemplate?.metadata?.category === "교우관계") {
+          if (!response || !Array.isArray(response) || response.length === 0) {
+            return false;
+          }
+        } else {
+          // 다른 카테고리인 경우 빈 문자열이면 안됨
+          if (!response || response === "") {
+            return false;
+          }
+        }
+      } else if (question.type === "text") {
+        // 텍스트 답변인 경우 빈 문자열이면 안됨
+        if (!response || response.trim() === "") {
+          return false;
+        }
+      }
+    }
+    
+    return true;
+  };
+
+  // 필수 항목 검증 (제출 시 상세 검증용)
   const validateRequiredFields = () => {
     if (!survey || !survey.questions) return { isValid: true, firstMissingQuestionId: null };
 
@@ -908,13 +940,22 @@ const SurveyResponse: React.FC = () => {
 
             {/* 제출 버튼 */}
             <div className="flex justify-between border-t border-gray-200 pt-6">
-              
               <button
                 type="submit"
-                disabled={submitting}
-                className="rounded-lg bg-blue-600 px-6 py-3 text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+                disabled={submitting || !isAllRequiredFieldsCompleted()}
+                className={`rounded-lg px-6 py-3 text-white transition-colors ${
+                  submitting || !isAllRequiredFieldsCompleted()
+                    ? "cursor-not-allowed bg-gray-400 opacity-50"
+                    : "bg-blue-600 hover:bg-blue-700"
+                }`}
               >
-                {submitting ? "📤 제출 중..." : "🎯 설문 제출하기"}
+                {submitting ? (
+                  "📤 제출 중..."
+                ) : !isAllRequiredFieldsCompleted() ? (
+                  "⚠️ 필수 항목을 완료해주세요"
+                ) : (
+                  "🎯 설문 제출하기"
+                )}
               </button>
             </div>
           </form>
