@@ -150,17 +150,17 @@ const SurveyTemplates: React.FC = () => {
     const now = new Date();
     const start = new Date(startDate);
     const end = new Date(endDate);
-    
+
     // 현재 날짜가 시작일보다 이전이면 "대기중"
     if (now < start) {
       return "waiting";
     }
-    
+
     // 현재 날짜가 시작일과 종료일 사이에 있으면 "진행중"
     if (now >= start && now <= end) {
       return "active";
     }
-    
+
     // 현재 날짜가 종료일보다 이후면 "종료"
     return "completed";
   };
@@ -298,12 +298,15 @@ const SurveyTemplates: React.FC = () => {
       }
 
       // 성공 메시지
-      const statusText = getSurveyStatus(surveyConfig.startDate, surveyConfig.endDate) === 'waiting' 
-        ? '대기중' 
-        : getSurveyStatus(surveyConfig.startDate, surveyConfig.endDate) === 'active' 
-          ? '진행중' 
-          : '완료';
-          
+      const statusText =
+        getSurveyStatus(surveyConfig.startDate, surveyConfig.endDate) ===
+        "waiting"
+          ? "대기중"
+          : getSurveyStatus(surveyConfig.startDate, surveyConfig.endDate) ===
+              "active"
+            ? "진행중"
+            : "완료";
+
       alert(
         `✅ "${selectedTemplate.title}" 템플릿으로 새 설문이 생성되었습니다!\n\n📚 대상: ${teacherInfo.grade_level}학년 ${teacherInfo.class_number}반\n👥 대상 학생: ${students.length}명\n📅 기간: ${surveyConfig.startDate} ~ ${surveyConfig.endDate}\n📊 상태: ${statusText}\n\n📝 참고: 대상 학생 정보는 설문 응답 시 자동으로 필터링됩니다.\n\n설문 관리 페이지로 이동합니다.`,
       );
@@ -464,7 +467,7 @@ const SurveyTemplates: React.FC = () => {
       {/* 로딩 상태 */}
       {isLoadingTemplates && (
         <div className="py-8 text-center">
-          <div className="inline-block h-8 w-8 animate-spin rounded-full border-b-2 border-blue-600"></div>
+          <div className="inline-block h-8 w-8 animate-spin rounded-full border-b-2 border-[#3F80EA]"></div>
           <p className="mt-2 text-gray-600">설문 템플릿을 불러오는 중...</p>
         </div>
       )}
@@ -552,7 +555,7 @@ const SurveyTemplates: React.FC = () => {
               </p>
               <button
                 onClick={() => setIsCreateModalOpen(false)}
-                className="w-full rounded-lg bg-blue-600 px-4 py-2 text-white hover:bg-blue-700"
+                className="w-full rounded-lg bg-[#3F80EA] px-4 py-2 text-white hover:bg-blue-600"
               >
                 확인
               </button>
@@ -776,7 +779,7 @@ const SurveyConfigModal: React.FC<{
                   config.targetGrades.length === 0 ||
                   config.targetClasses.length === 0
                 }
-                className="flex-1 rounded-lg bg-blue-600 px-4 py-3 text-white transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+                className="flex-1 rounded-lg bg-[#3F80EA] px-4 py-3 text-white transition-colors hover:bg-blue-600 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {isCreating ? (
                   <div className="flex items-center justify-center">

@@ -1495,7 +1495,7 @@ const SurveyManagement: React.FC = () => {
             <div className="mb-4 flex items-center">
               <div className="mr-3 flex h-10 w-10 items-center justify-center rounded-full bg-blue-100">
                 <svg
-                  className="h-6 w-6 text-blue-600"
+                  className="h-6 w-6 text-[#3F80EA]"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -1542,7 +1542,7 @@ const SurveyManagement: React.FC = () => {
                       );
                       toast.success("링크가 클립보드에 복사되었습니다!");
                     }}
-                    className="rounded-r-lg bg-blue-600 px-4 py-2 text-sm text-white transition-colors hover:bg-blue-700"
+                    className="rounded-r-lg bg-[#3F80EA] px-4 py-2 text-sm text-white transition-colors hover:bg-blue-600"
                   >
                     복사
                   </button>
