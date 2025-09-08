@@ -1007,13 +1007,8 @@ const SurveyResponse: React.FC = () => {
             <div className="flex justify-between border-t border-gray-200 pt-6">
               <button
                 type="submit"
-                disabled={submitting || !isAllRequiredFieldsCompleted()}
-                className={`rounded-lg px-6 py-3 text-white transition-colors ${
-                  submitting || !isAllRequiredFieldsCompleted()
-                    ? "cursor-not-allowed bg-gray-400 opacity-50"
-                    : "bg-blue-600 hover:bg-blue-700"
-                }`}
-
+                disabled={submitting}
+                className="rounded-lg bg-[#3F80EA] px-6 py-3 text-white hover:bg-blue-600 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {submitting ? (
                   "📤 제출 중..."
