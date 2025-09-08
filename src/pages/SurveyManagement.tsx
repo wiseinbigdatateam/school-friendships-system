@@ -259,7 +259,7 @@ const SurveyManagement: React.FC = () => {
           schoolId: user.schoolId,
           school_id: user.school_id,
           grade: user.grade,
-          class: user.class
+          class: user.class,
         });
 
         setCurrentUser(user);
@@ -279,26 +279,34 @@ const SurveyManagement: React.FC = () => {
 
         // 학교 ID 설정 (사용자 권한에 따라)
         let schoolId = "";
-        
-        if (user.role === 'homeroom_teacher' || user.role === 'grade_teacher' || user.role === 'school_admin') {
+
+        if (
+          user.role === "homeroom_teacher" ||
+          user.role === "grade_teacher" ||
+          user.role === "school_admin"
+        ) {
           // 담임교사, 학년담당, 학교 관리자는 특정 학교에 속함
           schoolId = user.school_id || user.schoolId || "";
-          
+
           if (!schoolId) {
-            throw new Error("학교 정보가 설정되지 않았습니다. 관리자에게 문의하세요.");
+            throw new Error(
+              "학교 정보가 설정되지 않았습니다. 관리자에게 문의하세요.",
+            );
           }
-        } else if (user.role === 'district_admin') {
+        } else if (user.role === "district_admin") {
           // 교육청 관리자는 특정 교육청에 속함
           // district_id는 userData에서 가져와야 함
           const districtId = userData.district_id || "";
-          
+
           if (!districtId) {
-            throw new Error("교육청 정보가 설정되지 않았습니다. 관리자에게 문의하세요.");
+            throw new Error(
+              "교육청 정보가 설정되지 않았습니다. 관리자에게 문의하세요.",
+            );
           }
-          
+
           // 교육청 관리자의 경우 모든 학교의 설문을 볼 수 있도록 빈 문자열로 설정
           schoolId = "";
-        } else if (user.role === 'main_admin') {
+        } else if (user.role === "main_admin") {
           // 시스템 관리자는 모든 설문을 볼 수 있도록 빈 문자열로 설정
           schoolId = "";
         } else {
@@ -307,11 +315,11 @@ const SurveyManagement: React.FC = () => {
 
         setUserSchoolId(schoolId);
 
-        console.log("🔍 사용자 정보 설정 완료:", { 
-          user, 
+        console.log("🔍 사용자 정보 설정 완료:", {
+          user,
           userData,
           schoolId,
-          userRole: user.role 
+          userRole: user.role,
         });
       } catch (error) {
         console.error("사용자 정보 조회 오류:", error);
@@ -340,7 +348,7 @@ const SurveyManagement: React.FC = () => {
       console.log("🔍 설문 상태 자동 업데이트 완료");
 
       // 상태 업데이트 후 잠시 대기 (데이터베이스 반영 시간)
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      await new Promise((resolve) => setTimeout(resolve, 1000));
 
       console.log("🔍 설문 데이터 로드 시작:", {
         userSchoolId,
@@ -356,13 +364,13 @@ const SurveyManagement: React.FC = () => {
           grade: user?.grade,
           class: user?.class,
           schoolId: user?.school_id || user?.schoolId,
-        }
+        },
       });
 
       let surveysData: SurveyWithStats[];
 
       // 사용자 권한에 따른 설문 데이터 가져오기
-      if (user?.role === 'homeroom_teacher' && user?.grade && user?.class) {
+      if (user?.role === "homeroom_teacher" && user?.grade && user?.class) {
         // 담임선생님: 자신의 담당 학년/반의 설문만
         console.log("🔍 담임선생님용 설문 조회:", {
           schoolId: userSchoolId,
@@ -387,7 +395,7 @@ const SurveyManagement: React.FC = () => {
             status: s.status,
           })),
         });
-      } else if (user?.role === 'grade_teacher' && user?.grade) {
+      } else if (user?.role === "grade_teacher" && user?.grade) {
         // 학년담당: 해당 학년의 설문
         console.log("🔍 학년담당용 설문 조회:", {
           schoolId: userSchoolId,
@@ -409,7 +417,7 @@ const SurveyManagement: React.FC = () => {
             status: s.status,
           })),
         });
-      } else if (user?.role === 'school_admin') {
+      } else if (user?.role === "school_admin") {
         // 학교 관리자: 해당 학교의 모든 설문
         console.log("🔍 학교 관리자용 설문 조회:", { schoolId: userSchoolId });
 
@@ -431,7 +439,7 @@ const SurveyManagement: React.FC = () => {
             status: s.status,
           })),
         });
-      } else if (user?.role === 'district_admin') {
+      } else if (user?.role === "district_admin") {
         // 교육청 관리자: 해당 교육청의 모든 학교 설문
         console.log("🔍 교육청 관리자용 설문 조회: 전체 학교");
 
@@ -452,7 +460,7 @@ const SurveyManagement: React.FC = () => {
             status: s.status,
           })),
         });
-      } else if (user?.role === 'main_admin') {
+      } else if (user?.role === "main_admin") {
         // 시스템 관리자: 모든 설문
         console.log("🔍 시스템 관리자용 설문 조회: 전체 시스템");
 
@@ -583,7 +591,12 @@ const SurveyManagement: React.FC = () => {
 
   // 설문 데이터 로드
   useEffect(() => {
-    if (!userSchoolId && user?.role !== 'district_admin' && user?.role !== 'main_admin') return; // 학교 ID가 없으면 로드하지 않음 (단, 관리자는 제외)
+    if (
+      !userSchoolId &&
+      user?.role !== "district_admin" &&
+      user?.role !== "main_admin"
+    )
+      return; // 학교 ID가 없으면 로드하지 않음 (단, 관리자는 제외)
     loadSurveys();
     // 페이지네이션 초기화
     setCurrentPage(1);
@@ -591,12 +604,20 @@ const SurveyManagement: React.FC = () => {
 
   // 실시간 상태 업데이트 (5분마다)
   useEffect(() => {
-    if (!userSchoolId && user?.role !== 'district_admin' && user?.role !== 'main_admin') return;
-    
-    const interval = setInterval(() => {
-      console.log("🔍 실시간 상태 업데이트 실행");
-      loadSurveys();
-    }, 5 * 60 * 1000); // 5분마다
+    if (
+      !userSchoolId &&
+      user?.role !== "district_admin" &&
+      user?.role !== "main_admin"
+    )
+      return;
+
+    const interval = setInterval(
+      () => {
+        console.log("🔍 실시간 상태 업데이트 실행");
+        loadSurveys();
+      },
+      5 * 60 * 1000,
+    ); // 5분마다
 
     return () => clearInterval(interval);
   }, [userSchoolId, user]);
@@ -1038,7 +1059,7 @@ const SurveyManagement: React.FC = () => {
   const handlePageChange = (page: number) => {
     setCurrentPage(page);
     // 페이지 변경 시 스크롤을 맨 위로
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
   // 페이지네이션 컴포넌트
@@ -1048,7 +1069,7 @@ const SurveyManagement: React.FC = () => {
     const getPageNumbers = () => {
       const pages = [];
       const maxVisiblePages = 5;
-      
+
       if (totalPages <= maxVisiblePages) {
         // 전체 페이지가 5개 이하면 모두 표시
         for (let i = 1; i <= totalPages; i++) {
@@ -1058,17 +1079,17 @@ const SurveyManagement: React.FC = () => {
         // 현재 페이지 주변의 페이지들 표시
         let startPage = Math.max(1, currentPage - 2);
         let endPage = Math.min(totalPages, startPage + maxVisiblePages - 1);
-        
+
         // 끝 페이지가 totalPages에 가까우면 시작 페이지 조정
         if (endPage === totalPages) {
           startPage = Math.max(1, endPage - maxVisiblePages + 1);
         }
-        
+
         for (let i = startPage; i <= endPage; i++) {
           pages.push(i);
         }
       }
-      
+
       return pages;
     };
 
@@ -1078,14 +1099,14 @@ const SurveyManagement: React.FC = () => {
           <button
             onClick={() => handlePageChange(currentPage - 1)}
             disabled={currentPage === 1}
-            className="relative inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="relative inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
           >
             이전
           </button>
           <button
             onClick={() => handlePageChange(currentPage + 1)}
             disabled={currentPage === totalPages}
-            className="relative ml-3 inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="relative ml-3 inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
           >
             다음
           </button>
@@ -1094,23 +1115,38 @@ const SurveyManagement: React.FC = () => {
           <div>
             <p className="text-sm text-gray-700">
               <span className="font-medium">{startIndex + 1}</span> -{" "}
-              <span className="font-medium">{Math.min(endIndex, filteredSurveys.length)}</span> /{" "}
-              <span className="font-medium">{filteredSurveys.length}</span> 개의 설문
+              <span className="font-medium">
+                {Math.min(endIndex, filteredSurveys.length)}
+              </span>{" "}
+              / <span className="font-medium">{filteredSurveys.length}</span>{" "}
+              개의 설문
             </p>
           </div>
           <div>
-            <nav className="isolate inline-flex -space-x-px rounded-md shadow-sm" aria-label="Pagination">
+            <nav
+              className="isolate inline-flex -space-x-px rounded-md shadow-sm"
+              aria-label="Pagination"
+            >
               <button
                 onClick={() => handlePageChange(currentPage - 1)}
                 disabled={currentPage === 1}
-                className="relative inline-flex items-center rounded-l-md px-2 py-2 text-gray-400 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-20 focus:outline-offset-0 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="relative inline-flex items-center rounded-l-md px-2 py-2 text-gray-400 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-20 focus:outline-offset-0 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 <span className="sr-only">이전</span>
-                <svg className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-                  <path fillRule="evenodd" d="M12.79 5.23a.75.75 0 01-.02 1.06L8.832 10l3.938 3.71a.75.75 0 11-1.04 1.08l-4.5-4.25a.75.75 0 010-1.08l4.5-4.25a.75.75 0 011.06.02z" clipRule="evenodd" />
+                <svg
+                  className="h-5 w-5"
+                  viewBox="0 0 20 20"
+                  fill="currentColor"
+                  aria-hidden="true"
+                >
+                  <path
+                    fillRule="evenodd"
+                    d="M12.79 5.23a.75.75 0 01-.02 1.06L8.832 10l3.938 3.71a.75.75 0 11-1.04 1.08l-4.5-4.25a.75.75 0 010-1.08l4.5-4.25a.75.75 0 011.06.02z"
+                    clipRule="evenodd"
+                  />
                 </svg>
               </button>
-              
+
               {getPageNumbers().map((page) => (
                 <button
                   key={page}
@@ -1124,15 +1160,24 @@ const SurveyManagement: React.FC = () => {
                   {page}
                 </button>
               ))}
-              
+
               <button
                 onClick={() => handlePageChange(currentPage + 1)}
                 disabled={currentPage === totalPages}
-                className="relative inline-flex items-center rounded-r-md px-2 py-2 text-gray-400 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-20 focus:outline-offset-0 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="relative inline-flex items-center rounded-r-md px-2 py-2 text-gray-400 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-20 focus:outline-offset-0 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 <span className="sr-only">다음</span>
-                <svg className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-                  <path fillRule="evenodd" d="M7.21 14.77a.75.75 0 01-.02-1.06L11.168 10 7.23 6.29a.75.75 0 111.04-1.08l4.5 4.25a.75.75 0 010 1.08l-4.5 4.25a.75.75 0 01-1.06-.02z" clipRule="evenodd" />
+                <svg
+                  className="h-5 w-5"
+                  viewBox="0 0 20 20"
+                  fill="currentColor"
+                  aria-hidden="true"
+                >
+                  <path
+                    fillRule="evenodd"
+                    d="M7.21 14.77a.75.75 0 01-.02-1.06L11.168 10 7.23 6.29a.75.75 0 111.04-1.08l4.5 4.25a.75.75 0 010 1.08l-4.5 4.25a.75.75 0 01-1.06-.02z"
+                    clipRule="evenodd"
+                  />
                 </svg>
               </button>
             </nav>
@@ -1153,42 +1198,44 @@ const SurveyManagement: React.FC = () => {
   return (
     <div className="mx-auto min-h-screen max-w-7xl bg-gray-50 px-4 pb-16 sm:px-6 lg:px-8">
       {/* 헤더 */}
-      <div className="mb-8">
+      <div className="mb-4">
         <h1 className="mb-2 text-2xl font-bold text-gray-900">설문 관리</h1>
         <p className="text-gray-600">
           교우관계 분석을 위한 설문조사를 생성하고 관리합니다.
         </p>
         {/* 사용자 권한 정보 표시 */}
-        {user?.role === 'homeroom_teacher' && user?.grade && user?.class && (
-          <div>
-            
-          </div>
+        {user?.role === "homeroom_teacher" && user?.grade && user?.class && (
+          <div></div>
         )}
-        {user?.role === 'grade_teacher' && user?.grade && (
+        {user?.role === "grade_teacher" && user?.grade && (
           <div className="mt-2 rounded-lg bg-green-50 p-3">
             <p className="text-sm text-green-800">
-              <span className="font-semibold">학년담당 권한:</span> {user.grade}학년 담당
+              <span className="font-semibold">학년담당 권한:</span> {user.grade}
+              학년 담당
             </p>
           </div>
         )}
-        {user?.role === 'school_admin' && (
+        {user?.role === "school_admin" && (
           <div className="mt-2 rounded-lg bg-purple-50 p-3">
             <p className="text-sm text-purple-800">
-              <span className="font-semibold">학교 관리자 권한:</span> 전체 학교 설문 관리
+              <span className="font-semibold">학교 관리자 권한:</span> 전체 학교
+              설문 관리
             </p>
           </div>
         )}
-        {user?.role === 'district_admin' && (
+        {user?.role === "district_admin" && (
           <div className="mt-2 rounded-lg bg-orange-50 p-3">
             <p className="text-sm text-orange-800">
-              <span className="font-semibold">교육청 관리자 권한:</span> 전체 교육청 설문 관리
+              <span className="font-semibold">교육청 관리자 권한:</span> 전체
+              교육청 설문 관리
             </p>
           </div>
         )}
-        {user?.role === 'main_admin' && (
+        {user?.role === "main_admin" && (
           <div className="mt-2 rounded-lg bg-red-50 p-3">
             <p className="text-sm text-red-800">
-              <span className="font-semibold">시스템 관리자 권한:</span> 전체 시스템 설문 관리
+              <span className="font-semibold">시스템 관리자 권한:</span> 전체
+              시스템 설문 관리
             </p>
           </div>
         )}
@@ -1219,7 +1266,7 @@ const SurveyManagement: React.FC = () => {
       )}
 
       {/* 컨트롤 패널 */}
-      <div className="mb-6 rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
+      <div className="mb-4 rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
         <div className="flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
           <div className="flex flex-1 flex-col gap-4 sm:flex-row">
             {/* 검색 */}
@@ -1289,7 +1336,7 @@ const SurveyManagement: React.FC = () => {
       </div>
 
       {/* 설문 목록 */}
-      <div className="space-y-4">
+      <div className="space-y-3">
         {filteredSurveys.length === 0 ? (
           <div className="rounded-lg border border-gray-200 bg-white p-12 text-center">
             <svg
@@ -1322,7 +1369,7 @@ const SurveyManagement: React.FC = () => {
         ) : (
           <>
             {/* 설문 목록 */}
-            <div className="space-y-4">
+            <div className="space-y-3">
               {currentSurveys.map((survey) => (
                 <SurveyItem
                   key={survey.id}
@@ -1336,7 +1383,7 @@ const SurveyManagement: React.FC = () => {
                 />
               ))}
             </div>
-            
+
             {/* 페이지네이션 */}
             <Pagination />
           </>

@@ -175,43 +175,17 @@ const Login: React.FC = () => {
     <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-blue-50 via-white to-purple-50 px-4 py-12 sm:px-6 lg:px-8">
       <div className="w-full max-w-md">
         {/* 헤더 */}
-        <div className="mb-8 text-center">
-          <button
-            onClick={handleBackToLanding}
-            className="mb-6 inline-flex items-center space-x-2 text-blue-600 transition-colors hover:text-blue-700"
-          >
-            <svg
-              className="h-5 w-5"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M15 19l-7-7 7-7"
-              />
-            </svg>
-            <span>홈으로 돌아가기</span>
-          </button>
-
-          <div className="mb-0 flex justify-center">
-            <div className="flex h-48 w-48 items-center justify-center">
-              <img
-                src="/logo_school.png"
-                alt="WiseOn School Logo"
-                className="h-full w-full object-contain"
-              />
-            </div>
+        <div className="mb-5 flex flex-col items-center gap-2">
+          <div className="h-fit w-fit self-start">
+            <img src="/logo_school.png" alt="WiseOn School Logo" />
           </div>
 
-          <h2 className="-mt-16 mb-2 text-3xl font-bold text-gray-900">
-            로그인
-          </h2>
-          <p className="text-gray-600">
-            학생 교우관계 분석 시스템에 로그인하세요
-          </p>
+          <div className="flex flex-col items-center gap-2">
+            <h2 className="text-2xl font-bold text-gray-900">로그인</h2>
+            <p className="text-gray-600">
+              학생 교우관계 분석 시스템에 로그인하세요
+            </p>
+          </div>
         </div>
 
         {/* 로그인 폼 */}
@@ -220,7 +194,7 @@ const Login: React.FC = () => {
           <div className="mb-6 rounded-lg border border-blue-200 bg-blue-50 p-4">
             <div className="flex items-start">
               <svg
-                className="mr-3 mt-0.5 h-5 w-5 flex-shrink-0 text-blue-600"
+                className="mr-3 mt-0.5 h-5 w-5 flex-shrink-0 text-[#3F80EA]"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -422,7 +396,7 @@ const Login: React.FC = () => {
             <button
               type="submit"
               disabled={loading}
-              className="flex w-full items-center justify-center rounded-lg border border-transparent bg-gradient-to-r from-blue-600 to-purple-600 px-4 py-3 text-base font-medium text-white shadow-sm transition-all duration-200 hover:from-blue-700 hover:to-purple-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+              className="flex w-full items-center justify-center rounded-lg bg-gradient-to-r from-blue-600 to-purple-600 px-4 py-3 text-base font-medium text-white shadow-sm transition-all duration-200 hover:from-blue-700 hover:to-purple-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
             >
               {loading ? (
                 <>
@@ -458,14 +432,14 @@ const Login: React.FC = () => {
               <label className="flex items-center">
                 <input
                   type="checkbox"
-                  className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                  className="h-4 w-4 rounded border-gray-300 text-[#3F80EA] focus:ring-blue-500"
                 />
                 <span className="ml-2 text-gray-600">로그인 상태 유지</span>
               </label>
               <button
                 type="button"
                 onClick={() => setShowForgotPassword(true)}
-                className="font-medium text-blue-600 hover:text-blue-700"
+                className="font-medium text-[#3F80EA] hover:text-blue-600"
               >
                 비밀번호 찾기
               </button>
@@ -513,12 +487,12 @@ const Login: React.FC = () => {
           </div> */}
 
           {/* 회원가입 링크 */}
-          <div className="mt-8 space-y-3 text-center">
+          <div className="mt-8 flex flex-col gap-5 text-center">
             <p className="text-sm text-gray-600">
               계정이 없으신가요?{" "}
               <Link
                 to="/signup"
-                className="font-medium text-blue-600 hover:text-blue-700"
+                className="font-medium text-[#3F80EA] hover:text-blue-600"
               >
                 회원가입
               </Link>
@@ -529,6 +503,25 @@ const Login: React.FC = () => {
                 문의하기
               </Link>
             </p> */}
+            <button
+              onClick={handleBackToLanding}
+              className="inline-flex items-center space-x-2 self-end text-[#3F80EA] transition-colors hover:text-blue-600"
+            >
+              <svg
+                className="h-5 w-5"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M15 19l-7-7 7-7"
+                />
+              </svg>
+              <span className="text-base">홈으로 돌아가기</span>
+            </button>
           </div>
         </div>
 
@@ -664,11 +657,11 @@ const Login: React.FC = () => {
         <div className="mt-8 space-y-2 text-center text-sm text-gray-500">
           <p>
             로그인하시면{" "}
-            <button className="text-blue-600 underline hover:text-blue-700">
+            <button className="text-[#3F80EA] underline hover:text-blue-600">
               이용약관
             </button>{" "}
             및{" "}
-            <button className="text-blue-600 underline hover:text-blue-700">
+            <button className="text-[#3F80EA] underline hover:text-blue-600">
               개인정보처리방침
             </button>
             에 동의하는 것으로 간주됩니다.
@@ -677,7 +670,7 @@ const Login: React.FC = () => {
             시스템 도입 문의:{" "}
             <Link
               to="/contact"
-              className="text-blue-600 underline hover:text-blue-700"
+              className="text-[#3F80EA] underline hover:text-blue-600"
             >
               고객지원센터
             </Link>

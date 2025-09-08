@@ -1319,7 +1319,7 @@ const NetworkAnalysis: React.FC = () => {
             {teacherInfo && (
               <div className="text-right">
                 <div className="text-sm text-gray-500">현재 담당</div>
-                <div className="text-lg font-semibold text-blue-600">
+                <div className="text-lg font-semibold text-[#3F80EA]">
                   {teacherInfo.role === "homeroom_teacher" &&
                     `${teacherInfo.grade_level}학년 ${teacherInfo.class_number}반`}
                   {teacherInfo.role === "grade_teacher" &&
@@ -1342,7 +1342,7 @@ const NetworkAnalysis: React.FC = () => {
             <div className="space-y-4">
               <div className="mb-4 text-sm text-gray-600">
                 총{" "}
-                <span className="font-semibold text-blue-600">
+                <span className="font-semibold text-[#3F80EA]">
                   {surveys.length}개
                 </span>
                 의 설문을 찾았습니다.
@@ -1351,9 +1351,9 @@ const NetworkAnalysis: React.FC = () => {
                 {surveys.map((survey) => (
                   <div
                     key={survey.id}
-                    className={`cursor-pointer rounded-lg border-2 p-4 transition-all ${
+                    className={`cursor-pointer rounded-lg border p-4 transition-all ${
                       selectedSurvey?.id === survey.id
-                        ? "border-blue-500 bg-blue-50"
+                        ? "border-[#3F80EA] bg-blue-50"
                         : "border-gray-200 bg-white hover:border-gray-300"
                     }`}
                     onClick={async () => {
@@ -1383,7 +1383,7 @@ const NetworkAnalysis: React.FC = () => {
                         {survey.title}
                       </h4>
                       {selectedSurvey?.id === survey.id && (
-                        <div className="flex h-5 w-5 items-center justify-center rounded-full bg-blue-500">
+                        <div className="flex h-5 w-5 items-center justify-center rounded-full bg-[#3F80EA]">
                           <svg
                             className="h-3 w-3 text-white"
                             fill="currentColor"
@@ -1475,7 +1475,7 @@ const NetworkAnalysis: React.FC = () => {
               className={`inline-flex items-center rounded-lg px-8 py-4 text-lg font-medium text-white transition-colors ${
                 isAnalyzing
                   ? "cursor-not-allowed bg-gray-400"
-                  : "bg-blue-600 hover:bg-blue-700 active:bg-blue-800"
+                  : "bg-[#3F80EA] hover:bg-blue-600 active:bg-blue-600"
               }`}
             >
               {isAnalyzing ? (
@@ -1575,7 +1575,7 @@ const NetworkAnalysis: React.FC = () => {
                 onClick={() => setAnalysisView("overview")}
                 className={`rounded-md px-4 py-2 text-sm font-medium ${
                   analysisView === "overview"
-                    ? "bg-blue-600 text-white"
+                    ? "bg-[#3F80EA] text-white"
                     : "bg-gray-100 text-gray-700 hover:bg-gray-200"
                 }`}
               >
@@ -1586,7 +1586,7 @@ const NetworkAnalysis: React.FC = () => {
                 onClick={() => setAnalysisView("network")}
                 className={`rounded-md px-4 py-2 text-sm font-medium ${
                   analysisView === "network"
-                    ? "bg-blue-600 text-white"
+                    ? "bg-[#3F80EA] text-white"
                     : "bg-gray-100 text-gray-700 hover:bg-gray-200"
                 }`}
               >
@@ -1615,7 +1615,7 @@ const NetworkAnalysis: React.FC = () => {
             <div className="p-6">
               <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
                 <div className="text-center">
-                  <div className="text-2xl font-bold text-blue-600">
+                  <div className="text-2xl font-bold text-[#3F80EA]">
                     {analysisResults.metrics.total_students}
                   </div>
                   <div className="text-sm text-gray-600">총 학생 수</div>
@@ -2355,7 +2355,7 @@ const NetworkAnalysis: React.FC = () => {
                 </div>
                 <div className="text-right">
                   <div className="text-sm text-gray-500">총 학생 수</div>
-                  <div className="text-lg font-semibold text-blue-600">
+                  <div className="text-lg font-semibold text-[#3F80EA]">
                     {analysisResults.nodes.length}명
                   </div>
                   <div className="text-sm text-gray-500">총 관계 수</div>
@@ -2410,7 +2410,7 @@ const NetworkAnalysis: React.FC = () => {
             <div className="p-6">
               <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
                 <div className="text-center">
-                  <div className="text-2xl font-bold text-blue-600">
+                  <div className="text-2xl font-bold text-[#3F80EA]">
                     {
                       analysisResults.nodes.filter((n) => n.centrality >= 0.5)
                         .length
