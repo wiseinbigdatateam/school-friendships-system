@@ -88,8 +88,8 @@ const Notifications: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 pb-8">
-      <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
+    <div className="mx-auto min-h-screen max-w-7xl bg-gray-50 px-4 pb-16 sm:px-6 lg:px-8">
+      <div className="">
         {/* 헤더 */}
         <div className="mb-4">
           <button
