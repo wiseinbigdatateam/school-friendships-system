@@ -1,10 +1,16 @@
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "../../contexts/AuthContext";
 
 function LandingHeader() {
   const navigate = useNavigate();
+  const { user } = useAuth();
 
   const handleLoginClick = () => {
-    navigate("/login");
+    if (user) {
+      navigate("/dashboard");
+    } else {
+      navigate("/login");
+    }
   };
 
   const handleContactClick = () => {
@@ -28,7 +34,7 @@ function LandingHeader() {
             onClick={handleLoginClick}
             className="h-8 rounded-[30px] bg-sky-700 px-6 py-1.5 text-sm text-white transition-all duration-200 hover:bg-sky-500"
           >
-            로그인
+            {user ? "솔루션" : "로그인"}
           </button>
         </div>
       </div>
