@@ -84,28 +84,34 @@ const SurveyMonitoring: React.FC = () => {
         .eq("is_active", true);
 
       // 담임선생님인 경우 자신의 담당 학급만 필터링
-      if (user?.role === 'homeroom_teacher' && user?.grade && user?.class) {
-        console.log('🔍 담임선생님 필터링:', { 
-          grade: user.grade, 
+      if (user?.role === "homeroom_teacher" && user?.grade && user?.class) {
+        console.log("🔍 담임선생님 필터링:", {
+          grade: user.grade,
           class: user.class,
-          userRole: user.role 
+          userRole: user.role,
         });
-        
+
         studentsQuery = studentsQuery
           .eq("grade", user.grade)
           .eq("class", user.class);
-      } else if (user?.role === 'grade_teacher' && user?.grade) {
+      } else if (user?.role === "grade_teacher" && user?.grade) {
         // 학년담당인 경우 해당 학년만 필터링
-        console.log('🔍 학년담당 필터링:', { 
+        console.log("🔍 학년담당 필터링:", {
           grade: user.grade,
-          userRole: user.role 
+          userRole: user.role,
         });
-        
+
         studentsQuery = studentsQuery.eq("grade", user.grade);
-      } else if (user?.role === 'school_admin' || user?.role === 'district_admin' || user?.role === 'main_admin') {
+      } else if (
+        user?.role === "school_admin" ||
+        user?.role === "district_admin" ||
+        user?.role === "main_admin"
+      ) {
         // 관리자는 모든 학생 조회 가능
-        console.log('🔍 관리자 권한 - 모든 학생 조회:', { userRole: user?.role });
-        
+        console.log("🔍 관리자 권한 - 모든 학생 조회:", {
+          userRole: user?.role,
+        });
+
         // 설문의 target_grades와 target_classes가 설정된 경우 해당 범위만 조회
         if (surveyData.target_grades && surveyData.target_grades.length > 0) {
           studentsQuery = studentsQuery.in("grade", surveyData.target_grades);
@@ -285,36 +291,40 @@ const SurveyMonitoring: React.FC = () => {
   // 학급별로 학생들을 그룹화하는 함수
   const groupStudentsByClass = (students: StudentResponse[]) => {
     const grouped: { [key: string]: StudentResponse[] } = {};
-    
-    students.forEach(student => {
+
+    students.forEach((student) => {
       const classKey = `${student.grade}학년 ${student.class}반`;
       if (!grouped[classKey]) {
         grouped[classKey] = [];
       }
       grouped[classKey].push(student);
     });
-    
+
     return grouped;
   };
 
   // 학급별 응답률 계산 함수
   const calculateClassResponseRate = (classKey: string) => {
     const respondedCount = groupedRespondedStudents[classKey]?.length || 0;
-    const notRespondedCount = groupedNotRespondedStudents[classKey]?.length || 0;
+    const notRespondedCount =
+      groupedNotRespondedStudents[classKey]?.length || 0;
     const totalCount = respondedCount + notRespondedCount;
-    
+
     if (totalCount === 0) return 0;
     return Math.round((respondedCount / totalCount) * 100);
   };
 
   const groupedRespondedStudents = groupStudentsByClass(respondedStudents);
-  const groupedNotRespondedStudents = groupStudentsByClass(notRespondedStudents);
-  
+  const groupedNotRespondedStudents =
+    groupStudentsByClass(notRespondedStudents);
+
   // 모든 학급 키를 가져오기
-  const allClassKeys = Array.from(new Set([
-    ...Object.keys(groupedRespondedStudents),
-    ...Object.keys(groupedNotRespondedStudents)
-  ])).sort();
+  const allClassKeys = Array.from(
+    new Set([
+      ...Object.keys(groupedRespondedStudents),
+      ...Object.keys(groupedNotRespondedStudents),
+    ]),
+  ).sort();
 
   return (
     <div className="mx-auto min-h-screen max-w-7xl bg-gray-50 px-4 pb-16 sm:px-6 lg:px-8">
@@ -329,24 +339,31 @@ const SurveyMonitoring: React.FC = () => {
               실시간 응답 현황을 모니터링하고 관리합니다.
             </p>
             {/* 담임선생님 권한 정보 표시 */}
-            {user?.role === 'homeroom_teacher' && user?.grade && user?.class && (
-              <div className="mt-2 rounded-lg bg-blue-50 p-3">
-                <p className="text-sm text-blue-800">
-                  <span className="font-semibold">담임 권한:</span> {user.grade}학년 {user.class}반 담임
-                </p>
-              </div>
-            )}
-            {user?.role === 'grade_teacher' && user?.grade && (
+            {user?.role === "homeroom_teacher" &&
+              user?.grade &&
+              user?.class && (
+                <div className="mt-2 rounded-lg bg-blue-50 p-3">
+                  <p className="text-sm text-blue-800">
+                    <span className="font-semibold">담임 권한:</span>{" "}
+                    {user.grade}학년 {user.class}반 담임
+                  </p>
+                </div>
+              )}
+            {user?.role === "grade_teacher" && user?.grade && (
               <div className="mt-2 rounded-lg bg-green-50 p-3">
                 <p className="text-sm text-green-800">
-                  <span className="font-semibold">학년담당 권한:</span> {user.grade}학년 담당
+                  <span className="font-semibold">학년담당 권한:</span>{" "}
+                  {user.grade}학년 담당
                 </p>
               </div>
             )}
-            {(user?.role === 'school_admin' || user?.role === 'district_admin' || user?.role === 'main_admin') && (
+            {(user?.role === "school_admin" ||
+              user?.role === "district_admin" ||
+              user?.role === "main_admin") && (
               <div className="mt-2 rounded-lg bg-purple-50 p-3">
                 <p className="text-sm text-purple-800">
-                  <span className="font-semibold">관리자 권한:</span> 전체 학생 조회 가능
+                  <span className="font-semibold">관리자 권한:</span> 전체 학생
+                  조회 가능
                 </p>
               </div>
             )}
@@ -528,24 +545,39 @@ const SurveyMonitoring: React.FC = () => {
 
         {/* 학급별 학생 목록 */}
         {allClassKeys.map((classKey) => (
-          <div key={classKey} className="rounded-lg border border-gray-200 bg-white shadow-sm">
+          <div
+            key={classKey}
+            className="rounded-lg border border-gray-200 bg-white shadow-sm"
+          >
             <div className="border-b border-gray-200 p-6">
-              <h3 className="text-lg font-semibold text-gray-900">{classKey}</h3>
+              <h3 className="text-lg font-semibold text-gray-900">
+                {classKey}
+              </h3>
               <div className="mt-2 flex space-x-4 text-sm text-gray-600">
-                <span>응답 완료: {groupedRespondedStudents[classKey]?.length || 0}명</span>
-                <span>미응답: {groupedNotRespondedStudents[classKey]?.length || 0}명</span>
+                <span>
+                  응답 완료: {groupedRespondedStudents[classKey]?.length || 0}명
+                </span>
+                <span>
+                  미응답: {groupedNotRespondedStudents[classKey]?.length || 0}명
+                </span>
                 <span>응답률: {calculateClassResponseRate(classKey)}%</span>
               </div>
             </div>
-            
+
             <div className="p-6">
               <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
                 {/* 응답 완료 학생 */}
                 <div>
-                  <h4 className="mb-3 text-sm font-medium text-gray-900">응답 완료 ({groupedRespondedStudents[classKey]?.length || 0}명)</h4>
+                  <h4 className="mb-3 text-sm font-medium text-gray-900">
+                    응답 완료 ({groupedRespondedStudents[classKey]?.length || 0}
+                    명)
+                  </h4>
                   <div className="max-h-64 space-y-2 overflow-y-auto">
                     {groupedRespondedStudents[classKey]?.map((student) => (
-                      <div key={student.id} className="flex items-center justify-between rounded-lg bg-green-50 p-3">
+                      <div
+                        key={student.id}
+                        className="flex items-center justify-between rounded-lg bg-green-50 p-3"
+                      >
                         <div>
                           <p className="font-medium text-gray-900">
                             {parseInt(student.number)}번 {student.name}
@@ -559,29 +591,41 @@ const SurveyMonitoring: React.FC = () => {
                         </span>
                       </div>
                     )) || (
-                      <p className="text-sm text-gray-500">응답 완료한 학생이 없습니다.</p>
+                      <p className="text-sm text-gray-500">
+                        응답 완료한 학생이 없습니다.
+                      </p>
                     )}
                   </div>
                 </div>
 
                 {/* 미응답 학생 */}
                 <div>
-                  <h4 className="mb-3 text-sm font-medium text-gray-900">미응답 ({groupedNotRespondedStudents[classKey]?.length || 0}명)</h4>
+                  <h4 className="mb-3 text-sm font-medium text-gray-900">
+                    미응답 ({groupedNotRespondedStudents[classKey]?.length || 0}
+                    명)
+                  </h4>
                   <div className="max-h-64 space-y-2 overflow-y-auto">
                     {groupedNotRespondedStudents[classKey]?.map((student) => (
-                      <div key={student.id} className="flex items-center justify-between rounded-lg bg-red-50 p-3">
+                      <div
+                        key={student.id}
+                        className="flex items-center justify-between rounded-lg bg-gray-100 p-3"
+                      >
                         <div>
                           <p className="font-medium text-gray-900">
                             {parseInt(student.number)}번 {student.name}
                           </p>
-                          <p className="text-sm text-gray-500">아직 응답하지 않음</p>
+                          <p className="text-sm text-gray-500">
+                            아직 응답하지 않음
+                          </p>
                         </div>
                         <span className="rounded-full bg-red-100 px-2 py-1 text-xs text-red-800">
                           미응답
                         </span>
                       </div>
                     )) || (
-                      <p className="text-sm text-gray-500">미응답 학생이 없습니다.</p>
+                      <p className="text-sm text-gray-500">
+                        미응답 학생이 없습니다.
+                      </p>
                     )}
                   </div>
                 </div>

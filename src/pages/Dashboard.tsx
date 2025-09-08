@@ -909,7 +909,7 @@ const Dashboard: React.FC = () => {
             </div>
 
             {/* 참여 현황 리스트 */}
-            <div className="mb-6 w-full rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
+            <div className="relative mb-6 w-full rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
               <h3 className="mb-4 text-lg font-semibold text-gray-900">
                 참여 현황 리스트
               </h3>
@@ -932,7 +932,10 @@ const Dashboard: React.FC = () => {
                           ?.questions?.map((question: any, index: number) => (
                             <th
                               key={question.id || index}
-                              className="min-w-[176px] max-w-[176px] truncate px-3 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500"
+                              className="tooltip-header"
+                              data-tooltip={
+                                question.text || `질문 ${index + 1}`
+                              }
                             >
                               {question.text || `질문 ${index + 1}`}
                             </th>

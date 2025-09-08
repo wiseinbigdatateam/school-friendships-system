@@ -441,7 +441,7 @@ const IndividualAnalysis: React.FC = () => {
                     key={student.id}
                     className={`cursor-pointer rounded-lg p-2 transition-colors ${
                       selectedStudent === student.id
-                        ? "bg-blue-100 text-blue-900"
+                        ? "bg-blue-50 text-blue-900"
                         : "hover:bg-gray-50"
                     }`}
                     onClick={() => setSelectedStudent(student.id)}
@@ -470,13 +470,13 @@ const IndividualAnalysis: React.FC = () => {
                       {selectedStudentData.name} 학생 개별 분석 리포트
                     </h2>
                     {/* 탭 헤더 */}
-                    <div className="mb-6 flex items-center justify-between">
+                    <div className="mb-4 flex items-center justify-between">
                       <div className="flex space-x-1 rounded-lg bg-gray-100 p-1">
                         <button
                           onClick={() => setActiveTab("core")}
                           className={`rounded-md px-4 py-2 text-sm font-medium transition-colors ${
                             activeTab === "core"
-                              ? "bg-white text-blue-600 shadow-sm"
+                              ? "bg-white text-[#3F80EA] shadow-sm"
                               : "text-gray-600 hover:text-gray-900"
                           }`}
                         >
@@ -486,7 +486,7 @@ const IndividualAnalysis: React.FC = () => {
                           onClick={() => setActiveTab("ai")}
                           className={`rounded-md px-4 py-2 text-sm font-medium transition-colors ${
                             activeTab === "ai"
-                              ? "bg-white text-blue-600 shadow-sm"
+                              ? "bg-white text-[#3F80EA] shadow-sm"
                               : "text-gray-600 hover:text-gray-900"
                           }`}
                         >
@@ -508,7 +508,7 @@ const IndividualAnalysis: React.FC = () => {
                       <div>
                         {networkLoading ? (
                           <div className="py-8 text-center">
-                            <div className="mx-auto mb-4 h-8 w-8 animate-spin rounded-full border-b-2 border-blue-600"></div>
+                            <div className="mx-auto mb-4 h-8 w-8 animate-spin rounded-full border-b-2 border-[#3F80EA]"></div>
                             <p className="text-gray-600">
                               네트워크 분석을 실행하는 중...
                             </p>
@@ -548,7 +548,7 @@ const IndividualAnalysis: React.FC = () => {
                       <div className="space-y-6">
                         {aiReportLoading ? (
                           <div className="py-8 text-center">
-                            <div className="mx-auto mb-4 h-8 w-8 animate-spin rounded-full border-b-2 border-blue-600"></div>
+                            <div className="mx-auto mb-4 h-8 w-8 animate-spin rounded-full border-b-2 border-[#3F80EA]"></div>
                             <p className="text-gray-600">
                               AI 리포트를 생성하는 중...
                             </p>
@@ -558,7 +558,7 @@ const IndividualAnalysis: React.FC = () => {
                             </p>
                           </div>
                         ) : aiReport ? (
-                          <div className="space-y-6">
+                          <div className="space-y-4">
                             {/* 종합진단 */}
                             <div className="rounded-lg border border-blue-200 bg-blue-50 p-6">
                               <h4 className="mb-4 text-lg font-semibold text-blue-800">

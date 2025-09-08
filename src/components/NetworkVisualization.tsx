@@ -40,7 +40,7 @@ const NetworkVisualization: React.FC<NetworkVisualizationProps> = ({
   data,
   period,
   width = 800,
-  height = 600,
+  height = 550,
   onNodeClick,
 }) => {
   const svgRef = useRef<SVGSVGElement>(null);
@@ -292,12 +292,7 @@ const NetworkVisualization: React.FC<NetworkVisualizationProps> = ({
       </div>
 
       <div className="overflow-hidden rounded-lg border border-gray-200 bg-white">
-        <svg
-          ref={svgRef}
-          width={width}
-          height={height}
-          className="h-auto w-full"
-        />
+        <svg ref={svgRef} width={width} height={height} className="w-full" />
       </div>
 
       {selectedNode && (

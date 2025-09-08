@@ -12,7 +12,7 @@ const Header: React.FC<HeaderProps> = ({ logo, navigationItems }) => {
   const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [showNotificationMenu, setShowNotificationMenu] = useState(false);
-  
+
   // 드롭다운 메뉴 참조
   const userMenuRef = useRef<HTMLDivElement>(null);
   const notificationMenuRef = useRef<HTMLDivElement>(null);
@@ -21,22 +21,28 @@ const Header: React.FC<HeaderProps> = ({ logo, navigationItems }) => {
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       // 사용자 메뉴 외부 클릭 감지
-      if (userMenuRef.current && !userMenuRef.current.contains(event.target as Node)) {
+      if (
+        userMenuRef.current &&
+        !userMenuRef.current.contains(event.target as Node)
+      ) {
         setShowUserMenu(false);
       }
-      
+
       // 알림 메뉴 외부 클릭 감지
-      if (notificationMenuRef.current && !notificationMenuRef.current.contains(event.target as Node)) {
+      if (
+        notificationMenuRef.current &&
+        !notificationMenuRef.current.contains(event.target as Node)
+      ) {
         setShowNotificationMenu(false);
       }
     };
 
     // 이벤트 리스너 추가
-    document.addEventListener('mousedown', handleClickOutside);
-    
+    document.addEventListener("mousedown", handleClickOutside);
+
     // 클린업 함수
     return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener("mousedown", handleClickOutside);
     };
   }, []);
 
@@ -130,7 +136,7 @@ const Header: React.FC<HeaderProps> = ({ logo, navigationItems }) => {
                 <img
                   src="/logo_school.png"
                   alt="WiseOn School Logo"
-                  className="h-full w-full object-contain"
+                  className="h-fit w-fit"
                 />
               </div>
             </button>
@@ -424,7 +430,7 @@ const Header: React.FC<HeaderProps> = ({ logo, navigationItems }) => {
                           setShowNotificationMenu(false);
                           navigate("/notifications");
                         }}
-                        className="w-full rounded-lg bg-blue-600 px-4 py-2 text-white transition-colors hover:bg-blue-700"
+                        className="w-full rounded-lg bg-[#3F80EA] px-4 py-2 text-white transition-colors hover:bg-blue-600"
                       >
                         전체보기
                       </button>

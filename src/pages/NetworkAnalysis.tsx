@@ -835,209 +835,274 @@ const NetworkAnalysis: React.FC = () => {
   };
 
   // 네트워크 분석을 위한 헬퍼 함수들
-  const calculateClusteringCoefficient = (nodes: NetworkNode[], edges: NetworkEdge[]): number => {
+  const calculateClusteringCoefficient = (
+    nodes: NetworkNode[],
+    edges: NetworkEdge[],
+  ): number => {
     if (nodes.length === 0 || edges.length === 0) return 0;
-    
+
     let totalCoefficient = 0;
     let validNodes = 0;
-    
-    nodes.forEach(node => {
+
+    nodes.forEach((node) => {
       const neighbors = edges
-        .filter(edge => edge.source === node.id || edge.target === node.id)
-        .map(edge => edge.source === node.id ? edge.target : edge.source);
-      
+        .filter((edge) => edge.source === node.id || edge.target === node.id)
+        .map((edge) => (edge.source === node.id ? edge.target : edge.source));
+
       if (neighbors.length < 2) {
         totalCoefficient += 0;
         validNodes++;
         return;
       }
-      
+
       let triangles = 0;
       let possibleTriangles = 0;
-      
+
       for (let i = 0; i < neighbors.length; i++) {
         for (let j = i + 1; j < neighbors.length; j++) {
           possibleTriangles++;
-          const hasEdge = edges.some(edge => 
-            (edge.source === neighbors[i] && edge.target === neighbors[j]) ||
-            (edge.source === neighbors[j] && edge.target === neighbors[i])
+          const hasEdge = edges.some(
+            (edge) =>
+              (edge.source === neighbors[i] && edge.target === neighbors[j]) ||
+              (edge.source === neighbors[j] && edge.target === neighbors[i]),
           );
           if (hasEdge) triangles++;
         }
       }
-      
-      const coefficient = possibleTriangles > 0 ? triangles / possibleTriangles : 0;
+
+      const coefficient =
+        possibleTriangles > 0 ? triangles / possibleTriangles : 0;
       totalCoefficient += coefficient;
       validNodes++;
     });
-    
+
     return validNodes > 0 ? totalCoefficient / validNodes : 0;
   };
 
-  const calculateAveragePathLength = (nodes: NetworkNode[], edges: NetworkEdge[]): number => {
+  const calculateAveragePathLength = (
+    nodes: NetworkNode[],
+    edges: NetworkEdge[],
+  ): number => {
     if (nodes.length === 0 || edges.length === 0) return 0;
-    
+
     // Floyd-Warshall 알고리즘으로 최단 경로 계산
     const distances: { [key: string]: { [key: string]: number } } = {};
-    
+
     // 초기화
-    nodes.forEach(node => {
+    nodes.forEach((node) => {
       distances[node.id] = {};
-      nodes.forEach(otherNode => {
-        distances[node.id][otherNode.id] = node.id === otherNode.id ? 0 : Infinity;
+      nodes.forEach((otherNode) => {
+        distances[node.id][otherNode.id] =
+          node.id === otherNode.id ? 0 : Infinity;
       });
     });
-    
+
     // 직접 연결된 노드들
-    edges.forEach(edge => {
+    edges.forEach((edge) => {
       distances[edge.source][edge.target] = 1;
       distances[edge.target][edge.source] = 1;
     });
-    
+
     // Floyd-Warshall
-    nodes.forEach(k => {
-      nodes.forEach(i => {
-        nodes.forEach(j => {
-          if (distances[i.id][k.id] + distances[k.id][j.id] < distances[i.id][j.id]) {
-            distances[i.id][j.id] = distances[i.id][k.id] + distances[k.id][j.id];
+    nodes.forEach((k) => {
+      nodes.forEach((i) => {
+        nodes.forEach((j) => {
+          if (
+            distances[i.id][k.id] + distances[k.id][j.id] <
+            distances[i.id][j.id]
+          ) {
+            distances[i.id][j.id] =
+              distances[i.id][k.id] + distances[k.id][j.id];
           }
         });
       });
     });
-    
+
     // 평균 경로 길이 계산
     let totalDistance = 0;
     let pathCount = 0;
-    
-    nodes.forEach(i => {
-      nodes.forEach(j => {
+
+    nodes.forEach((i) => {
+      nodes.forEach((j) => {
         if (i.id !== j.id && distances[i.id][j.id] !== Infinity) {
           totalDistance += distances[i.id][j.id];
           pathCount++;
         }
       });
     });
-    
+
     return pathCount > 0 ? totalDistance / pathCount : 0;
   };
 
-  const calculateModularity = (nodes: NetworkNode[], edges: NetworkEdge[], communities: Community[]): number => {
-    if (nodes.length === 0 || edges.length === 0 || communities.length === 0) return 0;
-    
+  const calculateModularity = (
+    nodes: NetworkNode[],
+    edges: NetworkEdge[],
+    communities: Community[],
+  ): number => {
+    if (nodes.length === 0 || edges.length === 0 || communities.length === 0)
+      return 0;
+
     const m = edges.length;
     let modularity = 0;
-    
-    edges.forEach(edge => {
-      const sourceCommunity = communities.find(c => c.members.includes(edge.source));
-      const targetCommunity = communities.find(c => c.members.includes(edge.target));
-      
-      if (sourceCommunity && targetCommunity && sourceCommunity.id === targetCommunity.id) {
-        const ki = edges.filter(e => e.source === edge.source || e.target === edge.source).length;
-        const kj = edges.filter(e => e.source === edge.target || e.target === edge.target).length;
+
+    edges.forEach((edge) => {
+      const sourceCommunity = communities.find((c) =>
+        c.members.includes(edge.source),
+      );
+      const targetCommunity = communities.find((c) =>
+        c.members.includes(edge.target),
+      );
+
+      if (
+        sourceCommunity &&
+        targetCommunity &&
+        sourceCommunity.id === targetCommunity.id
+      ) {
+        const ki = edges.filter(
+          (e) => e.source === edge.source || e.target === edge.source,
+        ).length;
+        const kj = edges.filter(
+          (e) => e.source === edge.target || e.target === edge.target,
+        ).length;
         modularity += 1 - (ki * kj) / (2 * m);
       }
     });
-    
+
     return m > 0 ? modularity / (2 * m) : 0;
   };
 
   // 네트워크 분석 결과를 기반으로 개선 권장사항 생성
-  const generateImprovementRecommendations = (analysisResults: NetworkAnalysisResult) => {
+  const generateImprovementRecommendations = (
+    analysisResults: NetworkAnalysisResult,
+  ) => {
     const recommendations = {
       friendshipDevelopment: [] as string[],
       communityIntegration: [] as string[],
-      priority: 'normal' as 'high' | 'normal' | 'low'
+      priority: "normal" as "high" | "normal" | "low",
     };
 
     // 연결 수가 적은 학생 비율 계산
-    const lowConnectionStudents = analysisResults.nodes.filter(n => {
-      const connections = analysisResults.edges.filter(e => e.source === n.id || e.target === n.id).length;
+    const lowConnectionStudents = analysisResults.nodes.filter((n) => {
+      const connections = analysisResults.edges.filter(
+        (e) => e.source === n.id || e.target === n.id,
+      ).length;
       return connections <= 2;
     }).length;
-    const lowConnectionRatio = lowConnectionStudents / analysisResults.nodes.length;
+    const lowConnectionRatio =
+      lowConnectionStudents / analysisResults.nodes.length;
 
     // 커뮤니티 수와 평균 크기
-    const avgCommunitySize = analysisResults.nodes.length / analysisResults.communities.length;
-    const smallCommunities = analysisResults.communities.filter(c => c.size < avgCommunitySize * 0.5).length;
+    const avgCommunitySize =
+      analysisResults.nodes.length / analysisResults.communities.length;
+    const smallCommunities = analysisResults.communities.filter(
+      (c) => c.size < avgCommunitySize * 0.5,
+    ).length;
 
     // 네트워크 밀도 기반 권장사항
     if (analysisResults.metrics.density < 0.1) {
-      recommendations.friendshipDevelopment.push('전체적으로 낮은 네트워크 밀도로 인해 친구 관계 확장 프로그램이 필요합니다');
-      recommendations.priority = 'high';
+      recommendations.friendshipDevelopment.push(
+        "전체적으로 낮은 네트워크 밀도로 인해 친구 관계 확장 프로그램이 필요합니다",
+      );
+      recommendations.priority = "high";
     } else if (analysisResults.metrics.density < 0.3) {
-      recommendations.friendshipDevelopment.push('네트워크 밀도 개선을 위한 그룹 활동 프로그램 운영이 권장됩니다');
+      recommendations.friendshipDevelopment.push(
+        "네트워크 밀도 개선을 위한 그룹 활동 프로그램 운영이 권장됩니다",
+      );
     }
 
     // 연결 수가 적은 학생들에 대한 권장사항
     if (lowConnectionRatio > 0.3) {
-      recommendations.friendshipDevelopment.push(`${Math.round(lowConnectionRatio * 100)}%의 학생이 연결 수가 적어 개별 상담 프로그램이 필요합니다`);
-      recommendations.priority = 'high';
+      recommendations.friendshipDevelopment.push(
+        `${Math.round(lowConnectionRatio * 100)}%의 학생이 연결 수가 적어 개별 상담 프로그램이 필요합니다`,
+      );
+      recommendations.priority = "high";
     } else if (lowConnectionRatio > 0.1) {
-      recommendations.friendshipDevelopment.push('연결 수가 적은 학생들을 위한 그룹 활동 프로그램 운영');
+      recommendations.friendshipDevelopment.push(
+        "연결 수가 적은 학생들을 위한 그룹 활동 프로그램 운영",
+      );
     }
 
     // 클러스터링 계수 기반 권장사항
     if (analysisResults.metrics.clustering_coefficient < 0.2) {
-      recommendations.friendshipDevelopment.push('낮은 클러스터링 계수로 인해 친구들의 친구 관계 형성을 위한 활동이 필요합니다');
+      recommendations.friendshipDevelopment.push(
+        "낮은 클러스터링 계수로 인해 친구들의 친구 관계 형성을 위한 활동이 필요합니다",
+      );
     }
 
     // 커뮤니티 통합 관련 권장사항
     if (analysisResults.communities.length > 3) {
-      recommendations.communityIntegration.push('커뮤니티가 많아 통합 활동 프로그램이 필요합니다');
-      recommendations.priority = 'high';
+      recommendations.communityIntegration.push(
+        "커뮤니티가 많아 통합 활동 프로그램이 필요합니다",
+      );
+      recommendations.priority = "high";
     } else if (smallCommunities > 0) {
-      recommendations.communityIntegration.push('작은 커뮤니티들이 있어 통합 활동을 통한 네트워크 확장이 필요합니다');
+      recommendations.communityIntegration.push(
+        "작은 커뮤니티들이 있어 통합 활동을 통한 네트워크 확장이 필요합니다",
+      );
     }
 
     // 모듈성 기반 권장사항
     if (analysisResults.metrics.modularity > 0.5) {
-      recommendations.communityIntegration.push('높은 모듈성으로 인해 커뮤니티 간 교류 프로그램이 필요합니다');
+      recommendations.communityIntegration.push(
+        "높은 모듈성으로 인해 커뮤니티 간 교류 프로그램이 필요합니다",
+      );
     }
 
     // 기본 권장사항 추가
     if (recommendations.friendshipDevelopment.length === 0) {
-      recommendations.friendshipDevelopment.push('현재 친구 관계는 양호하나 지속적인 개선을 위한 활동 프로그램 운영');
+      recommendations.friendshipDevelopment.push(
+        "현재 친구 관계는 양호하나 지속적인 개선을 위한 활동 프로그램 운영",
+      );
     }
     if (recommendations.communityIntegration.length === 0) {
-      recommendations.communityIntegration.push('커뮤니티 간 자연스러운 교류를 위한 활동 기회 제공');
+      recommendations.communityIntegration.push(
+        "커뮤니티 간 자연스러운 교류를 위한 활동 기회 제공",
+      );
     }
 
     return recommendations;
   };
 
   // 개별 학생 개선방안 생성
-  const generateIndividualRecommendations = (node: NetworkNode, analysisResults: NetworkAnalysisResult) => {
+  const generateIndividualRecommendations = (
+    node: NetworkNode,
+    analysisResults: NetworkAnalysisResult,
+  ) => {
     const recommendations = [] as string[];
-    const connections = analysisResults.edges.filter(e => e.source === node.id || e.target === node.id).length;
+    const connections = analysisResults.edges.filter(
+      (e) => e.source === node.id || e.target === node.id,
+    ).length;
     const totalStudents = analysisResults.nodes.length;
     const connectionRatio = connections / (totalStudents - 1);
 
     // 중심성 기반 권장사항
     if (node.centrality < 0.3) {
-      recommendations.push('친구 관계 확장 프로그램 참여 권장');
-      recommendations.push('그룹 활동 및 팀워크 활동 적극 참여');
-      recommendations.push('담임교사와의 정기적인 상담 진행');
+      recommendations.push("친구 관계 확장 프로그램 참여 권장");
+      recommendations.push("그룹 활동 및 팀워크 활동 적극 참여");
+      recommendations.push("담임교사와의 정기적인 상담 진행");
       if (connectionRatio < 0.2) {
-        recommendations.push('새로운 친구들과의 교류 기회 적극 마련');
+        recommendations.push("새로운 친구들과의 교류 기회 적극 마련");
       }
     } else if (node.centrality < 0.6) {
-      recommendations.push('현재 친구 관계 유지 및 발전');
-      recommendations.push('다양한 그룹 활동 참여로 네트워크 확장');
-      recommendations.push('리더십 역할 기회 적극 활용');
+      recommendations.push("현재 친구 관계 유지 및 발전");
+      recommendations.push("다양한 그룹 활동 참여로 네트워크 확장");
+      recommendations.push("리더십 역할 기회 적극 활용");
       if (connectionRatio < 0.5) {
-        recommendations.push('새로운 학생들과의 친교 도움');
+        recommendations.push("새로운 학생들과의 친교 도움");
       }
     } else {
-      recommendations.push('우수한 네트워크 상태 유지');
-      recommendations.push('다른 학생들의 롤모델 역할 수행');
-      recommendations.push('새로운 학생들과의 친교 적극 도움');
-      recommendations.push('네트워크 확장을 위한 리더십 발휘');
+      recommendations.push("우수한 네트워크 상태 유지");
+      recommendations.push("다른 학생들의 롤모델 역할 수행");
+      recommendations.push("새로운 학생들과의 친교 적극 도움");
+      recommendations.push("네트워크 확장을 위한 리더십 발휘");
     }
 
     // 커뮤니티 관련 권장사항
-    const community = analysisResults.communities.find(c => c.id === node.community);
+    const community = analysisResults.communities.find(
+      (c) => c.id === node.community,
+    );
     if (community && community.size < 3) {
-      recommendations.push('작은 커뮤니티 소속으로 다른 그룹과의 교류 확대');
+      recommendations.push("작은 커뮤니티 소속으로 다른 그룹과의 교류 확대");
     }
 
     return recommendations;
@@ -1254,7 +1319,7 @@ const NetworkAnalysis: React.FC = () => {
             {teacherInfo && (
               <div className="text-right">
                 <div className="text-sm text-gray-500">현재 담당</div>
-                <div className="text-lg font-semibold text-blue-600">
+                <div className="text-lg font-semibold text-[#3F80EA]">
                   {teacherInfo.role === "homeroom_teacher" &&
                     `${teacherInfo.grade_level}학년 ${teacherInfo.class_number}반`}
                   {teacherInfo.role === "grade_teacher" &&
@@ -1277,7 +1342,7 @@ const NetworkAnalysis: React.FC = () => {
             <div className="space-y-4">
               <div className="mb-4 text-sm text-gray-600">
                 총{" "}
-                <span className="font-semibold text-blue-600">
+                <span className="font-semibold text-[#3F80EA]">
                   {surveys.length}개
                 </span>
                 의 설문을 찾았습니다.
@@ -1286,9 +1351,9 @@ const NetworkAnalysis: React.FC = () => {
                 {surveys.map((survey) => (
                   <div
                     key={survey.id}
-                    className={`cursor-pointer rounded-lg border-2 p-4 transition-all ${
+                    className={`cursor-pointer rounded-lg border p-4 transition-all ${
                       selectedSurvey?.id === survey.id
-                        ? "border-blue-500 bg-blue-50"
+                        ? "border-[#3F80EA] bg-blue-50"
                         : "border-gray-200 bg-white hover:border-gray-300"
                     }`}
                     onClick={async () => {
@@ -1318,7 +1383,7 @@ const NetworkAnalysis: React.FC = () => {
                         {survey.title}
                       </h4>
                       {selectedSurvey?.id === survey.id && (
-                        <div className="flex h-5 w-5 items-center justify-center rounded-full bg-blue-500">
+                        <div className="flex h-5 w-5 items-center justify-center rounded-full bg-[#3F80EA]">
                           <svg
                             className="h-3 w-3 text-white"
                             fill="currentColor"
@@ -1410,7 +1475,7 @@ const NetworkAnalysis: React.FC = () => {
               className={`inline-flex items-center rounded-lg px-8 py-4 text-lg font-medium text-white transition-colors ${
                 isAnalyzing
                   ? "cursor-not-allowed bg-gray-400"
-                  : "bg-blue-600 hover:bg-blue-700 active:bg-blue-800"
+                  : "bg-[#3F80EA] hover:bg-blue-600 active:bg-blue-600"
               }`}
             >
               {isAnalyzing ? (
@@ -1510,7 +1575,7 @@ const NetworkAnalysis: React.FC = () => {
                 onClick={() => setAnalysisView("overview")}
                 className={`rounded-md px-4 py-2 text-sm font-medium ${
                   analysisView === "overview"
-                    ? "bg-blue-600 text-white"
+                    ? "bg-[#3F80EA] text-white"
                     : "bg-gray-100 text-gray-700 hover:bg-gray-200"
                 }`}
               >
@@ -1521,7 +1586,7 @@ const NetworkAnalysis: React.FC = () => {
                 onClick={() => setAnalysisView("network")}
                 className={`rounded-md px-4 py-2 text-sm font-medium ${
                   analysisView === "network"
-                    ? "bg-blue-600 text-white"
+                    ? "bg-[#3F80EA] text-white"
                     : "bg-gray-100 text-gray-700 hover:bg-gray-200"
                 }`}
               >
@@ -1550,7 +1615,7 @@ const NetworkAnalysis: React.FC = () => {
             <div className="p-6">
               <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
                 <div className="text-center">
-                  <div className="text-2xl font-bold text-blue-600">
+                  <div className="text-2xl font-bold text-[#3F80EA]">
                     {analysisResults.metrics.total_students}
                   </div>
                   <div className="text-sm text-gray-600">총 학생 수</div>
@@ -1942,7 +2007,9 @@ const NetworkAnalysis: React.FC = () => {
                     친구관계 발전
                   </h4>
                   <ul className="list-inside list-disc space-y-2 text-sm text-blue-800">
-                    {generateImprovementRecommendations(analysisResults).friendshipDevelopment.map((recommendation, index) => (
+                    {generateImprovementRecommendations(
+                      analysisResults,
+                    ).friendshipDevelopment.map((recommendation, index) => (
                       <li key={index}>{recommendation}</li>
                     ))}
                   </ul>
@@ -1954,22 +2021,28 @@ const NetworkAnalysis: React.FC = () => {
                     커뮤니티 통합
                   </h4>
                   <ul className="list-inside list-disc space-y-2 text-sm text-green-800">
-                    {generateImprovementRecommendations(analysisResults).communityIntegration.map((recommendation, index) => (
+                    {generateImprovementRecommendations(
+                      analysisResults,
+                    ).communityIntegration.map((recommendation, index) => (
                       <li key={index}>{recommendation}</li>
                     ))}
                   </ul>
                 </div>
               </div>
-              
+
               {/* 우선순위 표시 */}
-              {generateImprovementRecommendations(analysisResults).priority === 'high' && (
+              {generateImprovementRecommendations(analysisResults).priority ===
+                "high" && (
                 <div className="mt-4 rounded-lg border border-red-200 bg-red-50 p-4">
                   <div className="flex items-center">
                     <span className="mr-2 text-red-600">⚠️</span>
-                    <span className="font-medium text-red-800">높은 우선순위</span>
+                    <span className="font-medium text-red-800">
+                      높은 우선순위
+                    </span>
                   </div>
                   <p className="mt-1 text-sm text-red-700">
-                    네트워크 분석 결과에 따라 즉시 개선 조치가 필요한 상황입니다.
+                    네트워크 분석 결과에 따라 즉시 개선 조치가 필요한
+                    상황입니다.
                   </p>
                 </div>
               )}
@@ -2282,7 +2355,7 @@ const NetworkAnalysis: React.FC = () => {
                 </div>
                 <div className="text-right">
                   <div className="text-sm text-gray-500">총 학생 수</div>
-                  <div className="text-lg font-semibold text-blue-600">
+                  <div className="text-lg font-semibold text-[#3F80EA]">
                     {analysisResults.nodes.length}명
                   </div>
                   <div className="text-sm text-gray-500">총 관계 수</div>
@@ -2312,7 +2385,7 @@ const NetworkAnalysis: React.FC = () => {
                   }}
                   period="현재"
                   width={900}
-                  height={750}
+                  height={550}
                   onNodeClick={(node) => {
                     console.log("🔍 노드 클릭:", node);
                     const student = students.find((s) => s.id === node.id);
@@ -2337,7 +2410,7 @@ const NetworkAnalysis: React.FC = () => {
             <div className="p-6">
               <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
                 <div className="text-center">
-                  <div className="text-2xl font-bold text-blue-600">
+                  <div className="text-2xl font-bold text-[#3F80EA]">
                     {
                       analysisResults.nodes.filter((n) => n.centrality >= 0.5)
                         .length
@@ -2855,7 +2928,10 @@ const NetworkAnalysis: React.FC = () => {
                     </h5>
                     <div className="rounded-lg bg-gray-50 p-4">
                       <ul className="list-inside list-disc space-y-1 text-sm text-gray-700">
-                        {generateIndividualRecommendations(selectedStudentModal.node, analysisResults).map((recommendation, index) => (
+                        {generateIndividualRecommendations(
+                          selectedStudentModal.node,
+                          analysisResults,
+                        ).map((recommendation, index) => (
                           <li key={index}>{recommendation}</li>
                         ))}
                       </ul>
@@ -2928,43 +3004,70 @@ const NetworkAnalysis: React.FC = () => {
                     <div className="text-sm text-yellow-800">
                       {(() => {
                         const centrality = selectedStudentModal.node.centrality;
-                        const connections = analysisResults.edges.filter(e => e.source === selectedStudentModal.student!.id || e.target === selectedStudentModal.student!.id).length;
+                        const connections = analysisResults.edges.filter(
+                          (e) =>
+                            e.source === selectedStudentModal.student!.id ||
+                            e.target === selectedStudentModal.student!.id,
+                        ).length;
                         const totalStudents = analysisResults.nodes.length;
-                        const connectionRatio = connections / (totalStudents - 1);
-                        
+                        const connectionRatio =
+                          connections / (totalStudents - 1);
+
                         if (centrality < 0.3) {
                           return (
                             <div>
-                              <p className="mb-2 font-medium">⚠️ 주의가 필요한 학생</p>
+                              <p className="mb-2 font-medium">
+                                ⚠️ 주의가 필요한 학생
+                              </p>
                               <ul className="list-inside list-disc space-y-1">
                                 <li>친구 관계를 더 발전시킬 필요가 있습니다</li>
                                 <li>그룹 활동 참여를 권장합니다</li>
                                 <li>담임교사와의 상담이 필요할 수 있습니다</li>
-                                {connectionRatio < 0.2 && <li>연결 수가 매우 적어 즉시 개선 조치가 필요합니다</li>}
+                                {connectionRatio < 0.2 && (
+                                  <li>
+                                    연결 수가 매우 적어 즉시 개선 조치가
+                                    필요합니다
+                                  </li>
+                                )}
                               </ul>
                             </div>
                           );
                         } else if (centrality < 0.6) {
                           return (
                             <div>
-                              <p className="mb-2 font-medium">📈 개선 여지가 있는 학생</p>
+                              <p className="mb-2 font-medium">
+                                📈 개선 여지가 있는 학생
+                              </p>
                               <ul className="list-inside list-disc space-y-1">
                                 <li>현재 친구 관계는 양호합니다</li>
                                 <li>더 다양한 친구들과의 교류를 권장합니다</li>
                                 <li>리더십 역할을 맡아볼 수 있습니다</li>
-                                {connectionRatio < 0.5 && <li>연결 수를 늘려 네트워크를 확장할 수 있습니다</li>}
+                                {connectionRatio < 0.5 && (
+                                  <li>
+                                    연결 수를 늘려 네트워크를 확장할 수 있습니다
+                                  </li>
+                                )}
                               </ul>
                             </div>
                           );
                         } else {
                           return (
                             <div>
-                              <p className="mb-2 font-medium">🌟 우수한 네트워크를 가진 학생</p>
+                              <p className="mb-2 font-medium">
+                                🌟 우수한 네트워크를 가진 학생
+                              </p>
                               <ul className="list-inside list-disc space-y-1">
                                 <li>매우 좋은 친구 관계를 유지하고 있습니다</li>
                                 <li>다른 학생들의 롤모델이 될 수 있습니다</li>
-                                <li>새로운 학생들과의 친교를 도울 수 있습니다</li>
-                                {connectionRatio > 0.7 && <li>네트워크 영향력을 활용하여 다른 학생들을 도울 수 있습니다</li>}
+                                <li>
+                                  새로운 학생들과의 친교를 도울 수 있습니다
+                                </li>
+                                {connectionRatio > 0.7 && (
+                                  <li>
+                                    네트워크 영향력을 활용하여 다른 학생들을
+                                    도울 수 있습니다
+                                  </li>
+                                )}
                               </ul>
                             </div>
                           );
