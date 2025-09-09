@@ -316,7 +316,7 @@ const Contact: React.FC = () => {
                 htmlFor="message"
                 className="mb-2 block text-sm font-medium text-gray-700"
               >
-                문의 내용 *
+                내용 *
               </label>
               <textarea
                 id="message"
