@@ -222,7 +222,7 @@ const IndividualAnalysis: React.FC = () => {
   };
 
   // 개별 학생의 네트워크 데이터 생성 (선택된 학생 중심)
-  const generateIndividualNetworkData = async (
+  const generateIndividualNetworkData = useCallback(async (
     studentId: string,
     surveyId: string,
   ) => {
@@ -346,7 +346,7 @@ const IndividualAnalysis: React.FC = () => {
       console.error("Error in generateIndividualNetworkData:", error);
       return [];
     }
-  };
+  }, [students]);
 
   // 학생 또는 설문 선택 시 네트워크 데이터 생성
   useEffect(() => {
