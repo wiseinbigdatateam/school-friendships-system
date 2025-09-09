@@ -61,7 +61,7 @@ const GradeAnalysis: React.FC = () => {
     try {
       const gradeScope = getUserGradeScope();
       
-      // 교육청ID와 학교ID로 필터링
+      // 학교ID로 필터링 (교육청ID는 사용자 정보에서 가져옴)
       let query = supabase
         .from("students")
         .select("*")
@@ -69,11 +69,6 @@ const GradeAnalysis: React.FC = () => {
         .order("grade", { ascending: true })
         .order("class", { ascending: true })
         .order("student_number", { ascending: true });
-
-      // 교육청ID가 있는 경우 추가 필터링
-      if (user?.district_id) {
-        query = query.eq("district_id", user.district_id);
-      }
 
       // 학교관리자가 아닌 경우 특정 학년만 필터링
       if (gradeScope !== "all") {
@@ -98,18 +93,13 @@ const GradeAnalysis: React.FC = () => {
     try {
       const gradeScope = getUserGradeScope();
       
-      // 교육청ID와 학교ID로 필터링
+      // 학교ID로 필터링 (교육청ID는 사용자 정보에서 가져옴)
       let query = supabase
         .from("surveys")
         .select("*")
         .eq("school_id", user?.school_id || "")
         .in("status", ["active", "completed"])
         .order("created_at", { ascending: false });
-
-      // 교육청ID가 있는 경우 추가 필터링
-      if (user?.district_id) {
-        query = query.eq("district_id", user.district_id);
-      }
 
       const { data: surveysData, error } = await query;
 

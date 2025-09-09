@@ -256,10 +256,8 @@ const Dashboard: React.FC = () => {
           .select("*")
           .eq("current_school_id", schoolId);
 
-        // 교육청ID가 있는 경우 추가 필터링
-        if (currentUser?.district_id) {
-          studentsQuery = studentsQuery.eq("district_id", currentUser.district_id);
-        }
+        // 교육청ID는 사용자 테이블에서 가져오므로 학생 테이블에서는 필터링하지 않음
+        // (학생 테이블에 district_id 컬럼이 있지만 사용자 정보 기반으로 필터링)
 
         // school_admin인 경우 전학년 전체 데이터 조회
         if (currentUser?.role === "school_admin") {
@@ -296,10 +294,8 @@ const Dashboard: React.FC = () => {
             .in("status", ["active", "completed"]) // draft 제외
             .order("created_at", { ascending: false });
 
-          // 교육청ID가 있는 경우 추가 필터링
-          if (currentUser?.district_id) {
-            surveysQuery = surveysQuery.eq("district_id", currentUser.district_id);
-          }
+          // 교육청ID는 사용자 테이블에서 가져오므로 설문 테이블에서는 필터링하지 않음
+          // (설문 테이블에 district_id 컬럼이 있지만 사용자 정보 기반으로 필터링)
 
           const { data: surveys, error: surveysError } = await surveysQuery;
 
