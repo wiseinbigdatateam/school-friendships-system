@@ -27,6 +27,7 @@ const NetworkAnalysis = lazy(() => import("./pages/NetworkAnalysis"));
 const NetworkAnalysisPage = lazy(() => import("./pages/NetworkAnalysisPage"));
 const IndividualAnalysis = lazy(() => import("./pages/IndividualAnalysis"));
 const GradeAnalysis = lazy(() => import("./pages/GradeAnalysis"));
+const SchoolWideAnalysis = lazy(() => import("./pages/SchoolWideAnalysis"));
 const ClassSurvey = lazy(() => import("./pages/ClassSurvey"));
 const Reports = lazy(() => import("./pages/Reports"));
 const DataTransfer = lazy(() => import("./pages/DataTransfer"));
@@ -260,6 +261,17 @@ const App: React.FC = () => {
               <ProtectedRoute requiredRole="grade_teacher">
                 <ProtectedLayout>
                   <GradeAnalysis />
+                </ProtectedLayout>
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/school-wide-analysis"
+            element={
+              <ProtectedRoute requiredRole="school_admin">
+                <ProtectedLayout>
+                  <SchoolWideAnalysis />
                 </ProtectedLayout>
               </ProtectedRoute>
             }

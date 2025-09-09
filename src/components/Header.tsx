@@ -161,12 +161,16 @@ const Header: React.FC<HeaderProps> = ({ logo, navigationItems }) => {
                   </button>
                 </div>
 
-                {/* 교우 관계 분석 - 학습별 분석결과만 표시 */}
+                {/* 교우 관계 분석 - 역할에 따라 다른 페이지로 이동 */}
                 <div className="relative">
                   <button
-                    onClick={() => handleNavigationClick("/grade-analysis")}
+                    onClick={() => handleNavigationClick(
+                      user?.role === "school_admin" 
+                        ? "/school-wide-analysis" 
+                        : "/grade-analysis"
+                    )}
                     className={`rounded-md px-3 py-2 text-sm font-medium transition-colors ${
-                      isCurrentPath("/grade-analysis")
+                      isCurrentPath("/grade-analysis") || isCurrentPath("/school-wide-analysis")
                         ? "bg-blue-50 text-blue-600"
                         : "text-gray-700 hover:bg-gray-50 hover:text-blue-600"
                     }`}
