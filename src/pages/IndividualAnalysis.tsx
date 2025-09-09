@@ -129,7 +129,6 @@ const IndividualAnalysis: React.FC = () => {
   const [activeTab, setActiveTab] = useState<"core" | "ai" | "python">("core");
   const [aiReport, setAiReport] = useState<GeneratedReport | null>(null);
   const [aiReportLoading, setAiReportLoading] = useState(false);
-  const [aiReportError, setAiReportError] = useState<string | null>(null);
   const [pythonAnalysisResult, setPythonAnalysisResult] = useState<PythonAnalysisResult | null>(null);
   const [pythonAnalysisLoading, setPythonAnalysisLoading] = useState(false);
   const [pythonAnalysisError, setPythonAnalysisError] = useState<string | null>(null);
@@ -270,6 +269,7 @@ const IndividualAnalysis: React.FC = () => {
       // 4. 템플릿 메타데이터에서 max_selections 추출
       const metadata = surveyData?.survey_templates?.metadata as any;
       const maxSelections = metadata?.max_selections || [];
+      setMaxSelections(maxSelections);
 
       // 5. 개별 학생의 친구 관계 추출
       const studentMap = new Map(studentsData.map((s) => [s.id, s]));
@@ -366,16 +366,97 @@ const IndividualAnalysis: React.FC = () => {
           setNetworkLoading(false);
         });
     }
-  }, [selectedStudent, selectedSurvey, students]);
+  }, [selectedStudent, selectedSurvey, students, generateIndividualNetworkData]);
 
   const selectedStudentData = students.find((s) => s.id === selectedStudent);
+
+  // Python 분석용 친구 관계 데이터 준비
+  const prepareFriendshipDataForPython = useCallback(async () => {
+    try {
+      // 전체 학급의 설문 응답 데이터 조회 (선택된 학생만이 아닌 모든 학생)
+      const { data: allResponses, error: responseError } = await supabase
+        .from("survey_responses")
+        .select("*")
+        .eq("survey_id", selectedSurvey);
+
+      if (responseError || !allResponses || allResponses.length === 0) {
+        return [];
+      }
+
+      // 설문 템플릿 메타데이터 조회
+      const { data: surveyData, error: surveyError } = await supabase
+        .from("surveys")
+        .select(`
+          *,
+          survey_templates!surveys_template_id_fkey(metadata)
+        `)
+        .eq("id", selectedSurvey)
+        .single();
+
+      if (surveyError || !surveyData) {
+        return [];
+      }
+
+      const metadata = surveyData?.survey_templates?.metadata as any;
+      const maxSelections = metadata?.max_selections || [];
+
+      // 전체 학급의 친구 관계 데이터 변환
+      const friendshipData: Array<{
+        student_id: string;
+        friend_student_id: string;
+        relationship_type: string;
+        strength_score: number;
+      }> = [];
+      
+      // 모든 학생의 응답을 처리
+      allResponses.forEach((response) => {
+        if (response.responses && response.student_id) {
+          const answers = typeof response.responses === "string"
+            ? JSON.parse(response.responses)
+            : response.responses;
+
+          Object.entries(answers).forEach(([questionKey, answer]: [string, any]) => {
+            const questionIndex = parseInt(questionKey.replace("q", "")) - 1;
+            const maxSelection = maxSelections[questionIndex] || 10;
+
+            if (Array.isArray(answer)) {
+              const limitedAnswers = answer.slice(0, maxSelection);
+              limitedAnswers.forEach((friendId: string) => {
+                if (friendId && friendId !== response.student_id && response.student_id) {
+                  friendshipData.push({
+                    student_id: response.student_id,
+                    friend_student_id: friendId,
+                    relationship_type: 'friend',
+                    strength_score: 1.0
+                  });
+                }
+              });
+            } else if (typeof answer === "string" && answer !== response.student_id && response.student_id) {
+              if (maxSelection >= 1) {
+                friendshipData.push({
+                  student_id: response.student_id,
+                  friend_student_id: answer,
+                  relationship_type: 'friend',
+                  strength_score: 1.0
+                });
+              }
+            }
+          });
+        }
+      });
+
+      return friendshipData;
+    } catch (error) {
+      console.error("친구 관계 데이터 준비 오류:", error);
+      return [];
+    }
+  }, [selectedSurvey]);
 
   // AI 리포트 생성 함수
   const generateAIReport = useCallback(async () => {
     if (!selectedStudentData || !individualNetworkData.length) return;
 
     setAiReportLoading(true);
-    setAiReportError(null);
 
     try {
       // 네트워크 분석 결과에서 데이터 추출
@@ -430,7 +511,6 @@ const IndividualAnalysis: React.FC = () => {
 
       const fallbackReport = generateFallbackReport(analysisData);
       setAiReport(fallbackReport);
-      setAiReportError(null); // 오류 메시지 제거
     } finally {
       setAiReportLoading(false);
     }
@@ -487,89 +567,7 @@ const IndividualAnalysis: React.FC = () => {
     } finally {
       setPythonAnalysisLoading(false);
     }
-  }, [selectedStudentData, selectedSurvey, students, selectedStudent]);
-
-  // Python 분석용 친구 관계 데이터 준비
-  const prepareFriendshipDataForPython = async () => {
-    try {
-      // 전체 학급의 설문 응답 데이터 조회 (선택된 학생만이 아닌 모든 학생)
-      const { data: allResponses, error: responseError } = await supabase
-        .from("survey_responses")
-        .select("*")
-        .eq("survey_id", selectedSurvey);
-
-      if (responseError || !allResponses || allResponses.length === 0) {
-        return [];
-      }
-
-      // 설문 템플릿 메타데이터 조회
-      const { data: surveyData, error: surveyError } = await supabase
-        .from("surveys")
-        .select(`
-          *,
-          survey_templates!surveys_template_id_fkey(metadata)
-        `)
-        .eq("id", selectedSurvey)
-        .single();
-
-      if (surveyError || !surveyData) {
-        return [];
-      }
-
-      const metadata = surveyData?.survey_templates?.metadata as any;
-      const maxSelections = metadata?.max_selections || [];
-
-      // 전체 학급의 친구 관계 데이터 변환
-      const friendshipData: Array<{
-        student_id: string;
-        friend_student_id: string;
-        relationship_type: string;
-        strength_score: number;
-      }> = [];
-      
-      // 모든 학생의 응답을 처리
-      allResponses.forEach((response) => {
-        if (response.responses) {
-          const answers = typeof response.responses === "string"
-            ? JSON.parse(response.responses)
-            : response.responses;
-
-          Object.entries(answers).forEach(([questionKey, answer]: [string, any]) => {
-            const questionIndex = parseInt(questionKey.replace("q", "")) - 1;
-            const maxSelection = maxSelections[questionIndex] || 10;
-
-            if (Array.isArray(answer)) {
-              const limitedAnswers = answer.slice(0, maxSelection);
-              limitedAnswers.forEach((friendId: string) => {
-                if (friendId && friendId !== response.student_id) {
-                  friendshipData.push({
-                    student_id: response.student_id,
-                    friend_student_id: friendId,
-                    relationship_type: 'friend',
-                    strength_score: 1.0
-                  });
-                }
-              });
-            } else if (typeof answer === "string" && answer !== response.student_id) {
-              if (maxSelection >= 1) {
-                friendshipData.push({
-                  student_id: response.student_id,
-                  friend_student_id: answer,
-                  relationship_type: 'friend',
-                  strength_score: 1.0
-                });
-              }
-            }
-          });
-        }
-      });
-
-      return friendshipData;
-    } catch (error) {
-      console.error("친구 관계 데이터 준비 오류:", error);
-      return [];
-    }
-  };
+  }, [selectedStudentData, selectedSurvey, students, selectedStudent, prepareFriendshipDataForPython]);
 
   // AI리포트 탭이 활성화될 때 리포트 생성
   useEffect(() => {
