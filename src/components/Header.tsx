@@ -261,6 +261,18 @@ const Header: React.FC<HeaderProps> = ({ logo, navigationItems }) => {
                     >
                       학급별 분석결과
                     </button>
+                    {user?.role === "grade_teacher" && (
+                      <button
+                        onClick={() => handleNavigationClick("/grade-analysis")}
+                        className={`block w-full px-4 py-2 text-left text-sm transition-colors ${
+                          isCurrentPath("/grade-analysis")
+                            ? "bg-blue-50 text-blue-600"
+                            : "text-gray-700 hover:bg-gray-50 hover:text-gray-900"
+                        }`}
+                      >
+                        학습별 분석결과
+                      </button>
+                    )}
                     <button
                       onClick={() =>
                         handleNavigationClick("/individual-analysis")
