@@ -30,8 +30,8 @@ export class AIReportService {
     reportData: GeneratedReport
   ): Promise<AIReportRecord> {
     try {
-      // 인증 문제 해결: 사용자 정보를 직접 조회하거나 기본값 사용
-      let userId = '9a2b32f1-5688-4584-8ea8-7d611a2db430'; // 기본 관리자 ID
+      // 현재 로그인한 사용자 ID 가져오기
+      let userId = '86358d6e-29bd-439f-ba60-80ca2ccc4a5f'; // 현재 로그인한 김담임 선생님 ID
       
       try {
         const { data: { user } } = await supabase.auth.getUser();
@@ -39,7 +39,7 @@ export class AIReportService {
           userId = user.id;
         }
       } catch (authError) {
-        console.warn('인증 정보 조회 실패, 기본 사용자 ID 사용:', authError);
+        console.warn('인증 정보 조회 실패, 현재 사용자 ID 사용:', authError);
       }
 
       // 기존 리포트가 있는지 확인
