@@ -252,9 +252,9 @@ const Header: React.FC<HeaderProps> = ({ logo, navigationItems }) => {
                 <div className="absolute left-0 top-full z-50 mt-1 w-48 rounded-md border border-gray-200 bg-white shadow-lg">
                   <div className="py-1">
                     <button
-                      onClick={() => handleNavigationClick("/network-analysis")}
+                      onClick={() => handleNavigationClick("/network-analysis-new")}
                       className={`block w-full px-4 py-2 text-left text-sm transition-colors ${
-                        isCurrentPath("/network-analysis")
+                        isCurrentPath("/network-analysis-new")
                           ? "bg-blue-50 text-blue-600"
                           : "text-gray-700 hover:bg-gray-50 hover:text-gray-900"
                       }`}

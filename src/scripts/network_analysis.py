@@ -2,20 +2,103 @@
 # -*- coding: utf-8 -*-
 """
 교우관계 네트워크 분석 스크립트
-NetworkX를 사용한 네트워크 분석 및 D3.js용 데이터 생성
+NetworkX를 사용한 네트워크 분석, 시각화 및 D3.js용 데이터 생성
 """
 
 import networkx as nx
-import pandas as pd
 import numpy as np
 import json
+import matplotlib.pyplot as plt
+import matplotlib.font_manager as fm
 from typing import Dict, List, Tuple, Any
 from datetime import datetime
 import logging
+import os
+import platform
 
 # 로깅 설정
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+# 한글 폰트 설정 함수
+def setup_korean_font():
+    """운영체제별 한글 폰트 설정"""
+    system = platform.system()
+    
+    if system == "Darwin":  # macOS
+        font_paths = [
+            '/System/Library/Fonts/AppleSDGothicNeo.ttc',
+            '/System/Library/Fonts/AppleGothic.ttf',
+            '/Library/Fonts/AppleGothic.ttf'
+        ]
+    elif system == "Windows":
+        font_paths = [
+            'C:/Windows/Fonts/malgun.ttf',
+            'C:/Windows/Fonts/gulim.ttc',
+            'C:/Windows/Fonts/batang.ttc'
+        ]
+    else:  # Linux
+        font_paths = [
+            '/usr/share/fonts/truetype/nanum/NanumGothic.ttf',
+            '/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf'
+        ]
+    
+    # 사용 가능한 폰트 찾기
+    for font_path in font_paths:
+        if os.path.exists(font_path):
+            try:
+                font_prop = fm.FontProperties(fname=font_path)
+                plt.rcParams['font.family'] = font_prop.get_name()
+                logger.info(f"한글 폰트 설정 완료: {font_path}")
+                return font_prop
+            except Exception as e:
+                logger.warning(f"폰트 로드 실패: {font_path}, {e}")
+                continue
+    
+    # 폰트를 찾지 못한 경우 기본 설정
+    logger.warning("한글 폰트를 찾을 수 없습니다. 기본 폰트를 사용합니다.")
+    plt.rcParams['font.family'] = 'DejaVu Sans'
+    return None
+
+# 샘플 데이터 생성 함수
+def generate_sample_data():
+    """교우관계 분석용 샘플 데이터 생성"""
+    survey_data = [
+        ('학생A', '학생B', '가장 친한 친구'), ('학생A', '학생C', '가장 친한 친구'), ('학생A', '학생D', '가장 친한 친구'),
+        ('학생B', '학생A', '가장 친한 친구'), ('학생B', '학생D', '함께 놀고 싶은 친구'),
+        ('학생C', '학생A', '가장 친한 친구'), ('학생C', '학생E', '고민 상담'),
+        ('학생D', '학생B', '함께 놀고 싶은 친구'), ('학생D', '학생E', '존경/닮고 싶은'),
+        ('학생E', '학생A', '함께 놀고 싶은 친구'), ('학생E', '학생C', '고민 상담'),
+        ('학생F', '학생G', '가장 친한 친구'), ('학생G', '학생F', '가장 친한 친구'),
+        ('학생H', '학생I', '함께 놀고 싶은 친구'), ('학생I', '학생H', '함께 놀고 싶은 친구'),
+        ('학생J', '학생K', '고민 상담'), ('학생K', '학생J', '고민 상담'),
+    ]
+    
+    # 학생 정보 생성
+    students = set()
+    for source, target, _ in survey_data:
+        students.add(source)
+        students.add(target)
+    
+    student_info = []
+    for i, student_id in enumerate(sorted(students)):
+        student_info.append({
+            'id': student_id,
+            'name': student_id,
+            'grade': f'{i % 3 + 1}학년',
+            'class': f'{i % 5 + 1}반'
+        })
+    
+    return survey_data, student_info
+
+# 관계 유형별 색상 및 스타일 정의
+RELATION_COLORS = {
+    '가장 친한 친구': '#FF6B6B',
+    '함께 놀고 싶은 친구': '#4ECDC4',
+    '고민 상담': '#45B7D1',
+    '존경/닮고 싶은': '#96CEB4',
+    '기타': '#FECA57'
+}
 
 class FriendshipNetworkAnalyzer:
     """교우관계 네트워크 분석 클래스"""
@@ -254,6 +337,143 @@ class FriendshipNetworkAnalyzer:
         
         return comparison
     
+    def visualize_network(self, period: str, save_path: str = None, show_plot: bool = True) -> str:
+        """네트워크 시각화"""
+        if period not in self.networks:
+            logger.error(f"{period} 네트워크가 존재하지 않습니다.")
+            return None
+        
+        G = self.networks[period]
+        analysis_result = self.analysis_results.get(period, {})
+        student_details = analysis_result.get('student_details', {})
+        
+        # 한글 폰트 설정
+        font_prop = setup_korean_font()
+        
+        # 그래프 시각화
+        plt.figure(figsize=(15, 12))
+        
+        # 노드 위치 결정 (레이아웃 알고리즘)
+        pos = nx.spring_layout(G, k=3, iterations=50)
+        
+        # 노드, 엣지, 라벨 그리기
+        nodes = G.nodes()
+        edges = G.edges()
+        
+        # 엣지 색상을 리스트로 추출
+        edge_colors = []
+        for u, v in edges:
+            edge_data = G[u][v]
+            rel_type = edge_data.get('relationship_type', '기타')
+            edge_colors.append(RELATION_COLORS.get(rel_type, RELATION_COLORS['기타']))
+        
+        # 노드 크기 결정 (연결 수에 비례)
+        node_sizes = []
+        node_colors = []
+        for node in nodes:
+            degree = G.degree(node)
+            node_sizes.append(max(500, degree * 200))
+            
+            # 교우관계 유형에 따른 색상
+            if node in student_details:
+                friendship_type = student_details[node]['friendship_type']
+                if friendship_type == "사교 스타":
+                    node_colors.append('#FF6B6B')
+                elif friendship_type == "친구 많은 학생":
+                    node_colors.append('#4ECDC4')
+                elif friendship_type == "평균적인 학생":
+                    node_colors.append('#45B7D1')
+                elif friendship_type == "소수 친구 학생":
+                    node_colors.append('#96CEB4')
+                else:
+                    node_colors.append('#FECA57')
+            else:
+                node_colors.append('#D3D3D3')
+        
+        # 노드 그리기
+        nx.draw_networkx_nodes(G, pos, node_size=node_sizes, node_color=node_colors, alpha=0.8)
+        
+        # 엣지 그리기 (방향성 그래프인 경우 화살표 포함)
+        if isinstance(G, nx.DiGraph):
+            nx.draw_networkx_edges(G, pos, width=2, edge_color=edge_colors, 
+                                 arrowstyle='->', arrowsize=20, alpha=0.7)
+        else:
+            nx.draw_networkx_edges(G, pos, width=2, edge_color=edge_colors, alpha=0.7)
+        
+        # 노드 라벨(이름) 그리기
+        labels = {}
+        for node in nodes:
+            if node in student_details:
+                labels[node] = student_details[node]['name']
+            else:
+                labels[node] = node
+        
+        nx.draw_networkx_labels(G, pos, labels, font_size=10, font_weight='bold')
+        
+        # 범례 추가
+        legend_elements = []
+        for label, color in RELATION_COLORS.items():
+            legend_elements.append(plt.Line2D([0], [0], color=color, lw=4, label=label))
+        
+        plt.legend(handles=legend_elements, loc='upper right', bbox_to_anchor=(1.15, 1))
+        
+        # 제목 및 통계 정보
+        title = f'교우 관계 네트워크 분석 - {period}'
+        stats = analysis_result.get('network_stats', {})
+        subtitle = f"학생 수: {stats.get('total_students', 0)}명, 관계 수: {stats.get('total_relationships', 0)}개"
+        
+        plt.title(f'{title}\n{subtitle}', fontsize=16, pad=20)
+        plt.axis('off')
+        
+        # 그래프 저장
+        if save_path:
+            plt.savefig(save_path, format='PNG', dpi=300, bbox_inches='tight')
+            logger.info(f"네트워크 그래프를 {save_path}에 저장했습니다.")
+        
+        if show_plot:
+            plt.show()
+        
+        return save_path
+    
+    def create_relationship_analysis_chart(self, period: str, save_path: str = None) -> str:
+        """교우관계 유형별 분포 차트 생성"""
+        if period not in self.analysis_results:
+            logger.error(f"{period} 분석 결과가 존재하지 않습니다.")
+            return None
+        
+        analysis_result = self.analysis_results[period]
+        type_distribution = analysis_result.get('friendship_type_distribution', {})
+        
+        # 한글 폰트 설정
+        font_prop = setup_korean_font()
+        
+        # 파이 차트 생성
+        fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(15, 6))
+        
+        # 교우관계 유형별 분포 파이 차트
+        labels = list(type_distribution.keys())
+        sizes = list(type_distribution.values())
+        colors = ['#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FECA57'][:len(labels)]
+        
+        ax1.pie(sizes, labels=labels, colors=colors, autopct='%1.1f%%', startangle=90)
+        ax1.set_title('교우관계 유형별 분포', fontsize=14, pad=20)
+        
+        # 막대 차트
+        ax2.bar(labels, sizes, color=colors, alpha=0.7)
+        ax2.set_title('교우관계 유형별 학생 수', fontsize=14, pad=20)
+        ax2.set_ylabel('학생 수')
+        ax2.tick_params(axis='x', rotation=45)
+        
+        plt.tight_layout()
+        
+        # 차트 저장
+        if save_path:
+            plt.savefig(save_path, format='PNG', dpi=300, bbox_inches='tight')
+            logger.info(f"교우관계 분석 차트를 {save_path}에 저장했습니다.")
+        
+        plt.show()
+        return save_path
+    
     def export_results(self, output_file: str = None) -> str:
         """분석 결과를 JSON 파일로 내보내기"""
         if not output_file:
@@ -274,22 +494,73 @@ class FriendshipNetworkAnalyzer:
         return output_file
 
 def main():
-    """메인 실행 함수"""
+    """메인 실행 함수 - 샘플 데이터로 네트워크 분석 실행"""
+    print("=" * 60)
+    print("교우관계 네트워크 분석기")
+    print("=" * 60)
+    
+    # 분석기 초기화
     analyzer = FriendshipNetworkAnalyzer()
     
-    print("교우관계 네트워크 분석기")
-    print("이 스크립트는 실제 데이터와 함께 사용되어야 합니다.")
-    print("사용법:")
-    print("1. friendship_data: 친구 관계 데이터 리스트")
-    print("2. student_info: 학생 정보 데이터 리스트")
-    print("3. analyzer.analyze_network() 호출하여 분석 수행")
+    # 샘플 데이터 생성
+    print("📊 샘플 데이터 생성 중...")
+    survey_data, student_info = generate_sample_data()
     
-    # 실제 사용 예시 (주석 처리)
-    # friendship_data = [...]  # 실제 친구 관계 데이터
-    # student_info = [...]     # 실제 학생 정보 데이터
-    # result = analyzer.analyze_network('현재', friendship_data, student_info)
+    print(f"✅ 샘플 데이터 생성 완료:")
+    print(f"   - 학생 수: {len(student_info)}명")
+    print(f"   - 관계 수: {len(survey_data)}개")
     
-    print("\n분석기 초기화 완료!")
+    # 설문 데이터를 분석기 형식으로 변환
+    friendship_data = []
+    for source, target, rel_type in survey_data:
+        friendship_data.append({
+            'student_id': source,
+            'friend_student_id': target,
+            'relationship_type': rel_type,
+            'strength_score': 1.0
+        })
+    
+    # 네트워크 분석 실행
+    print("\n🔍 네트워크 분석 시작...")
+    result = analyzer.analyze_network('현재', friendship_data, student_info)
+    
+    # 분석 결과 출력
+    print("\n📈 분석 결과:")
+    print(f"   - 총 학생 수: {result['network_stats']['total_students']}명")
+    print(f"   - 총 관계 수: {result['network_stats']['total_relationships']}개")
+    print(f"   - 평균 연결 수: {result['network_stats']['average_degree']:.2f}")
+    print(f"   - 네트워크 밀도: {result['network_stats']['density']:.3f}")
+    print(f"   - 클러스터링 계수: {result['network_stats']['clustering_coefficient']:.3f}")
+    
+    print("\n👥 교우관계 유형별 분포:")
+    for friendship_type, count in result['friendship_type_distribution'].items():
+        print(f"   - {friendship_type}: {count}명")
+    
+    # 시각화 생성
+    print("\n🎨 네트워크 시각화 생성 중...")
+    try:
+        # 네트워크 그래프 생성
+        network_image = analyzer.visualize_network('현재', 'friendship_network.png', show_plot=False)
+        
+        # 교우관계 분석 차트 생성
+        chart_image = analyzer.create_relationship_analysis_chart('현재', 'friendship_analysis_chart.png')
+        
+        print("✅ 시각화 완료:")
+        print(f"   - 네트워크 그래프: friendship_network.png")
+        print(f"   - 분석 차트: friendship_analysis_chart.png")
+        
+    except Exception as e:
+        print(f"⚠️ 시각화 생성 중 오류 발생: {e}")
+        print("   matplotlib 또는 한글 폰트 설정을 확인해주세요.")
+    
+    # 결과 내보내기
+    print("\n💾 분석 결과 내보내기...")
+    json_file = analyzer.export_results()
+    print(f"✅ JSON 파일 저장 완료: {json_file}")
+    
+    print("\n" + "=" * 60)
+    print("분석 완료! 생성된 파일들을 확인해보세요.")
+    print("=" * 60)
 
 if __name__ == "__main__":
     main()

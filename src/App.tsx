@@ -24,6 +24,7 @@ const SurveyTemplates = lazy(() => import("./pages/SurveyTemplates"));
 const SurveyManagement = lazy(() => import("./pages/SurveyManagement"));
 const StudentManagement = lazy(() => import("./pages/StudentManagement"));
 const NetworkAnalysis = lazy(() => import("./pages/NetworkAnalysis"));
+const NetworkAnalysisPage = lazy(() => import("./pages/NetworkAnalysisPage"));
 const IndividualAnalysis = lazy(() => import("./pages/IndividualAnalysis"));
 const ClassSurvey = lazy(() => import("./pages/ClassSurvey"));
 const Reports = lazy(() => import("./pages/Reports"));
@@ -225,6 +226,17 @@ const App: React.FC = () => {
               <ProtectedRoute>
                 <ProtectedLayout>
                   <NetworkAnalysis />
+                </ProtectedLayout>
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/network-analysis-new"
+            element={
+              <ProtectedRoute>
+                <ProtectedLayout>
+                  <NetworkAnalysisPage />
                 </ProtectedLayout>
               </ProtectedRoute>
             }

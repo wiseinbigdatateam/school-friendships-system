@@ -1,339 +1,361 @@
-import React, { useState, useEffect } from "react";
-import { supabase } from "../lib/supabase";
-import NetworkGraph from "../components/NetworkGraph";
+// 분석 - 교우현황 페이지 (ResultMonitoring 구조 참고)
+import React, { useEffect, useState } from 'react';
+import NetworkChartComponent from '../components/NetworkChartComponent';
+import { NetworkNode, NetworkEdge, NetworkAnalysisData, NetworkMetrics } from '../types';
+import { SurveyService, SurveyWithStats } from '../services/surveyService';
+import { useAuth } from '../contexts/AuthContext';
+import { networkAnalysisService } from '../services/networkAnalysisService';
 
-interface Student {
-  id: string;
+interface SurveyProject {
+  pid: string;
   name: string;
-  grade: string;
-  class: string;
-  friends: string[];
-  friendCount: number;
+  created_at: string;
+  status: 'ready' | 'progress' | 'completed';
+  response_count?: number;
 }
 
-interface SurveyResponse {
-  id: string;
-  student_id: string;
-  answers: any;
-  submitted_at: string;
-}
 
 const NetworkAnalysisPage: React.FC = () => {
-  const [students, setStudents] = useState<Student[]>([]);
+  const { user } = useAuth();
   const [loading, setLoading] = useState(true);
-  const [selectedSurvey, setSelectedSurvey] = useState<string>("");
-  const [surveys, setSurveys] = useState<any[]>([]);
-  const [maxSelections, setMaxSelections] = useState<number[]>([]);
+  
+  // 프로젝트 리스트 데이터 (실제로는 API에서 가져올 데이터)
+  const [projectsData, setProjectsData] = useState<SurveyProject[]>([]);
 
+  // Drag & Drop 관련 (클릭 기반으로 변경)
+  const [draggableItems, setDraggableItems] = useState<SurveyProject[]>([]);
+  const [selectedItems, setSelectedItems] = useState<SurveyProject[]>([]);
+
+  // ChartComponent 컴포넌트에 props전달할 데이터
+  const [chartData, setChartData] = useState<NetworkAnalysisData[]>([]);
+  const [selectedData, setSelectedData] = useState<SurveyProject[]>([]);
+
+  // 초기 데이터 설정
   useEffect(() => {
+    const fetchSurveys = async () => {
+      if (!user?.school_id) {
+        console.error('사용자 학교 ID가 없습니다.');
+        setLoading(false);
+        return;
+      }
+
+      try {
+        setLoading(true);
+        console.log('🔍 설문 데이터 조회 시작:', { 
+          schoolId: user.school_id,
+          userRole: user.role,
+          gradeLevel: user.grade,
+          classNumber: user.class
+        });
+        
+        let surveys;
+        
+        // 사용자 역할에 따라 다른 방식으로 설문 조회
+        if (user.role === 'homeroom_teacher' && user.grade && user.class) {
+          // 담임선생님인 경우: 담당 학년/반의 설문만 조회
+          console.log('🔍 담임선생님 - 담당 학년/반 설문 조회:', {
+            grade: user.grade,
+            class: user.class
+          });
+          
+          surveys = await SurveyService.getSurveysBySchoolGradeClass(
+            user.school_id,
+            user.grade,
+            user.class
+          );
+          
+          // 완료된 설문만 필터링
+          surveys = surveys.filter(survey => survey.status === 'completed');
+        } else {
+          // 관리자나 다른 역할인 경우: 학교의 모든 완료된 설문 조회
+          console.log('🔍 관리자/기타 역할 - 전체 설문 조회');
+          surveys = await SurveyService.getSurveysByStatus(user.school_id, 'completed');
+        }
+        
+        // 교우관계 카테고리만 필터링 (키워드 기반)
+        surveys = surveys.filter(survey => {
+          const title = survey.title?.toLowerCase() || '';
+          const description = survey.description?.toLowerCase() || '';
+          return title.includes('교우관계') || title.includes('친구') || title.includes('관계') ||
+                 description.includes('교우관계') || description.includes('친구') || description.includes('관계');
+        });
+        
+        console.log('🔍 교우관계 필터링 후 설문:', surveys.length, '개');
+        
+        console.log('🔍 조회된 설문 데이터:', surveys);
+        
+        // SurveyWithStats를 SurveyProject 형태로 변환
+        const projectData: SurveyProject[] = surveys.map(survey => ({
+          pid: survey.id,
+          name: survey.title,
+          created_at: survey.created_at || new Date().toISOString(),
+          status: 'completed' as const,
+          response_count: survey.response_count || 0,
+        }));
+        
+        setProjectsData(projectData);
+        setDraggableItems([...projectData]);
+        
+        console.log('✅ 설문 데이터 로드 완료:', projectData);
+      } catch (error) {
+        console.error('❌ 설문 데이터 조회 실패:', error);
+        alert('설문 데이터를 불러오는데 실패했습니다.');
+      } finally {
+        setLoading(false);
+      }
+    };
+
     fetchSurveys();
-  }, []);
+  }, [user?.school_id, user?.role, user?.grade, user?.class]);
 
-  useEffect(() => {
-    if (selectedSurvey) {
-      fetchNetworkData(selectedSurvey);
+  // 프로젝트 선택 (클릭 기반)
+  const handleProjectSelect = (project: SurveyProject) => {
+    if (selectedItems.length >= 2) {
+      alert('최대 2개까지만 선택할 수 있습니다.');
+      return;
     }
-  }, [selectedSurvey]);
-
-  const fetchSurveys = async () => {
-    try {
-      const { data, error } = await supabase
-        .from("surveys")
-        .select("*")
-        .eq("category", "교우관계")
-        .order("created_at", { ascending: false });
-
-      if (error) throw error;
-      setSurveys(data || []);
-    } catch (error) {
-      console.error("설문 조회 오류:", error);
+    
+    if (!selectedItems.find(item => item.pid === project.pid)) {
+      setSelectedItems(prev => [...prev, project]);
+      setDraggableItems(prev => prev.filter(item => item.pid !== project.pid));
     }
   };
 
-  const fetchNetworkData = async (surveyId: string) => {
+  // 프로젝트 선택 해제
+  const handleProjectDeselect = (project: SurveyProject) => {
+    setSelectedItems(prev => prev.filter(item => item.pid !== project.pid));
+    setDraggableItems(prev => [...prev, project].sort((a, b) => a.pid.localeCompare(b.pid)));
+  };
+
+  // 분석하기 버튼
+  const getAnalysisResult = async () => {
+    setChartData([]); // 그래프 데이터 초기화
+
+    if (selectedItems.length === 0) {
+      alert('분석할 대상을 선택해주세요');
+      return;
+    }
+
     try {
       setLoading(true);
+      console.log('🔍 네트워크 분석 시작:', selectedItems);
 
-      // 설문 정보와 템플릿 메타데이터 조회
-      const { data: surveyData, error: surveyError } = await supabase
-        .from("surveys")
-        .select(
-          `
-          *,
-          survey_templates!surveys_template_id_fkey(metadata)
-        `,
-        )
-        .eq("id", surveyId)
-        .single();
+      const analysisResults: NetworkAnalysisData[] = [];
 
-      if (surveyError) throw surveyError;
+      for (const item of selectedItems) {
+        console.log(`🔍 설문 분석 중: ${item.name} (${item.pid})`);
+        
+        try {
+          // 실제 네트워크 분석 수행
+          const result = await networkAnalysisService.analyzeNetwork(item.pid);
+          
+          console.log(`✅ 설문 분석 완료: ${item.name}`, result);
+          
+          analysisResults.push({
+            nodes: result.nodes.map(node => ({
+              ...node,
+              grade: node.grade.toString(),
+              class: node.class.toString(),
+            })),
+            edges: result.edges,
+            metrics: {
+              // 기본 속성들
+              totalConnections: result.metrics?.total_relationships || 0,
+              averageCentrality: result.metrics?.average_degree_centrality || 0,
+              isolatedIndividuals: 0, // 기본값
+              highCentralityIndividuals: 0, // 기본값
+              clusterCount: result.metrics?.connected_components || 0,
+              
+              // 추가 속성들
+              total_students: result.metrics?.total_students || result.nodes.length,
+              total_relationships: result.metrics?.total_relationships || result.edges.length,
+              total_nodes: result.nodes.length,
+              total_edges: result.edges.length,
+              density: result.metrics?.density || 0,
+              network_density: result.metrics?.density || 0,
+              average_degree: result.metrics?.average_degree || 0,
+              average_path_length: result.metrics?.average_path_length || 0,
+              clustering_coefficient: result.metrics?.clustering_coefficient || 0,
+              modularity: result.metrics?.modularity || 0,
+              connected_components: result.metrics?.connected_components || 0,
+              average_degree_centrality: result.metrics?.average_degree_centrality || 0,
+              average_closeness_centrality: result.metrics?.average_closeness_centrality || 0,
+              average_betweenness_centrality: result.metrics?.average_betweenness_centrality || 0,
+              average_eigenvector_centrality: result.metrics?.average_eigenvector_centrality || 0,
+            } as NetworkMetrics,
+            friendship_types: result.friendship_type_distribution || {
+              외톨이형: 0,
+              소수친구학생: 0,
+              평균적인학생: 0,
+              친구많은학생: 0,
+              사교스타: 0,
+            },
+          });
+        } catch (error) {
+          console.error(`❌ 설문 분석 실패: ${item.name}`, error);
+          
+          // 분석 실패 시 기본 데이터로 대체
+          analysisResults.push({
+            nodes: [],
+            edges: [],
+            metrics: {
+              // 기본 속성들
+              totalConnections: 0,
+              averageCentrality: 0,
+              isolatedIndividuals: 0,
+              highCentralityIndividuals: 0,
+              clusterCount: 0,
+              
+              // 추가 속성들
+              total_students: 0,
+              total_relationships: 0,
+              total_nodes: 0,
+              total_edges: 0,
+              density: 0,
+              network_density: 0,
+              average_degree: 0,
+              average_path_length: 0,
+              clustering_coefficient: 0,
+              modularity: 0,
+              connected_components: 0,
+              average_degree_centrality: 0,
+              average_closeness_centrality: 0,
+              average_betweenness_centrality: 0,
+              average_eigenvector_centrality: 0,
+            } as NetworkMetrics,
+            friendship_types: {
+              외톨이형: 0,
+              소수친구학생: 0,
+              평균적인학생: 0,
+              친구많은학생: 0,
+              사교스타: 0,
+            },
+          });
+        }
+      }
 
-      // 설문 응답 데이터 조회
-      const { data: responses, error: responseError } = await supabase
-        .from("survey_responses")
-        .select(
-          `
-          *,
-          students!survey_responses_student_id_fkey(id, name)
-        `,
-        )
-        .eq("survey_id", surveyId);
-
-      if (responseError) throw responseError;
-
-      // 학생 데이터 조회
-      const { data: studentsData, error: studentsError } = await supabase
-        .from("students")
-        .select("*");
-
-      if (studentsError) throw studentsError;
-
-      // 템플릿 메타데이터에서 max_selections 추출
-      const metadata = surveyData?.survey_templates?.metadata as any;
-      const templateMaxSelections = metadata?.max_selections || [];
-      setMaxSelections(templateMaxSelections);
-
-      // 네트워크 데이터 생성 (max_selections 반영)
-      const networkData = generateNetworkData(
-        responses || [],
-        studentsData || [],
-        templateMaxSelections,
-      );
-      setStudents(networkData);
+      setChartData(analysisResults);
+      setSelectedData([...selectedItems]);
+      
+      console.log('✅ 모든 분석 완료:', analysisResults);
     } catch (error) {
-      console.error("네트워크 데이터 조회 오류:", error);
+      console.error('❌ 분석 중 오류 발생:', error);
+      alert('분석 중 오류가 발생했습니다.');
     } finally {
       setLoading(false);
     }
   };
 
-  const generateNetworkData = (
-    responses: any[],
-    studentsData: any[],
-    maxSelections: number[] = [],
-  ): Student[] => {
-    const studentMap = new Map<string, Student>();
-    const friendshipMap = new Map<string, Set<string>>();
-
-    // 학생 초기화
-    studentsData.forEach((student) => {
-      studentMap.set(student.id, {
-        id: student.id,
-        name: student.name,
-        grade: student.grade,
-        class: student.class,
-        friends: [],
-        friendCount: 0,
-      });
-      friendshipMap.set(student.id, new Set());
-    });
-
-    // 설문 응답에서 친구 관계 추출
-    responses.forEach((response) => {
-      if (response.answers) {
-        const answers =
-          typeof response.answers === "string"
-            ? JSON.parse(response.answers)
-            : response.answers;
-
-        // 질문별로 max_selections 값에 따라 처리
-        Object.entries(answers).forEach(
-          ([questionKey, answer]: [string, any]) => {
-            // q1, q2, q3, q4 등의 질문 번호 추출
-            const questionIndex = parseInt(questionKey.replace("q", "")) - 1;
-            const maxSelection = maxSelections[questionIndex] || 10; // 기본값 10
-
-            if (Array.isArray(answer)) {
-              // 배열 형태의 답변 (여러 친구 선택)
-              // max_selections 값에 따라 제한
-              const limitedAnswers = answer.slice(0, maxSelection);
-              limitedAnswers.forEach((friendId: string) => {
-                if (friendId && studentMap.has(friendId)) {
-                  friendshipMap.get(response.student_id)?.add(friendId);
-                  friendshipMap.get(friendId)?.add(response.student_id);
-                }
-              });
-            } else if (typeof answer === "string" && studentMap.has(answer)) {
-              // 단일 친구 선택 (max_selections가 1인 경우)
-              if (maxSelection >= 1) {
-                friendshipMap.get(response.student_id)?.add(answer);
-                friendshipMap.get(answer)?.add(response.student_id);
-              }
-            }
-          },
-        );
-      }
-    });
-
-    // 최종 네트워크 데이터 생성
-    const networkData: Student[] = [];
-    studentMap.forEach((student, studentId) => {
-      const friends = Array.from(friendshipMap.get(studentId) || []);
-      networkData.push({
-        ...student,
-        friends,
-        friendCount: friends.length,
-      });
-    });
-
-    return networkData;
-  };
-
-  const getNetworkInsights = () => {
-    if (students.length === 0) return null;
-
-    const totalStudents = students.length;
-    const connectedStudents = students.filter((s) => s.friendCount > 0).length;
-    const isolatedStudents = students.filter((s) => s.friendCount === 0).length;
-    const avgFriends =
-      students.reduce((sum, s) => sum + s.friendCount, 0) / totalStudents;
-
-    const maxFriends = Math.max(...students.map((s) => s.friendCount));
-    const popularStudents = students.filter(
-      (s) => s.friendCount === maxFriends,
-    );
-
-    return {
-      totalStudents,
-      connectedStudents,
-      isolatedStudents,
-      avgFriends: avgFriends.toFixed(1),
-      popularStudents,
-    };
-  };
-
-  const insights = getNetworkInsights();
-
-  if (loading) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-gray-50">
-        <div className="text-center">
-          <div className="mx-auto mb-4 h-16 w-16 animate-spin rounded-full border-b-2 border-blue-600"></div>
-          <p className="text-lg font-medium text-gray-900">
-            네트워크 분석 중...
-          </p>
-        </div>
-      </div>
-    );
-  }
-
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
-      <div className="mx-auto max-w-7xl">
+    <div className="min-h-screen bg-gray-50 py-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* 헤더 */}
         <div className="mb-8">
-          <h1 className="mb-2 text-2xl font-bold text-gray-900">
-            교우관계 네트워크 분석
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">
+            교우 현황 분석
           </h1>
-          <p className="text-gray-600">
-            학생들의 교우관계를 시각화하고 분석합니다.
-          </p>
-        </div>
-
-        {/* 설문 선택 */}
-        <div className="mb-6">
-          <label className="mb-2 block text-sm font-medium text-gray-700">
-            분석할 설문 선택
-          </label>
-          <select
-            value={selectedSurvey}
-            onChange={(e) => setSelectedSurvey(e.target.value)}
-            className="w-full rounded-md border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 md:w-96"
-          >
-            <option value="">설문을 선택하세요</option>
-            {surveys.map((survey) => (
-              <option key={survey.id} value={survey.id}>
-                {survey.title} (
-                {new Date(survey.created_at).toLocaleDateString()})
-              </option>
-            ))}
-          </select>
-        </div>
-
-        {selectedSurvey && students.length > 0 && (
-          <>
-            {/* 인사이트 카드 */}
-            {insights && (
-              <div className="mb-6 grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
-                <div className="rounded-lg border bg-white p-4 shadow-sm">
-                  <h3 className="text-sm font-medium text-gray-500">
-                    총 학생 수
-                  </h3>
-                  <p className="text-2xl font-bold text-blue-600">
-                    {insights.totalStudents}명
-                  </p>
-                </div>
-                <div className="rounded-lg border bg-white p-4 shadow-sm">
-                  <h3 className="text-sm font-medium text-gray-500">
-                    연결된 학생
-                  </h3>
-                  <p className="text-2xl font-bold text-green-600">
-                    {insights.connectedStudents}명
-                  </p>
-                </div>
-                <div className="rounded-lg border bg-white p-4 shadow-sm">
-                  <h3 className="text-sm font-medium text-gray-500">
-                    고립된 학생
-                  </h3>
-                  <p className="text-2xl font-bold text-red-600">
-                    {insights.isolatedStudents}명
-                  </p>
-                </div>
-                <div className="rounded-lg border bg-white p-4 shadow-sm">
-                  <h3 className="text-sm font-medium text-gray-500">
-                    평균 친구 수
-                  </h3>
-                  <p className="text-2xl font-bold text-purple-600">
-                    {insights.avgFriends}명
-                  </p>
-                </div>
-              </div>
-            )}
-
-            {/* 네트워크 그래프 */}
-            <div className="rounded-lg border bg-white p-6 shadow-sm">
-              <h2 className="mb-4 text-xl font-semibold">교우관계 네트워크</h2>
-              <NetworkGraph
-                students={students}
-                maxSelections={
-                  maxSelections.length > 0 ? Math.max(...maxSelections) : 5
-                }
-              />
-            </div>
-
-            {/* 인기 학생 정보 */}
-            {insights && insights.popularStudents.length > 0 && (
-              <div className="mt-6 rounded-lg border bg-white p-6 shadow-sm">
-                <h3 className="mb-4 text-lg font-semibold">
-                  인기 학생 (친구 수: {insights.popularStudents[0].friendCount}
-                  명)
-                </h3>
-                <div className="flex flex-wrap gap-2">
-                  {insights.popularStudents.map((student) => (
-                    <span
-                      key={student.id}
-                      className="inline-flex items-center rounded-full bg-blue-100 px-3 py-1 text-sm font-medium text-blue-800"
-                    >
-                      {student.name}
-                    </span>
-                  ))}
-                </div>
-              </div>
-            )}
-          </>
-        )}
-
-        {selectedSurvey && students.length === 0 && (
-          <div className="rounded-lg border bg-white p-8 text-center shadow-sm">
-            <p className="text-gray-500">
-              선택한 설문에 대한 응답 데이터가 없습니다.
+          {user?.role === 'homeroom_teacher' && user?.grade && user?.class ? (
+            <p className="text-gray-600">
+              {user.grade}학년 {user.class}반 담임선생님 - 담당 반 설문 분석
             </p>
-          </div>
-        )}
+          ) : (
+            <p className="text-gray-600">
+              학교 전체 설문 분석
+            </p>
+          )}
+        </div>
 
-        {!selectedSurvey && (
-          <div className="rounded-lg border bg-white p-8 text-center shadow-sm">
-            <p className="text-gray-500">분석할 설문을 선택해주세요.</p>
+        {/* 선택 영역 - ResultMonitoring 스타일 적용 */}
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-8">
+          <div className="mb-4">
+            <h2 className="text-xl font-semibold text-gray-900 mb-2">
+              학급내 <span className="text-blue-600">교우관계 유형 변화 추이</span> 결과 분석
+            </h2>
+            <div className="flex items-center space-x-4 text-sm text-gray-600">
+              <span>설문프로젝트를 클릭하여 선택해주세요.</span>
+              <span className="text-blue-600 font-medium">*최대 2개까지 가능</span>
+            </div>
+          </div>
+
+          {/* 선택 가능한 설문 - ResultMonitoring ListsBox 스타일 */}
+          <div className="mb-6">
+            <div className="min-h-16 p-4 rounded-lg border border-gray-300 bg-gray-50 flex flex-wrap gap-3 justify-center items-center">
+              {loading ? (
+                <p className="text-gray-500 text-sm">설문 데이터를 불러오는 중...</p>
+              ) : draggableItems.length === 0 ? (
+                <p className="text-gray-500 text-sm">
+                  {user?.role === 'homeroom_teacher' 
+                    ? '담당 반의 완료된 교우현황 설문이 없습니다.'
+                    : '선택할 교우현황 설문이 없습니다.'
+                  }
+                </p>
+              ) : (
+                draggableItems.map((item) => (
+                  <button
+                    key={item.pid}
+                    onClick={() => handleProjectSelect(item)}
+                    className="px-4 py-2 text-sm font-medium border border-gray-300 rounded-lg bg-white cursor-pointer hover:border-blue-500 hover:text-blue-600 transition-colors duration-200"
+                  >
+                    {item.name}
+                    {item.response_count && (
+                      <span className="ml-2 text-xs text-gray-500">
+                        ({item.response_count}명 응답)
+                      </span>
+                    )}
+                  </button>
+                ))
+              )}
+            </div>
+          </div>
+
+          {/* 선택된 아이템 영역 - ResultMonitoring SelectedBox 스타일 */}
+          <div className="mb-6">
+            <div className="min-h-16 p-4 rounded-lg border border-dashed border-gray-400 bg-gray-100 flex items-center justify-center">
+              <div className="flex flex-wrap gap-3 justify-center items-center">
+                {selectedItems.length === 0 ? (
+                  <p className="text-gray-500 text-sm">
+                    분석할 설문을 선택해주세요.
+                  </p>
+                ) : (
+                  selectedItems.map((item) => (
+                    <button
+                      key={item.pid}
+                      onClick={() => handleProjectDeselect(item)}
+                      className="px-4 py-2 text-sm font-medium border border-blue-600 rounded-lg bg-blue-600 text-white cursor-pointer hover:bg-blue-700 transition-colors duration-200"
+                    >
+                      {item.name}
+                    </button>
+                  ))
+                )}
+              </div>
+              <button
+                onClick={getAnalysisResult}
+                disabled={selectedItems.length === 0 || loading}
+                className={`
+                  ml-4 px-6 py-2 rounded-lg font-medium text-white
+                  transition-colors duration-200
+                  ${selectedItems.length === 0 || loading
+                    ? 'bg-gray-400 cursor-not-allowed'
+                    : 'bg-blue-600 hover:bg-blue-700'
+                  }
+                `}
+              >
+                {loading ? '분석 중...' : '분석하기'}
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* 결과 : 그래프, 테이블 */}
+        {chartData.length !== 0 ? (
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+            <NetworkChartComponent chartData={chartData} />
+          </div>
+        ) : (
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+            <div className="text-center py-10">
+              <p className="text-gray-500 text-lg">분석할 데이터를 선택해주세요.</p>
+            </div>
           </div>
         )}
       </div>

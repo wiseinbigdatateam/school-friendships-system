@@ -1,0 +1,46 @@
+{
+  "survey_id": "test_survey_001",
+  "survey_data": [
+    ["student_001", "student_002", "가장 친한 친구"],
+    ["student_001", "student_003", "가장 친한 친구"],
+    ["student_002", "student_001", "가장 친한 친구"],
+    ["student_002", "student_004", "함께 놀고 싶은 친구"],
+    ["student_003", "student_001", "가장 친한 친구"],
+    ["student_003", "student_005", "고민 상담"],
+    ["student_004", "student_002", "함께 놀고 싶은 친구"],
+    ["student_005", "student_003", "고민 상담"]
+  ],
+  "student_info": [
+    {
+      "id": "student_001",
+      "name": "김학생",
+      "grade": "1학년",
+      "class": "1반"
+    },
+    {
+      "id": "student_002", 
+      "name": "이학생",
+      "grade": "1학년",
+      "class": "1반"
+    },
+    {
+      "id": "student_003",
+      "name": "박학생", 
+      "grade": "1학년",
+      "class": "1반"
+    },
+    {
+      "id": "student_004",
+      "name": "최학생",
+      "grade": "1학년", 
+      "class": "1반"
+    },
+    {
+      "id": "student_005",
+      "name": "정학생",
+      "grade": "1학년",
+      "class": "1반"
+    }
+  ],
+  "timestamp": "2024-01-01T00:00:00.000Z"
+}

@@ -1,0 +1,144 @@
+{
+  "network_stats": {
+    "total_students": 4,
+    "total_relationships": 0,
+    "average_degree": 0.0,
+    "density": 0,
+    "clustering_coefficient": 0.0,
+    "average_path_length": Infinity,
+    "connected_components": 4
+  },
+  "friendship_type_distribution": {
+    "외톨이형": 4
+  },
+  "student_details": {
+    "5bd53cad-1971-43fa-b42b-0c13119cc8f4": {
+      "name": "강하준",
+      "grade": 5,
+      "class": 1,
+      "friendship_type": "외톨이형",
+      "centrality_metrics": {
+        "degree": 0.0,
+        "betweenness": 0.0,
+        "closeness": 0.0,
+        "eigenvector": 0.5
+      },
+      "community_id": 0,
+      "connection_count": 0,
+      "neighbors": []
+    },
+    "21e9c510-d030-43b2-a1ba-0e25a5f9be78": {
+      "name": "서하윤",
+      "grade": 5,
+      "class": 1,
+      "friendship_type": "외톨이형",
+      "centrality_metrics": {
+        "degree": 0.0,
+        "betweenness": 0.0,
+        "closeness": 0.0,
+        "eigenvector": 0.5
+      },
+      "community_id": 1,
+      "connection_count": 0,
+      "neighbors": []
+    },
+    "c2f371e9-6260-4897-b659-854b39f9f378": {
+      "name": "오서연",
+      "grade": 5,
+      "class": 1,
+      "friendship_type": "외톨이형",
+      "centrality_metrics": {
+        "degree": 0.0,
+        "betweenness": 0.0,
+        "closeness": 0.0,
+        "eigenvector": 0.5
+      },
+      "community_id": 2,
+      "connection_count": 0,
+      "neighbors": []
+    },
+    "a9719dc7-5c49-44c2-a4f2-2d027cf04dc0": {
+      "name": "이하준",
+      "grade": 5,
+      "class": 1,
+      "friendship_type": "외톨이형",
+      "centrality_metrics": {
+        "degree": 0.0,
+        "betweenness": 0.0,
+        "closeness": 0.0,
+        "eigenvector": 0.5
+      },
+      "community_id": 3,
+      "connection_count": 0,
+      "neighbors": []
+    }
+  },
+  "communities": [
+    {
+      "id": 0,
+      "size": 1,
+      "members": [
+        "5bd53cad-1971-43fa-b42b-0c13119cc8f4"
+      ],
+      "internal_density": 0.0
+    },
+    {
+      "id": 1,
+      "size": 1,
+      "members": [
+        "21e9c510-d030-43b2-a1ba-0e25a5f9be78"
+      ],
+      "internal_density": 0.0
+    },
+    {
+      "id": 2,
+      "size": 1,
+      "members": [
+        "c2f371e9-6260-4897-b659-854b39f9f378"
+      ],
+      "internal_density": 0.0
+    },
+    {
+      "id": 3,
+      "size": 1,
+      "members": [
+        "a9719dc7-5c49-44c2-a4f2-2d027cf04dc0"
+      ],
+      "internal_density": 0.0
+    }
+  ],
+  "centrality_metrics": {
+    "5bd53cad-1971-43fa-b42b-0c13119cc8f4": {
+      "degree": 0.0,
+      "betweenness": 0.0,
+      "closeness": 0.0,
+      "eigenvector": 0.5
+    },
+    "21e9c510-d030-43b2-a1ba-0e25a5f9be78": {
+      "degree": 0.0,
+      "betweenness": 0.0,
+      "closeness": 0.0,
+      "eigenvector": 0.5
+    },
+    "c2f371e9-6260-4897-b659-854b39f9f378": {
+      "degree": 0.0,
+      "betweenness": 0.0,
+      "closeness": 0.0,
+      "eigenvector": 0.5
+    },
+    "a9719dc7-5c49-44c2-a4f2-2d027cf04dc0": {
+      "degree": 0.0,
+      "betweenness": 0.0,
+      "closeness": 0.0,
+      "eigenvector": 0.5
+    }
+  },
+  "community_membership": {
+    "5bd53cad-1971-43fa-b42b-0c13119cc8f4": 0,
+    "21e9c510-d030-43b2-a1ba-0e25a5f9be78": 1,
+    "c2f371e9-6260-4897-b659-854b39f9f378": 2,
+    "a9719dc7-5c49-44c2-a4f2-2d027cf04dc0": 3
+  },
+  "analysis_timestamp": "2025-09-09T00:51:01.493615",
+  "survey_id": "6e0a8e6f-9d1a-48c8-bbc9-e0a4cdf42d32"
+}

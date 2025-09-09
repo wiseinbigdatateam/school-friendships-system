@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect } from "react";
 import { supabase } from "../lib/supabase";
 import { toast } from "react-hot-toast";
 import {
@@ -12,6 +12,7 @@ import {
 import NetworkVisualization from "../components/NetworkVisualization";
 import NetworkGraph from "../components/NetworkGraph";
 import { NotificationService } from "../services/notificationService";
+import { networkAnalysisService, NetworkAnalysisResult } from "../services/networkAnalysisService";
 
 // 선생님 정보 타입
 interface TeacherInfo {
@@ -50,54 +51,8 @@ interface Student {
   current_school_id: string;
 }
 
-// 네트워크 분석 결과 타입
-interface NetworkAnalysisResult {
-  nodes: NetworkNode[];
-  edges: NetworkEdge[];
-  metrics: NetworkMetrics;
-  communities: Community[];
-}
-
-// 네트워크 노드 타입
-interface NetworkNode {
-  id: string;
-  name: string;
-  grade: number;
-  class: number;
-  centrality: number;
-  community: number;
-  x?: number;
-  y?: number;
-  fx?: number | null;
-  fy?: number | null;
-}
-
-// 네트워크 엣지 타입
-interface NetworkEdge {
-  source: string;
-  target: string;
-  weight: number;
-  relationship_type: string;
-}
-
-// 네트워크 메트릭 타입
-interface NetworkMetrics {
-  total_students: number;
-  total_relationships: number;
-  density: number;
-  average_degree: number;
-  clustering_coefficient: number;
-  average_path_length: number;
-  modularity: number;
-}
-
-// 커뮤니티 타입
-interface Community {
-  id: number;
-  members: string[];
-  size: number;
-  internal_density: number;
-}
+// 네트워크 분석 결과 타입 (서비스에서 가져옴)
+type NetworkNode = NetworkAnalysisResult['nodes'][0];
 
 const NetworkAnalysis: React.FC = () => {
   // 일관된 랜덤 값 생성을 위한 해시 함수
@@ -111,6 +66,7 @@ const NetworkAnalysis: React.FC = () => {
   const [analysisView, setAnalysisView] = useState<
     "overview" | "individual" | "network" | "graph"
   >("overview");
+  const [networkKey, setNetworkKey] = useState(0);
   const [selectedStudentModal, setSelectedStudentModal] = useState<{
     isOpen: boolean;
     student: Student | null;
@@ -121,14 +77,6 @@ const NetworkAnalysis: React.FC = () => {
     node: null,
   });
 
-  // 친구 유형을 결정하는 함수
-  const getFriendshipType = (centrality: number): string => {
-    if (centrality < 0.2) return "외톨이형";
-    if (centrality < 0.4) return "소수 친구 학생";
-    if (centrality < 0.6) return "평균적인 학생";
-    if (centrality < 0.8) return "친구 많은 학생";
-    return "사교 스타";
-  };
 
   const [analysisResults, setAnalysisResults] =
     useState<NetworkAnalysisResult | null>(null);
@@ -265,78 +213,7 @@ const NetworkAnalysis: React.FC = () => {
     generateUnifiedNetworkData();
   }, [students, selectedSurvey]);
 
-  // 기존 convertToGraphData 함수 (하위 호환성을 위해 유지)
-  const convertToGraphData = useMemo(() => {
-    if (!analysisResults || !students || !selectedSurvey) return [];
 
-    const studentMap = new Map(students.map((s) => [s.id, s]));
-    const graphStudents = [];
-
-    for (const student of students) {
-      const friends = [];
-      let friendCount = 0;
-
-      // 네트워크 데이터에서 해당 학생의 연결 찾기
-      if (analysisResults.edges) {
-        for (const edge of analysisResults.edges) {
-          if (edge.source === student.id) {
-            const friendId = edge.target;
-            if (studentMap.has(friendId)) {
-              friends.push(friendId);
-              friendCount++;
-            }
-          } else if (edge.target === student.id) {
-            const friendId = edge.source;
-            if (studentMap.has(friendId)) {
-              friends.push(friendId);
-              friendCount++;
-            }
-          }
-        }
-      }
-
-      graphStudents.push({
-        id: student.id,
-        name: student.name,
-        friends,
-        friendCount,
-      });
-    }
-
-    return graphStudents;
-  }, [analysisResults, students, selectedSurvey]);
-
-  // 연결 수를 실제 설문 응답 데이터를 기반으로 계산
-  const connectionCounts = useMemo(() => {
-    if (!analysisResults || !selectedSurvey) return new Map<string, number>();
-
-    const counts = new Map<string, number>();
-
-    // 실제 설문 응답 데이터를 기반으로 연결 수 계산
-    analysisResults.nodes.forEach((node) => {
-      // 해당 학생이 다른 학생을 선택한 수만 계산 (단방향)
-      let totalConnections = 0;
-
-      if (analysisResults.edges) {
-        // 실제 설문에서 선택한 관계만 계산 (outgoing edges)
-        const outgoingEdges = analysisResults.edges.filter(
-          (edge) => edge.source === node.id,
-        ).length;
-        totalConnections = outgoingEdges;
-      }
-
-      counts.set(node.id, totalConnections);
-    });
-
-    console.log("🔍 connectionCounts 실제 데이터 기반 계산:", {
-      surveyId: selectedSurvey.id,
-      totalNodes: analysisResults.nodes.length,
-      sampleCounts: Array.from(counts.entries()).slice(0, 3),
-      totalEdges: analysisResults.edges?.length || 0,
-    });
-
-    return counts;
-  }, [analysisResults, selectedSurvey]);
 
   // 현재 사용자 정보 가져오기
   useEffect(() => {
@@ -361,47 +238,6 @@ const NetworkAnalysis: React.FC = () => {
     }
   }, [userSchoolId, teacherInfo]);
 
-  // 권한별 접근 제어
-  const canAccessPage = () => {
-    if (!teacherInfo) return false;
-
-    const allowedRoles = [
-      "homeroom_teacher",
-      "grade_teacher",
-      "school_admin",
-      "district_admin",
-    ];
-    return allowedRoles.includes(teacherInfo.role);
-  };
-
-  const getAccessScope = () => {
-    if (!teacherInfo) return { type: "none", description: "" };
-
-    switch (teacherInfo.role) {
-      case "homeroom_teacher":
-        return {
-          type: "class",
-          description: `${teacherInfo.grade_level}학년 ${teacherInfo.class_number}반 학생만`,
-        };
-      case "grade_teacher":
-        return {
-          type: "grade",
-          description: `${teacherInfo.grade_level}학년 전체 학생`,
-        };
-      case "school_admin":
-        return {
-          type: "school",
-          description: "학교 전체 학생",
-        };
-      case "district_admin":
-        return {
-          type: "district",
-          description: "전체 소속 학교 학생",
-        };
-      default:
-        return { type: "none", description: "" };
-    }
-  };
 
   // 저장된 네트워크 분석 결과 불러오기 (전체 데이터)
   const loadSavedNetworkAnalysis = async (
@@ -453,6 +289,7 @@ const NetworkAnalysis: React.FC = () => {
           modularity: 0,
         },
         communities: completeData.communities || [],
+        friendship_type_distribution: completeData.friendship_type_distribution || {},
       };
 
       console.log("🔍 변환된 분석 결과:", result);
@@ -703,7 +540,92 @@ const NetworkAnalysis: React.FC = () => {
     }
   };
 
-  // 네트워크 분석 실행
+  // Python 결과를 React 형식으로 변환
+  const convertPythonResultToReactFormat = (pythonResult: any): NetworkAnalysisResult => {
+    const studentDetails = pythonResult.student_details || {};
+    const centralityMetrics = pythonResult.centrality_metrics || {};
+    const communityMembership = pythonResult.community_membership || {};
+    const communities = pythonResult.communities || [];
+    
+    // 노드 데이터 변환
+    const nodes = Object.keys(studentDetails).map(studentId => {
+      const details = studentDetails[studentId];
+      const centrality = centralityMetrics[studentId] || {};
+      
+      return {
+        id: studentId,
+        name: details.name,
+        grade: parseInt(details.grade.replace('학년', '')) || 1,
+        class: parseInt(details.class.replace('반', '')) || 1,
+        centrality: centrality.degree || 0,
+        connection_count: details.connection_count || 0,
+        community: details.community_id || 0,
+        friendship_type: details.friendship_type || '분류 불가',
+        neighbors: details.neighbors || [],
+        // 추가 중심성 메트릭
+        degree_centrality: centrality.degree || 0,
+        closeness_centrality: centrality.closeness || 0,
+        betweenness_centrality: centrality.betweenness || 0,
+        eigenvector_centrality: centrality.eigenvector || 0
+      };
+    });
+    
+    // 엣지 데이터 변환
+    const edges: Array<{source: string, target: string, weight: number, relationship_type: string}> = [];
+    
+    // Python 결과에서 엣지 정보가 없다면 노드 간 연결 정보로부터 생성
+    nodes.forEach(node => {
+      node.neighbors.forEach((neighborId: string) => {
+        // 중복 엣지 방지
+        if (!edges.some(edge => 
+          (edge.source === node.id && edge.target === neighborId) ||
+          (edge.source === neighborId && edge.target === node.id)
+        )) {
+          edges.push({
+            source: node.id,
+            target: neighborId,
+            weight: 1,
+            relationship_type: 'friend'
+          });
+        }
+      });
+    });
+    
+    // 커뮤니티 데이터 변환
+    const convertedCommunities = communities.map((community: any) => ({
+      id: community.id,
+      size: community.size,
+      members: community.members || [],
+      internal_density: community.internal_density || 0
+    }));
+    
+    // 메트릭 데이터 변환
+    const metrics = {
+      total_students: pythonResult.network_stats?.total_students || nodes.length,
+      total_relationships: pythonResult.network_stats?.total_relationships || edges.length,
+      density: pythonResult.network_stats?.density || 0,
+      average_degree: pythonResult.network_stats?.average_degree || 0,
+      clustering_coefficient: pythonResult.network_stats?.clustering_coefficient || 0,
+      average_path_length: pythonResult.network_stats?.average_path_length || 0,
+      modularity: 0, // Python에서 계산되지 않음
+      connected_components: pythonResult.network_stats?.connected_components || 1,
+      // 추가 중심성 메트릭
+      average_degree_centrality: nodes.reduce((sum, node) => sum + node.degree_centrality, 0) / nodes.length,
+      average_closeness_centrality: nodes.reduce((sum, node) => sum + node.closeness_centrality, 0) / nodes.length,
+      average_betweenness_centrality: nodes.reduce((sum, node) => sum + node.betweenness_centrality, 0) / nodes.length,
+      average_eigenvector_centrality: nodes.reduce((sum, node) => sum + node.eigenvector_centrality, 0) / nodes.length
+    };
+    
+    return {
+      nodes,
+      edges,
+      metrics,
+      communities: convertedCommunities,
+      friendship_type_distribution: pythonResult.friendship_type_distribution || {}
+    };
+  };
+
+  // Python 네트워크 분석 실행
   const handleRunNetworkAnalysis = async () => {
     if (!selectedSurvey) {
       toast.error("분석할 설문을 선택해주세요.");
@@ -714,21 +636,80 @@ const NetworkAnalysis: React.FC = () => {
       setIsAnalyzing(true);
       setAnalysisError(null);
 
-      console.log("🔍 네트워크 분석 시작:", selectedSurvey.id);
+      console.log("🐍 Python 네트워크 분석 시작:", selectedSurvey.id);
+      console.log("=".repeat(60));
 
-      // 새로 분석을 실행합니다 (저장된 결과가 있어도 새로 분석)
-      console.log("🔍 새로 네트워크 분석을 시작합니다");
+      // Python 스크립트용 데이터 준비
+      console.log("🔍 1단계: 설문 데이터 변환 및 관계 유형 매핑");
+      const pythonData = await networkAnalysisService.convertToPythonFormat(selectedSurvey.id);
+      
+      console.log("📊 Python용 데이터 준비 완료:");
+      console.log(`   - 설문 데이터: ${pythonData.survey_data.length}개 관계`);
+      console.log(`   - 학생 정보: ${pythonData.student_info.length}명`);
+      
+      // 관계 유형별 분포 표시
+      const relationshipDistribution = pythonData.survey_data.reduce((acc, [source, target, relType]) => {
+        acc[relType] = (acc[relType] || 0) + 1;
+        return acc;
+      }, {} as Record<string, number>);
+      
+      console.log("📈 관계 유형별 분포:");
+      Object.entries(relationshipDistribution).forEach(([type, count]) => {
+        const percentage = ((count / pythonData.survey_data.length) * 100).toFixed(1);
+        console.log(`   - ${type}: ${count}개 (${percentage}%)`);
+      });
 
-      // Python 백엔드 호출 (시뮬레이션)
-      const mockAnalysisResults = await simulatePythonAnalysis(
-        selectedSurvey.id,
-      );
+      // Python API 호출
+      console.log("\n🚀 2단계: Python API 호출");
+      const response = await fetch('http://localhost:3001/api/network-analysis/run', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          surveyId: selectedSurvey.id,
+          surveyData: pythonData.survey_data,
+          studentInfo: pythonData.student_info
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error(`Python API 호출 실패: ${response.status}`);
+      }
+
+      const result = await response.json();
+      
+      if (!result.success) {
+        throw new Error(result.error || 'Python 분석 실패');
+      }
+
+      console.log("\n🐍 Python 분석 결과 수신 완료");
+      console.log("📊 분석 결과 요약:");
+      console.log(`   - 총 학생 수: ${result.data.network_stats?.total_students || 0}명`);
+      console.log(`   - 총 관계 수: ${result.data.network_stats?.total_relationships || 0}개`);
+      console.log(`   - 네트워크 밀도: ${result.data.network_stats?.density?.toFixed(3) || 0}`);
+      console.log(`   - 커뮤니티 수: ${result.data.communities?.length || 0}개`);
+
+      // Python 결과를 React 형식으로 변환
+      console.log("\n🔄 3단계: 결과 데이터 변환");
+      const analysisResults = convertPythonResultToReactFormat(result.data);
+      console.log("✅ 데이터 변환 완료");
 
       // 분석 결과를 DB에 저장
-      await saveNetworkAnalysisToDB(selectedSurvey.id, mockAnalysisResults);
+      await saveNetworkAnalysisToDB(selectedSurvey.id, analysisResults);
 
-      setAnalysisResults(mockAnalysisResults);
-      toast.success("네트워크 분석이 완료되었습니다!");
+      setAnalysisResults(analysisResults);
+      
+      console.log("\n🎉 4단계: 분석 완료 및 UI 업데이트");
+      console.log("=".repeat(60));
+      console.log("✅ Python 네트워크 분석 완료!");
+      console.log(`✅ 총 ${analysisResults.nodes.length}명의 학생 분석 완료`);
+      console.log(`✅ 총 ${analysisResults.edges.length}개의 관계 분석 완료`);
+      console.log(`✅ ${analysisResults.communities.length}개의 커뮤니티 탐지 완료`);
+      console.log(`✅ 네트워크 밀도: ${analysisResults.metrics.density.toFixed(3)}`);
+      console.log("=".repeat(60));
+      
+      toast.success("🐍 Python 네트워크 분석이 완료되었습니다!");
 
       // 네트워크 분석 완료 알림 생성
       try {
@@ -739,8 +720,8 @@ const NetworkAnalysis: React.FC = () => {
             {
               surveyTitle: selectedSurvey.title,
               surveyId: selectedSurvey.id,
-              totalStudents: mockAnalysisResults.nodes.length,
-              totalRelationships: mockAnalysisResults.edges.length,
+              totalStudents: analysisResults.nodes.length,
+              totalRelationships: analysisResults.edges.length,
             },
             "success",
           );
@@ -752,8 +733,8 @@ const NetworkAnalysis: React.FC = () => {
               userSchoolId,
               "network_analysis_completed",
               {
-                title: "네트워크 분석 완료",
-                message: `"${selectedSurvey.title}" 설문의 네트워크 분석이 완료되었습니다. 총 ${mockAnalysisResults.nodes.length}명의 학생과 ${mockAnalysisResults.edges.length}개의 관계가 분석되었습니다.`,
+                title: "Python 네트워크 분석 완료",
+                message: `"${selectedSurvey.title}" 설문의 Python 네트워크 분석이 완료되었습니다. 총 ${analysisResults.nodes.length}명의 학생과 ${analysisResults.edges.length}개의 관계가 분석되었습니다.`,
                 type: "success",
                 category: "분석",
               },
@@ -764,11 +745,12 @@ const NetworkAnalysis: React.FC = () => {
         console.error("네트워크 분석 완료 알림 생성 오류:", error);
       }
 
-      console.log("🔍 분석 결과:", mockAnalysisResults);
+      console.log("🔍 최종 분석 결과:", analysisResults);
     } catch (error) {
-      console.error("🔍 네트워크 분석 오류:", error);
-      setAnalysisError("네트워크 분석 중 오류가 발생했습니다.");
-      toast.error("네트워크 분석에 실패했습니다.");
+      console.error("🐍 Python 네트워크 분석 오류:", error);
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      setAnalysisError(`Python 네트워크 분석 중 오류가 발생했습니다: ${errorMessage}`);
+      toast.error("Python 네트워크 분석에 실패했습니다.");
     } finally {
       setIsAnalyzing(false);
     }
@@ -834,142 +816,6 @@ const NetworkAnalysis: React.FC = () => {
     }
   };
 
-  // 네트워크 분석을 위한 헬퍼 함수들
-  const calculateClusteringCoefficient = (
-    nodes: NetworkNode[],
-    edges: NetworkEdge[],
-  ): number => {
-    if (nodes.length === 0 || edges.length === 0) return 0;
-
-    let totalCoefficient = 0;
-    let validNodes = 0;
-
-    nodes.forEach((node) => {
-      const neighbors = edges
-        .filter((edge) => edge.source === node.id || edge.target === node.id)
-        .map((edge) => (edge.source === node.id ? edge.target : edge.source));
-
-      if (neighbors.length < 2) {
-        totalCoefficient += 0;
-        validNodes++;
-        return;
-      }
-
-      let triangles = 0;
-      let possibleTriangles = 0;
-
-      for (let i = 0; i < neighbors.length; i++) {
-        for (let j = i + 1; j < neighbors.length; j++) {
-          possibleTriangles++;
-          const hasEdge = edges.some(
-            (edge) =>
-              (edge.source === neighbors[i] && edge.target === neighbors[j]) ||
-              (edge.source === neighbors[j] && edge.target === neighbors[i]),
-          );
-          if (hasEdge) triangles++;
-        }
-      }
-
-      const coefficient =
-        possibleTriangles > 0 ? triangles / possibleTriangles : 0;
-      totalCoefficient += coefficient;
-      validNodes++;
-    });
-
-    return validNodes > 0 ? totalCoefficient / validNodes : 0;
-  };
-
-  const calculateAveragePathLength = (
-    nodes: NetworkNode[],
-    edges: NetworkEdge[],
-  ): number => {
-    if (nodes.length === 0 || edges.length === 0) return 0;
-
-    // Floyd-Warshall 알고리즘으로 최단 경로 계산
-    const distances: { [key: string]: { [key: string]: number } } = {};
-
-    // 초기화
-    nodes.forEach((node) => {
-      distances[node.id] = {};
-      nodes.forEach((otherNode) => {
-        distances[node.id][otherNode.id] =
-          node.id === otherNode.id ? 0 : Infinity;
-      });
-    });
-
-    // 직접 연결된 노드들
-    edges.forEach((edge) => {
-      distances[edge.source][edge.target] = 1;
-      distances[edge.target][edge.source] = 1;
-    });
-
-    // Floyd-Warshall
-    nodes.forEach((k) => {
-      nodes.forEach((i) => {
-        nodes.forEach((j) => {
-          if (
-            distances[i.id][k.id] + distances[k.id][j.id] <
-            distances[i.id][j.id]
-          ) {
-            distances[i.id][j.id] =
-              distances[i.id][k.id] + distances[k.id][j.id];
-          }
-        });
-      });
-    });
-
-    // 평균 경로 길이 계산
-    let totalDistance = 0;
-    let pathCount = 0;
-
-    nodes.forEach((i) => {
-      nodes.forEach((j) => {
-        if (i.id !== j.id && distances[i.id][j.id] !== Infinity) {
-          totalDistance += distances[i.id][j.id];
-          pathCount++;
-        }
-      });
-    });
-
-    return pathCount > 0 ? totalDistance / pathCount : 0;
-  };
-
-  const calculateModularity = (
-    nodes: NetworkNode[],
-    edges: NetworkEdge[],
-    communities: Community[],
-  ): number => {
-    if (nodes.length === 0 || edges.length === 0 || communities.length === 0)
-      return 0;
-
-    const m = edges.length;
-    let modularity = 0;
-
-    edges.forEach((edge) => {
-      const sourceCommunity = communities.find((c) =>
-        c.members.includes(edge.source),
-      );
-      const targetCommunity = communities.find((c) =>
-        c.members.includes(edge.target),
-      );
-
-      if (
-        sourceCommunity &&
-        targetCommunity &&
-        sourceCommunity.id === targetCommunity.id
-      ) {
-        const ki = edges.filter(
-          (e) => e.source === edge.source || e.target === edge.source,
-        ).length;
-        const kj = edges.filter(
-          (e) => e.source === edge.target || e.target === edge.target,
-        ).length;
-        modularity += 1 - (ki * kj) / (2 * m);
-      }
-    });
-
-    return m > 0 ? modularity / (2 * m) : 0;
-  };
 
   // 네트워크 분석 결과를 기반으로 개선 권장사항 생성
   const generateImprovementRecommendations = (
@@ -1108,172 +954,6 @@ const NetworkAnalysis: React.FC = () => {
     return recommendations;
   };
 
-  // Python 분석 시뮬레이션
-  const simulatePythonAnalysis = async (
-    surveyId: string,
-  ): Promise<NetworkAnalysisResult> => {
-    // 실제로는 Python 백엔드 API를 호출합니다
-    console.log("🔍 Python 네트워크 분석 시뮬레이션:", surveyId);
-
-    // 실제 설문 응답 데이터를 기반으로 네트워크 엣지 생성
-    const edges: NetworkEdge[] = [];
-
-    try {
-      // survey_responses 테이블에서 실제 응답 데이터 가져오기
-      const { data: surveyResponses, error } = await supabase
-        .from("survey_responses")
-        .select("*")
-        .eq("survey_id", surveyId);
-
-      if (error) {
-        console.error("🔍 설문 응답 데이터 가져오기 오류:", error);
-        // 오류 시 빈 edges 반환
-        console.log("🔍 설문 응답 데이터 오류로 인해 빈 edges 반환");
-      } else if (surveyResponses && surveyResponses.length > 0) {
-        console.log(
-          "🔍 실제 설문 응답 데이터 기반 엣지 생성:",
-          surveyResponses.length,
-        );
-
-        // 각 학생의 응답을 기반으로 엣지 생성
-        surveyResponses.forEach((response) => {
-          const studentId = response.student_id;
-          const responses = response.responses;
-
-          // studentId가 null이 아닌 경우에만 처리
-          if (studentId && responses && typeof responses === "object") {
-            Object.values(responses).forEach((questionResponses: any) => {
-              if (Array.isArray(questionResponses)) {
-                questionResponses.forEach((friendId: string) => {
-                  if (friendId && friendId !== studentId) {
-                    // 이미 존재하는 엣지인지 확인
-                    const existingEdge = edges.find(
-                      (edge) =>
-                        (edge.source === studentId &&
-                          edge.target === friendId) ||
-                        (edge.source === friendId && edge.target === studentId),
-                    );
-
-                    if (!existingEdge) {
-                      edges.push({
-                        source: studentId,
-                        target: friendId,
-                        weight: 3, // 기본 가중치
-                        relationship_type: "friend",
-                      });
-                    }
-                  }
-                });
-              }
-            });
-          }
-        });
-
-        console.log("🔍 실제 데이터 기반 엣지 생성 완료:", edges.length);
-      } else {
-        console.log("🔍 설문 응답 데이터가 없음, 빈 edges 반환");
-      }
-    } catch (error) {
-      console.error("🔍 엣지 생성 중 오류:", error);
-      console.log("🔍 오류로 인해 빈 edges 반환");
-    }
-
-    // 네트워크 노드 생성 (실제 데이터 기반)
-    const nodes: NetworkNode[] = students.map((student) => {
-      // 해당 학생의 연결 수 계산
-      const connectionCount = edges.filter(
-        (edge) => edge.source === student.id || edge.target === student.id,
-      ).length;
-
-      // 연결 수를 기반으로 중심성 계산 (0.1 ~ 1.0)
-      const centrality =
-        connectionCount > 0 ? Math.min(0.1 + connectionCount * 0.1, 1.0) : 0.1;
-
-      // 연결 수를 기반으로 커뮤니티 할당 (0, 1, 2)
-      const community = connectionCount > 0 ? connectionCount % 3 : 0;
-
-      return {
-        id: student.id,
-        name: student.name,
-        grade: student.grade,
-        class: student.class,
-        centrality,
-        community,
-        x: Math.random() * 800, // 랜덤 위치
-        y: Math.random() * 600,
-      };
-    });
-
-    // 커뮤니티 감지 (실제 데이터 기반으로 단순화)
-    const communities: Community[] = [];
-    if (edges.length > 0) {
-      // 간단한 커뮤니티 분할 (실제로는 더 복잡한 알고리즘 필요)
-      const halfSize = Math.floor(students.length / 2);
-      communities.push({
-        id: 0,
-        members: students.slice(0, halfSize).map((s) => s.id),
-        size: halfSize,
-        internal_density: 0.5,
-      });
-      if (students.length > halfSize) {
-        communities.push({
-          id: 1,
-          members: students.slice(halfSize).map((s) => s.id),
-          size: students.length - halfSize,
-          internal_density: 0.5,
-        });
-      }
-    }
-
-    // 네트워크 메트릭 계산 (실제 데이터 기반)
-    const metrics: NetworkMetrics = {
-      total_students: students.length,
-      total_relationships: edges.length,
-      density:
-        students.length > 1
-          ? edges.length / (students.length * (students.length - 1))
-          : 0,
-      average_degree:
-        students.length > 0 ? (edges.length * 2) / students.length : 0,
-      clustering_coefficient: calculateClusteringCoefficient(nodes, edges),
-      average_path_length: calculateAveragePathLength(nodes, edges),
-      modularity: calculateModularity(nodes, edges, communities),
-    };
-
-    // 커뮤니티 감지 (실제 데이터 기반으로 단순화)
-    if (edges.length > 0) {
-      // 간단한 커뮤니티 분할 (실제로는 더 복잡한 알고리즘 필요)
-      const halfSize = Math.floor(students.length / 2);
-      communities.push({
-        id: 0,
-        members: students.slice(0, halfSize).map((s) => s.id),
-        size: halfSize,
-        internal_density: 0.5,
-      });
-      if (students.length > halfSize) {
-        communities.push({
-          id: 1,
-          members: students.slice(halfSize).map((s) => s.id),
-          size: students.length - halfSize,
-          internal_density: 0.5,
-        });
-      }
-    }
-
-    console.log("🔍 실제 데이터 기반 분석 결과 생성:", {
-      surveyId,
-      totalStudents: students.length,
-      totalEdges: edges.length,
-      hasRealData: edges.length > 0,
-    });
-
-    return {
-      nodes,
-      edges,
-      metrics,
-      communities,
-    };
-  };
 
   if (loading) {
     return (
@@ -1290,18 +970,27 @@ const NetworkAnalysis: React.FC = () => {
     <div className="mx-auto min-h-screen max-w-7xl bg-gray-50 px-4 pb-16 sm:px-6 lg:px-8">
       <div className="mb-6">
         <h1 className="mb-2 text-2xl font-bold text-gray-900">
-          교우관계 네트워크 분석
+          교우관계 분석
         </h1>
         <p className="mb-4 text-gray-600">
           {teacherInfo?.role === "homeroom_teacher" &&
-            `${teacherInfo.grade_level}학년 ${teacherInfo.class_number}반 학생들의 AI 기반 네트워크 분석을 통해 교우관계를 시각화하고 분석합니다.`}
+            `${teacherInfo.grade_level}학년 ${teacherInfo.class_number}반 학생들의 친구 관계를 분석하여 학급 내 소통과 화합을 도모합니다.`}
           {teacherInfo?.role === "grade_teacher" &&
-            `${teacherInfo.grade_level}학년 전체 학생들의 AI 기반 네트워크 분석을 통해 교우관계를 시각화하고 분석합니다.`}
+            `${teacherInfo.grade_level}학년 전체 학생들의 친구 관계를 분석하여 학년 내 소통과 화합을 도모합니다.`}
           {teacherInfo?.role === "school_admin" &&
-            "학교 전체 학생들의 AI 기반 네트워크 분석을 통해 교우관계를 시각화하고 분석합니다."}
+            "학교 전체 학생들의 친구 관계를 분석하여 학교 내 소통과 화합을 도모합니다."}
           {teacherInfo?.role === "district_admin" &&
-            "전체 학교 학생들의 AI 기반 네트워크 분석을 통해 교우관계를 시각화하고 분석합니다."}
+            "전체 학교 학생들의 친구 관계를 분석하여 교육청 내 소통과 화합을 도모합니다."}
         </p>
+        <div className="mb-4 rounded-lg bg-blue-50 p-4">
+          <h3 className="mb-2 text-sm font-medium text-blue-900">💡 분석 도구 설명</h3>
+          <div className="text-sm text-blue-800">
+            <p className="mb-1">• <strong>교우관계 분석</strong>: 학생들의 친구 관계를 시각적으로 보여주고 분석하는 도구입니다.</p>
+            <p className="mb-1">• <strong>중심성</strong>: 학급 내에서 얼마나 많은 친구들과 연결되어 있는지를 나타내는 지표입니다.</p>
+            <p className="mb-1">• <strong>커뮤니티</strong>: 자연스럽게 형성된 친구 그룹을 의미합니다.</p>
+            <p>• <strong>네트워크 밀도</strong>: 전체 학생들 중 실제로 친구 관계를 맺고 있는 비율입니다.</p>
+          </div>
+        </div>
       </div>
 
       {/* 설문 선택 섹션 */}
@@ -1313,7 +1002,7 @@ const NetworkAnalysis: React.FC = () => {
                 분석할 설문 선택
               </h3>
               <p className="text-sm text-gray-600">
-                교우관계 분석을 위한 설문을 선택해주세요.
+                학생들의 친구 관계를 분석하기 위한 설문을 선택해주세요.
               </p>
             </div>
             {teacherInfo && (
@@ -1481,12 +1170,12 @@ const NetworkAnalysis: React.FC = () => {
               {isAnalyzing ? (
                 <div className="flex items-center space-x-2">
                   <div className="h-5 w-5 animate-spin rounded-full border-b-2 border-white"></div>
-                  <span>분석 중...</span>
+                  <span>Python 분석 중...</span>
                 </div>
               ) : (
                 <div className="flex items-center space-x-2">
                   <PlayIcon className="h-6 w-6" />
-                  <span>네트워크 분석 실행</span>
+                  <span>친구 관계 분석 실행</span>
                 </div>
               )}
             </button>
@@ -1572,7 +1261,13 @@ const NetworkAnalysis: React.FC = () => {
           <div className="border-b border-gray-200 px-6 py-4">
             <div className="flex space-x-2">
               <button
-                onClick={() => setAnalysisView("overview")}
+                onClick={() => {
+                  setAnalysisView("overview");
+                  // 탭 전환 시 선택된 학생 초기화
+                  setSelectedStudentModal({ isOpen: false, student: null, node: null });
+                  // 네트워크 컴포넌트 강제 재마운트
+                  setNetworkKey(prev => prev + 1);
+                }}
                 className={`rounded-md px-4 py-2 text-sm font-medium ${
                   analysisView === "overview"
                     ? "bg-[#3F80EA] text-white"
@@ -1583,7 +1278,13 @@ const NetworkAnalysis: React.FC = () => {
                 전체 현황
               </button>
               <button
-                onClick={() => setAnalysisView("network")}
+                onClick={() => {
+                  setAnalysisView("network");
+                  // 탭 전환 시 선택된 학생 초기화
+                  setSelectedStudentModal({ isOpen: false, student: null, node: null });
+                  // 네트워크 컴포넌트 강제 재마운트
+                  setNetworkKey(prev => prev + 1);
+                }}
                 className={`rounded-md px-4 py-2 text-sm font-medium ${
                   analysisView === "network"
                     ? "bg-[#3F80EA] text-white"
@@ -1591,7 +1292,7 @@ const NetworkAnalysis: React.FC = () => {
                 }`}
               >
                 <ChartBarIcon className="mr-2 inline h-4 w-4" />
-                네트워크 시각화
+                친구 관계 시각화
               </button>
             </div>
           </div>
@@ -1605,10 +1306,10 @@ const NetworkAnalysis: React.FC = () => {
           <div className="rounded-lg bg-white shadow">
             <div className="border-b border-gray-200 px-6 py-4">
               <h3 className="text-lg font-medium text-gray-900">
-                네트워크 메트릭스
+                학급 친구 관계 현황
               </h3>
               <p className="text-sm text-gray-600">
-                전체 네트워크의 구조적 특성을 분석합니다.
+                전체 학급의 친구 관계 구조를 한눈에 파악할 수 있습니다.
               </p>
             </div>
 
@@ -1624,28 +1325,29 @@ const NetworkAnalysis: React.FC = () => {
                   <div className="text-2xl font-bold text-green-600">
                     {analysisResults.metrics.total_relationships}
                   </div>
-                  <div className="text-sm text-gray-600">총 관계 수</div>
+                  <div className="text-sm text-gray-600">총 친구 관계 수</div>
                 </div>
                 <div className="text-center">
                   <div className="text-2xl font-bold text-purple-600">
                     {analysisResults.metrics.average_degree.toFixed(1)}
                   </div>
-                  <div className="text-sm text-gray-600">평균 연결 수</div>
+                  <div className="text-sm text-gray-600">평균 친구 수</div>
                 </div>
               </div>
 
               <div className="mt-6 grid grid-cols-1 gap-4 md:grid-cols-4">
                 <div className="rounded-lg bg-blue-50 p-4">
                   <div className="text-sm font-medium text-blue-900">
-                    네트워크 밀도
+                    친구 관계 밀도
                   </div>
                   <div className="text-lg font-semibold text-blue-700">
                     {(analysisResults.metrics.density * 100).toFixed(1)}%
                   </div>
+                  <div className="text-xs text-blue-600">전체 학생 중 친구 관계 비율</div>
                 </div>
                 <div className="rounded-lg bg-green-50 p-4">
                   <div className="text-sm font-medium text-green-900">
-                    클러스터링 계수
+                    친구들의 친구 관계
                   </div>
                   <div className="text-lg font-semibold text-green-700">
                     {(
@@ -1653,35 +1355,38 @@ const NetworkAnalysis: React.FC = () => {
                     ).toFixed(1)}
                     %
                   </div>
+                  <div className="text-xs text-green-600">친구들끼리도 친구인 비율</div>
                 </div>
                 <div className="rounded-lg bg-purple-50 p-4">
                   <div className="text-sm font-medium text-purple-900">
-                    평균 경로 길이
+                    평균 연결 거리
                   </div>
                   <div className="text-lg font-semibold text-purple-700">
                     {analysisResults.metrics.average_path_length.toFixed(1)}
                   </div>
+                  <div className="text-xs text-purple-600">학생들 간 평균 연결 단계</div>
                 </div>
                 <div className="rounded-lg bg-orange-50 p-4">
                   <div className="text-sm font-medium text-orange-900">
-                    모듈성
+                    그룹 분리도
                   </div>
                   <div className="text-lg font-semibold text-orange-700">
                     {(analysisResults.metrics.modularity * 100).toFixed(1)}%
                   </div>
+                  <div className="text-xs text-orange-600">친구 그룹 간 분리 정도</div>
                 </div>
               </div>
             </div>
           </div>
 
-          {/* 커뮤니티 분석 */}
+          {/* 친구 그룹 분석 */}
           <div className="rounded-lg bg-white shadow">
             <div className="border-b border-gray-200 px-6 py-4">
               <h3 className="text-lg font-medium text-gray-900">
-                커뮤니티 분석
+                친구 그룹 분석
               </h3>
               <p className="text-sm text-gray-600">
-                자연스럽게 형성된 친구 그룹을 분석합니다.
+                학생들이 자연스럽게 형성한 친구 그룹을 분석합니다.
               </p>
             </div>
 
@@ -1693,16 +1398,16 @@ const NetworkAnalysis: React.FC = () => {
                     className="rounded-lg border border-gray-200 p-4"
                   >
                     <h4 className="mb-2 font-medium text-gray-900">
-                      커뮤니티 {community.id + 1}
+                      친구 그룹 {community.id + 1}
                     </h4>
                     <div className="space-y-2 text-sm text-gray-600">
-                      <div>멤버 수: {community.size}명</div>
+                      <div>그룹원 수: {community.size}명</div>
                       <div>
-                        내부 밀도:{" "}
+                        그룹 내 친밀도:{" "}
                         {(community.internal_density * 100).toFixed(1)}%
                       </div>
                       <div className="text-xs text-gray-500">
-                        멤버:{" "}
+                        주요 멤버:{" "}
                         {community.members
                           .slice(0, 3)
                           .map((id) => students.find((s) => s.id === id)?.name)
@@ -1716,14 +1421,14 @@ const NetworkAnalysis: React.FC = () => {
             </div>
           </div>
 
-          {/* 학생별 중심성 분석 */}
+          {/* 학생별 친구 관계 분석 */}
           <div className="rounded-lg bg-white shadow">
             <div className="border-b border-gray-200 px-6 py-4">
               <h3 className="text-lg font-medium text-gray-900">
-                학생별 중심성 분석
+                학생별 친구 관계 분석
               </h3>
               <p className="text-sm text-gray-600">
-                각 학생의 네트워크 내 영향력과 연결성을 분석합니다.
+                각 학생의 학급 내 친구 관계와 영향력을 분석합니다.
               </p>
             </div>
 
@@ -1736,9 +1441,6 @@ const NetworkAnalysis: React.FC = () => {
                     const student = students.find((s) => s.id === node.id);
                     if (!student) return null;
 
-                    const connections = connectionCounts.get(node.id) || 0;
-                    const friendshipType = getFriendshipType(node.centrality);
-
                     return (
                       <div
                         key={node.id}
@@ -1750,36 +1452,36 @@ const NetworkAnalysis: React.FC = () => {
                           </h4>
                           <span
                             className={`rounded-full px-2 py-1 text-xs font-medium ${
-                              friendshipType === "사교 스타"
+                              node.friendship_type === "사교 스타"
                                 ? "bg-purple-100 text-purple-800"
-                                : friendshipType === "친구 많은 학생"
+                                : node.friendship_type === "친구 많은 학생"
                                   ? "bg-green-100 text-green-800"
-                                  : friendshipType === "평균적인 학생"
+                                  : node.friendship_type === "평균적인 학생"
                                     ? "bg-blue-100 text-blue-800"
-                                    : friendshipType === "소수 친구 학생"
+                                    : node.friendship_type === "소수 친구 학생"
                                       ? "bg-yellow-100 text-yellow-800"
                                       : "bg-red-100 text-red-800"
                             }`}
                           >
-                            {friendshipType}
+                            {node.friendship_type}
                           </span>
                         </div>
 
                         <div className="space-y-2 text-sm text-gray-600">
                           <div className="flex justify-between">
-                            <span>중심성:</span>
+                            <span>친구 관계 점수:</span>
                             <span className="font-medium">
                               {(node.centrality * 100).toFixed(1)}%
                             </span>
                           </div>
                           <div className="flex justify-between">
-                            <span>연결 수:</span>
-                            <span className="font-medium">{connections}개</span>
+                            <span>친구 수:</span>
+                            <span className="font-medium">{node.connection_count}명</span>
                           </div>
                           <div className="flex justify-between">
-                            <span>커뮤니티:</span>
+                            <span>소속 그룹:</span>
                             <span className="font-medium">
-                              {node.community + 1}번
+                              {node.community + 1}번 그룹
                             </span>
                           </div>
                         </div>
@@ -1798,22 +1500,22 @@ const NetworkAnalysis: React.FC = () => {
             </div>
           </div>
 
-          {/* 네트워크 구조 분석 */}
+          {/* 친구 관계 구조 분석 */}
           <div className="rounded-lg bg-white shadow">
             <div className="border-b border-gray-200 px-6 py-4">
               <h3 className="text-lg font-medium text-gray-900">
-                네트워크 구조 분석
+                친구 관계 구조 분석
               </h3>
               <p className="text-sm text-gray-600">
-                네트워크의 전반적인 구조와 특성을 분석합니다.
+                학급 내 친구 관계의 전반적인 구조와 특성을 분석합니다.
               </p>
             </div>
 
             <div className="p-6">
               <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-                {/* 연결 분포 */}
+                {/* 친구 수 분포 */}
                 <div className="space-y-4">
-                  <h4 className="font-medium text-gray-900">연결 분포</h4>
+                  <h4 className="font-medium text-gray-900">친구 수 분포</h4>
                   <div className="space-y-3">
                     {(() => {
                       const connectionRanges = [
@@ -1844,10 +1546,8 @@ const NetworkAnalysis: React.FC = () => {
                       ];
 
                       return connectionRanges.map((range) => {
-                        const count = Array.from(
-                          connectionCounts.values(),
-                        ).filter(
-                          (c) => c >= range.min && c <= range.max,
+                        const count = analysisResults.nodes.filter(
+                          (node) => node.connection_count >= range.min && node.connection_count <= range.max,
                         ).length;
 
                         const percentage =
@@ -1894,9 +1594,9 @@ const NetworkAnalysis: React.FC = () => {
                   </div>
                 </div>
 
-                {/* 중심성 분포 */}
+                {/* 친구 관계 점수 분포 */}
                 <div className="space-y-4">
-                  <h4 className="font-medium text-gray-900">중심성 분포</h4>
+                  <h4 className="font-medium text-gray-900">친구 관계 점수 분포</h4>
                   <div className="space-y-3">
                     {(() => {
                       const centralityRanges = [
@@ -2058,10 +1758,10 @@ const NetworkAnalysis: React.FC = () => {
           <div className="rounded-lg bg-white shadow">
             <div className="border-b border-gray-200 px-6 py-4">
               <h3 className="text-lg font-medium text-gray-900">
-                개별 관계 분석 요약
+                개별 친구 관계 분석 요약
               </h3>
               <p className="text-sm text-gray-600">
-                전체 학생의 네트워크 관계를 종합적으로 분석합니다.
+                전체 학생의 친구 관계를 종합적으로 분석합니다.
               </p>
             </div>
 
@@ -2074,7 +1774,7 @@ const NetworkAnalysis: React.FC = () => {
                         .length
                     }
                   </div>
-                  <div className="text-sm text-blue-600">높은 중심성</div>
+                  <div className="text-sm text-blue-600">높은 친구 관계 점수</div>
                   <div className="text-xs text-blue-500">(60% 이상)</div>
                 </div>
                 <div className="rounded-lg bg-green-50 p-4 text-center">
@@ -2085,7 +1785,7 @@ const NetworkAnalysis: React.FC = () => {
                       ).length
                     }
                   </div>
-                  <div className="text-sm text-green-600">보통 중심성</div>
+                  <div className="text-sm text-green-600">보통 친구 관계 점수</div>
                   <div className="text-xs text-green-500">(30-60%)</div>
                 </div>
                 <div className="rounded-lg bg-yellow-50 p-4 text-center">
@@ -2095,14 +1795,14 @@ const NetworkAnalysis: React.FC = () => {
                         .length
                     }
                   </div>
-                  <div className="text-sm text-yellow-600">낮은 중심성</div>
+                  <div className="text-sm text-yellow-600">낮은 친구 관계 점수</div>
                   <div className="text-xs text-yellow-500">(30% 미만)</div>
                 </div>
                 <div className="rounded-lg bg-purple-50 p-4 text-center">
                   <div className="text-2xl font-bold text-purple-600">
                     {analysisResults.communities.length}
                   </div>
-                  <div className="text-sm text-purple-600">커뮤니티</div>
+                  <div className="text-sm text-purple-600">친구 그룹</div>
                   <div className="text-xs text-purple-500">그룹 수</div>
                 </div>
               </div>
@@ -2118,7 +1818,7 @@ const NetworkAnalysis: React.FC = () => {
                     학생별 상세 분석
                   </h3>
                   <p className="text-sm text-gray-600">
-                    각 학생의 네트워크 중심성과 연결 관계를 분석합니다.
+                    각 학생의 친구 관계 점수와 연결 관계를 분석합니다.
                   </p>
                 </div>
                 <div className="text-sm text-gray-500">
@@ -2142,22 +1842,20 @@ const NetworkAnalysis: React.FC = () => {
                   }
                   className="rounded-md bg-blue-100 px-3 py-1 text-xs text-blue-800 hover:bg-blue-200"
                 >
-                  중심성 높은 순
+                  친구 관계 점수 높은 순
                 </button>
                 <button
                   onClick={() =>
                     setAnalysisResults({
                       ...analysisResults,
                       nodes: [...analysisResults.nodes].sort(
-                        (a, b) =>
-                          (connectionCounts.get(b.id) || 0) -
-                          (connectionCounts.get(a.id) || 0),
+                        (a, b) => b.connection_count - a.connection_count,
                       ),
                     })
                   }
                   className="rounded-md bg-green-100 px-3 py-1 text-xs text-green-800 hover:bg-green-200"
                 >
-                  연결 수 많은 순
+                  친구 수 많은 순
                 </button>
                 <button
                   onClick={() =>
@@ -2170,7 +1868,7 @@ const NetworkAnalysis: React.FC = () => {
                   }
                   className="rounded-md bg-purple-100 px-3 py-1 text-xs text-purple-800 hover:bg-purple-200"
                 >
-                  커뮤니티 순
+                  친구 그룹 순
                 </button>
               </div>
 
@@ -2178,9 +1876,6 @@ const NetworkAnalysis: React.FC = () => {
                 {analysisResults.nodes.map((node) => {
                   const student = students.find((s) => s.id === node.id);
                   if (!student) return null;
-
-                  const connections = connectionCounts.get(node.id) || 0;
-                  const friendshipType = getFriendshipType(node.centrality);
 
                   return (
                     <div
@@ -2190,8 +1885,7 @@ const NetworkAnalysis: React.FC = () => {
                         console.log("🔍 학생 섹션 클릭:", {
                           studentName: student.name,
                           nodeId: node.id,
-                          connections: connections,
-                          connectionCountsSize: connectionCounts.size,
+                          connections: node.connection_count,
                         });
 
                         setSelectedStudentModal({
@@ -2207,39 +1901,39 @@ const NetworkAnalysis: React.FC = () => {
                         </h4>
                         <span
                           className={`flex-shrink-0 rounded-full px-2 py-1 text-xs font-medium ${
-                            friendshipType === "사교 스타"
+                            node.friendship_type === "사교 스타"
                               ? "bg-purple-100 text-purple-800"
-                              : friendshipType === "친구 많은 학생"
+                              : node.friendship_type === "친구 많은 학생"
                                 ? "bg-green-100 text-green-800"
-                                : friendshipType === "평균적인 학생"
+                                : node.friendship_type === "평균적인 학생"
                                   ? "bg-blue-100 text-blue-800"
-                                  : friendshipType === "소수 친구 학생"
+                                  : node.friendship_type === "소수 친구 학생"
                                     ? "bg-yellow-100 text-yellow-800"
                                     : "bg-red-100 text-red-800"
                           }`}
                         >
-                          {friendshipType}
+                          {node.friendship_type}
                         </span>
                       </div>
 
-                      <div className="space-y-1 text-xs text-gray-600">
-                        <div className="flex justify-between">
-                          <span>연결:</span>
-                          <span className="font-medium">{connections}개</span>
+                        <div className="space-y-1 text-xs text-gray-600">
+                          <div className="flex justify-between">
+                            <span>친구 수:</span>
+                            <span className="font-medium">{node.connection_count}명</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span>친구 관계 점수:</span>
+                            <span className="font-medium">
+                              {(node.centrality * 100).toFixed(1)}%
+                            </span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span>소속 그룹:</span>
+                            <span className="font-medium">
+                              {node.community + 1}번 그룹
+                            </span>
+                          </div>
                         </div>
-                        <div className="flex justify-between">
-                          <span>중심성:</span>
-                          <span className="font-medium">
-                            {(node.centrality * 100).toFixed(1)}%
-                          </span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span>그룹:</span>
-                          <span className="font-medium">
-                            {node.community + 1}번
-                          </span>
-                        </div>
-                      </div>
                     </div>
                   );
                 })}
@@ -2247,14 +1941,14 @@ const NetworkAnalysis: React.FC = () => {
             </div>
           </div>
 
-          {/* 커뮤니티별 분석 */}
+          {/* 친구 그룹별 분석 */}
           <div className="rounded-lg bg-white shadow">
             <div className="border-b border-gray-200 px-6 py-4">
               <h3 className="text-lg font-medium text-gray-900">
-                커뮤니티별 분석
+                친구 그룹별 분석
               </h3>
               <p className="text-sm text-gray-600">
-                각 커뮤니티의 특성과 구성원을 분석합니다.
+                각 친구 그룹의 특성과 구성원을 분석합니다.
               </p>
             </div>
 
@@ -2277,7 +1971,7 @@ const NetworkAnalysis: React.FC = () => {
                     >
                       <div className="mb-3 flex items-center justify-between">
                         <h4 className="font-medium text-gray-900">
-                          커뮤니티 {community.id + 1}
+                          친구 그룹 {community.id + 1}
                         </h4>
                         <span className="rounded-full bg-blue-100 px-2 py-1 text-xs font-medium text-blue-800">
                           {community.size}명
@@ -2286,13 +1980,13 @@ const NetworkAnalysis: React.FC = () => {
 
                       <div className="space-y-2 text-sm text-gray-600">
                         <div className="flex justify-between">
-                          <span>평균 중심성:</span>
+                          <span>평균 친구 관계 점수:</span>
                           <span className="font-medium">
                             {(avgCentrality * 100).toFixed(1)}%
                           </span>
                         </div>
                         <div className="flex justify-between">
-                          <span>내부 밀도:</span>
+                          <span>그룹 내 친밀도:</span>
                           <span className="font-medium">
                             {(community.internal_density * 100).toFixed(1)}%
                           </span>
@@ -2337,7 +2031,7 @@ const NetworkAnalysis: React.FC = () => {
         </div>
       )}
 
-      {/* 네트워크 시각화 뷰 */}
+      {/* 친구 관계 시각화 뷰 */}
       {analysisView === "network" && analysisResults && (
         <div className="space-y-6">
           {/* 시각화 컨트롤 */}
@@ -2346,10 +2040,10 @@ const NetworkAnalysis: React.FC = () => {
               <div className="flex items-center justify-between">
                 <div>
                   <h3 className="text-xl font-bold text-gray-900">
-                    현재 교우관계 네트워크
+                    현재 친구 관계 현황
                   </h3>
                   <p className="mt-1 text-sm text-gray-600">
-                    학생들 간의 친구 관계를 시각화하여 네트워크 구조를
+                    학생들 간의 친구 관계를 시각화하여 학급 내 친구 관계 구조를
                     분석합니다
                   </p>
                 </div>
@@ -2358,7 +2052,7 @@ const NetworkAnalysis: React.FC = () => {
                   <div className="text-lg font-semibold text-[#3F80EA]">
                     {analysisResults.nodes.length}명
                   </div>
-                  <div className="text-sm text-gray-500">총 관계 수</div>
+                  <div className="text-sm text-gray-500">총 친구 관계 수</div>
                   <div className="text-lg font-semibold text-green-600">
                     {analysisResults.edges.length}개
                   </div>
@@ -2367,19 +2061,20 @@ const NetworkAnalysis: React.FC = () => {
             </div>
 
             <div className="p-6">
-              {/* 네트워크 시각화 */}
+              {/* 친구 관계 시각화 */}
               <div className="rounded-lg border bg-white p-4">
                 <NetworkVisualization
+                  key={`network-${networkKey}-${selectedSurvey?.id}`}
                   data={{
                     nodes: analysisResults.nodes.map((node) => ({
                       id: node.id,
                       name: node.name,
                       grade: node.grade.toString(),
                       class: node.class.toString(),
-                      friendship_type: getFriendshipType(node.centrality),
+                      friendship_type: node.friendship_type,
                       centrality: node.centrality,
                       community: node.community,
-                      connection_count: connectionCounts.get(node.id) || 0,
+                      connection_count: node.connection_count,
                     })),
                     edges: analysisResults.edges,
                   }}
@@ -2398,12 +2093,12 @@ const NetworkAnalysis: React.FC = () => {
             </div>
           </div>
 
-          {/* 시각화 통계 */}
+          {/* 친구 관계 통계 */}
           <div className="rounded-lg bg-white shadow">
             <div className="border-b border-gray-200 px-6 py-4">
-              <h3 className="text-lg font-medium text-gray-900">시각화 통계</h3>
+              <h3 className="text-lg font-medium text-gray-900">친구 관계 통계</h3>
               <p className="text-sm text-gray-600">
-                네트워크 시각화의 주요 통계 정보입니다.
+                친구 관계 시각화의 주요 통계 정보입니다.
               </p>
             </div>
 
@@ -2416,35 +2111,35 @@ const NetworkAnalysis: React.FC = () => {
                         .length
                     }
                   </div>
-                  <div className="text-sm text-gray-600">중심 노드</div>
-                  <div className="text-xs text-gray-500">(중심성 50% 이상)</div>
+                  <div className="text-sm text-gray-600">인기 학생</div>
+                  <div className="text-xs text-gray-500">(친구 관계 점수 50% 이상)</div>
                 </div>
                 <div className="text-center">
                   <div className="text-2xl font-bold text-green-600">
                     {analysisResults.edges.filter((e) => e.weight >= 3).length}
                   </div>
-                  <div className="text-sm text-gray-600">강한 연결</div>
-                  <div className="text-xs text-gray-500">(가중치 3 이상)</div>
+                  <div className="text-sm text-gray-600">강한 친구 관계</div>
+                  <div className="text-xs text-gray-500">(관계 강도 3 이상)</div>
                 </div>
                 <div className="text-center">
                   <div className="text-2xl font-bold text-purple-600">
                     {analysisResults.communities.length}
                   </div>
-                  <div className="text-sm text-gray-600">커뮤니티</div>
+                  <div className="text-sm text-gray-600">친구 그룹</div>
                   <div className="text-xs text-gray-500">그룹 수</div>
                 </div>
               </div>
             </div>
           </div>
 
-          {/* 커뮤니티 시각화 */}
+          {/* 친구 그룹 시각화 */}
           <div className="rounded-lg bg-white shadow">
             <div className="border-b border-gray-200 px-6 py-4">
               <h3 className="text-lg font-medium text-gray-900">
-                커뮤니티 시각화
+                친구 그룹 시각화
               </h3>
               <p className="text-sm text-gray-600">
-                각 커뮤니티의 구성과 특성을 시각적으로 표현합니다.
+                각 친구 그룹의 구성과 특성을 시각적으로 표현합니다.
               </p>
             </div>
 
@@ -2476,7 +2171,7 @@ const NetworkAnalysis: React.FC = () => {
                     >
                       <div className="mb-3 flex items-center justify-between">
                         <h4 className="font-medium text-gray-900">
-                          커뮤니티 {community.id + 1}
+                          친구 그룹 {community.id + 1}
                         </h4>
                         <span
                           className={`rounded-full px-2 py-1 text-xs font-medium ${colors[community.id % colors.length]} ${textColors[community.id % textColors.length]}`}
@@ -2559,7 +2254,7 @@ const NetworkAnalysis: React.FC = () => {
                 <div className="mb-6 flex items-center justify-between">
                   <div>
                     <h3 className="text-2xl font-bold text-gray-900">
-                      {selectedStudentModal.student.name}의 네트워크 분석
+                      {selectedStudentModal.student.name}의 친구 관계 분석
                     </h3>
                     <p className="text-gray-600">
                       {selectedStudentModal.student.grade}학년{" "}
@@ -2570,7 +2265,6 @@ const NetworkAnalysis: React.FC = () => {
                     onClick={() => {
                       console.log("🔍 모달 닫기:", {
                         studentName: selectedStudentModal.student?.name,
-                        connectionCountsSize: connectionCounts.size,
                         analysisResultsNodes: analysisResults?.nodes.length,
                       });
 
@@ -2602,7 +2296,7 @@ const NetworkAnalysis: React.FC = () => {
                 <div className="mb-6 grid grid-cols-1 gap-4 md:grid-cols-3">
                   <div className="rounded-lg bg-blue-50 p-4">
                     <div className="text-sm font-medium text-blue-600">
-                      중심성 점수
+                      친구 관계 점수
                     </div>
                     <div className="text-2xl font-bold text-blue-900">
                       {(selectedStudentModal.node.centrality * 100).toFixed(1)}%
@@ -2610,26 +2304,18 @@ const NetworkAnalysis: React.FC = () => {
                   </div>
                   <div className="rounded-lg bg-green-50 p-4">
                     <div className="text-sm font-medium text-green-600">
-                      연결 수
+                      친구 수
                     </div>
                     <div className="text-2xl font-bold text-green-900">
-                      {(() => {
-                        const selectedStudentId =
-                          selectedStudentModal.student!.id;
-                        const actualConnections = analysisResults.edges
-                          .filter((edge) => edge.source === selectedStudentId)
-                          .map((edge) => edge.target);
-                        return actualConnections.length;
-                      })()}
-                      개
+                      {selectedStudentModal.node.connection_count}명
                     </div>
                   </div>
                   <div className="rounded-lg bg-purple-50 p-4">
                     <div className="text-sm font-medium text-purple-600">
-                      커뮤니티
+                      소속 그룹
                     </div>
                     <div className="text-2xl font-bold text-purple-900">
-                      {selectedStudentModal.node.community + 1}번
+                      {selectedStudentModal.node.community + 1}번 그룹
                     </div>
                   </div>
                 </div>
@@ -2637,7 +2323,7 @@ const NetworkAnalysis: React.FC = () => {
                 {/* 네트워크 시각화 */}
                 <div className="mb-6">
                   <h4 className="mb-4 text-lg font-medium text-gray-900">
-                    연결 관계 네트워크
+                    친구 관계 시각화
                   </h4>
                   <div className="rounded-lg border bg-gray-50 p-4">
                     <NetworkVisualization
@@ -2664,13 +2350,10 @@ const NetworkAnalysis: React.FC = () => {
                               name: node.name,
                               grade: node.grade.toString(),
                               class: node.class.toString(),
-                              friendship_type: getFriendshipType(
-                                node.centrality,
-                              ),
+                              friendship_type: node.friendship_type,
                               centrality: node.centrality,
                               community: node.community,
-                              connection_count:
-                                connectionCounts.get(node.id) || 0,
+                              connection_count: node.connection_count,
                             }));
                         })(),
                         edges: (() => {
@@ -2758,27 +2441,17 @@ const NetworkAnalysis: React.FC = () => {
                   </div>
 
                   {/* 연결된 친구가 없는 경우 메시지 표시 */}
-                  {(() => {
-                    const selectedStudentId = selectedStudentModal.student!.id;
-                    const actualConnections = analysisResults.edges
-                      .filter((edge) => edge.source === selectedStudentId)
-                      .map((edge) => edge.target);
-
-                    if (actualConnections.length === 0) {
-                      return (
-                        <div className="py-8 text-center text-gray-500">
-                          <div className="mb-2 text-lg font-medium">
-                            연결된 친구가 없습니다
-                          </div>
-                          <div className="text-sm">
-                            이 학생은 현재 설문에서 다른 학생을 친구로 선택하지
-                            않았습니다.
-                          </div>
-                        </div>
-                      );
-                    }
-                    return null;
-                  })()}
+                  {selectedStudentModal.node.connection_count === 0 && (
+                    <div className="py-8 text-center text-gray-500">
+                      <div className="mb-2 text-lg font-medium">
+                        연결된 친구가 없습니다
+                      </div>
+                      <div className="text-sm">
+                        이 학생은 현재 설문에서 다른 학생을 친구로 선택하지
+                        않았습니다.
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 {/* 네트워크 메트릭 */}
@@ -2842,17 +2515,7 @@ const NetworkAnalysis: React.FC = () => {
                         </li>
                         <li>
                           직접 연결된 친구 수:{" "}
-                          {(() => {
-                            const selectedStudentId =
-                              selectedStudentModal.student!.id;
-                            const actualConnections = analysisResults.edges
-                              .filter(
-                                (edge) => edge.source === selectedStudentId,
-                              )
-                              .map((edge) => edge.target);
-                            return actualConnections.length;
-                          })()}
-                          명
+                          {selectedStudentModal.node.connection_count}명
                         </li>
                         <li>
                           소속 커뮤니티:{" "}
@@ -2880,15 +2543,8 @@ const NetworkAnalysis: React.FC = () => {
                         <li>
                           연결 밀도:{" "}
                           {(() => {
-                            const selectedStudentId =
-                              selectedStudentModal.student!.id;
-                            const actualConnections = analysisResults.edges
-                              .filter(
-                                (edge) => edge.source === selectedStudentId,
-                              )
-                              .map((edge) => edge.target);
                             const connectionDensity =
-                              (actualConnections.length /
+                              (selectedStudentModal.node.connection_count /
                                 Math.max(students.length - 1, 1)) *
                               100;
                             return connectionDensity.toFixed(1);
@@ -3004,11 +2660,7 @@ const NetworkAnalysis: React.FC = () => {
                     <div className="text-sm text-yellow-800">
                       {(() => {
                         const centrality = selectedStudentModal.node.centrality;
-                        const connections = analysisResults.edges.filter(
-                          (e) =>
-                            e.source === selectedStudentModal.student!.id ||
-                            e.target === selectedStudentModal.student!.id,
-                        ).length;
+                        const connections = selectedStudentModal.node.connection_count;
                         const totalStudents = analysisResults.nodes.length;
                         const connectionRatio =
                           connections / (totalStudents - 1);
