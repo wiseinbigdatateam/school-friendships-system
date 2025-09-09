@@ -339,11 +339,13 @@ const SurveyResponse: React.FC = () => {
   const isAllRequiredFieldsCompleted = () => {
     if (!survey || !survey.questions) return true;
 
-    const requiredQuestions = survey.questions.filter((question: any) => question.required);
-    
+    const requiredQuestions = survey.questions.filter(
+      (question: any) => question.required,
+    );
+
     for (const question of requiredQuestions) {
       const response = responses[question.id];
-      
+
       if (question.type === "multiple_choice") {
         // 교우관계 카테고리인 경우 배열이 비어있으면 안됨
         if (surveyTemplate?.metadata?.category === "교우관계") {
@@ -363,19 +365,22 @@ const SurveyResponse: React.FC = () => {
         }
       }
     }
-    
+
     return true;
   };
 
   // 필수 항목 검증 (제출 시 상세 검증용)
   const validateRequiredFields = () => {
-    if (!survey || !survey.questions) return { isValid: true, firstMissingQuestionId: null };
+    if (!survey || !survey.questions)
+      return { isValid: true, firstMissingQuestionId: null };
 
-    const requiredQuestions = survey.questions.filter((question: any) => question.required);
-    
+    const requiredQuestions = survey.questions.filter(
+      (question: any) => question.required,
+    );
+
     for (const question of requiredQuestions) {
       const response = responses[question.id];
-      
+
       if (question.type === "multiple_choice") {
         // 교우관계 카테고리인 경우 배열이 비어있으면 안됨
         if (surveyTemplate?.metadata?.category === "교우관계") {
@@ -395,7 +400,7 @@ const SurveyResponse: React.FC = () => {
         }
       }
     }
-    
+
     return { isValid: true, firstMissingQuestionId: null };
   };
 
@@ -409,16 +414,22 @@ const SurveyResponse: React.FC = () => {
     const validation = validateRequiredFields();
     if (!validation.isValid) {
       alert("필수 항목을 모두 입력해주세요.");
-      
+
       // 누락된 질문으로 스크롤
       if (validation.firstMissingQuestionId) {
-        const element = document.getElementById(`question-${validation.firstMissingQuestionId}`);
+        const element = document.getElementById(
+          `question-${validation.firstMissingQuestionId}`,
+        );
         if (element) {
-          element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          element.scrollIntoView({ behavior: "smooth", block: "center" });
           // 시각적 강조를 위해 잠시 하이라이트
-          element.classList.add('ring-2', 'ring-red-500', 'ring-opacity-50');
+          element.classList.add("ring-2", "ring-red-500", "ring-opacity-50");
           setTimeout(() => {
-            element.classList.remove('ring-2', 'ring-red-500', 'ring-opacity-50');
+            element.classList.remove(
+              "ring-2",
+              "ring-red-500",
+              "ring-opacity-50",
+            );
           }, 3000);
         }
       }
@@ -508,10 +519,23 @@ const SurveyResponse: React.FC = () => {
   if (currentStep === "verify") {
     return (
       <div className="flex min-h-screen w-full items-center justify-center bg-gray-50 py-8">
-        <div className="mx-auto max-w-2xl px-4">
+        {/* 배경 이미지 */}
+        <div
+          className="absolute top-0 z-0 h-full w-full bg-cover bg-center bg-no-repeat"
+          style={{
+            backgroundImage: `url('/mask_bg.png')`,
+          }}
+        ></div>
+        {/* 어두운 오버레이로 텍스트 가독성 향상 */}
+        <div className="absolute inset-0 z-10 h-full w-full bg-black/40"></div>
+
+        <div className="z-50">
+          <div className="mb-2 rounded-lg border border-gray-200 bg-white px-6 py-3 text-base font-semibold shadow-sm">
+            OO 초등학교
+          </div>
           {/* 설문 헤더 */}
           <div className="mb-6 rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
-            <h1 className="mb-4 text-center text-2xl font-bold text-gray-900">
+            <h1 className="mb-4 text-center text-lg font-bold text-gray-900">
               {survey.title}
             </h1>
             {survey.description && (
@@ -705,17 +729,30 @@ const SurveyResponse: React.FC = () => {
   // 설문 응답 단계
   if (currentStep === "survey") {
     return (
-      <div className="min-h-screen bg-gray-50 py-8">
-        <div className="mx-auto max-w-4xl px-4">
+      <div
+        className="relative min-h-screen bg-gray-50 bg-cover bg-center bg-no-repeat py-8"
+        // style={{
+        //   backgroundImage: `url('/mask_bg.png')`,
+        // }}
+      >
+        {/* 어두운 오버레이로 텍스트 가독성 향상 */}
+        {/* <div className="absolute inset-0 z-10 h-full w-full bg-black/40"></div> */}
+
+        <div className="relative z-50 mx-auto max-w-4xl px-4">
+          <div className="mb-2 rounded-lg border border-gray-200 bg-white px-6 py-3 text-base font-semibold shadow-sm">
+            OO 초등학교
+          </div>
           {/* 설문 헤더 */}
           <div className="mb-6 rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
             <div className="mb-4 flex items-center justify-between">
               <div>
-                <h1 className="text-2xl font-bold text-gray-900">
+                <h1 className="text-lg font-bold text-gray-900">
                   {survey.title}
                 </h1>
                 {survey.description && (
-                  <p className="mt-2 text-gray-600">{survey.description}</p>
+                  <p className="mt-2 text-sm text-gray-600">
+                    {survey.description}
+                  </p>
                 )}
               </div>
             </div>
@@ -734,12 +771,16 @@ const SurveyResponse: React.FC = () => {
           {/* 설문 폼 */}
           <form
             onSubmit={handleSubmit}
-            className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm"
+            className="flex flex-col rounded-lg border border-gray-200 bg-white p-6 shadow-sm"
           >
             {survey.questions &&
               Array.isArray(survey.questions) &&
               survey.questions.map((question: any, index) => (
-                <div key={question.id} id={`question-${question.id}`} className="mb-8">
+                <div
+                  key={question.id}
+                  id={`question-${question.id}`}
+                  className="mb-8"
+                >
                   <h3 className="mb-3 text-lg font-medium text-gray-900">
                     {index + 1}. {question.text || question.question}
                     {question.required && (
@@ -1003,20 +1044,19 @@ const SurveyResponse: React.FC = () => {
                 </div>
               ))}
 
+            <hr className="mb-6 w-full border-t border-gray-200" />
             {/* 제출 버튼 */}
-            <div className="flex justify-between border-t border-gray-200 pt-6">
+            <div className="self-end">
               <button
                 type="submit"
                 disabled={submitting}
                 className="rounded-lg bg-[#3F80EA] px-6 py-3 text-white hover:bg-blue-600 disabled:cursor-not-allowed disabled:opacity-50"
               >
-                {submitting ? (
-                  "📤 제출 중..."
-                ) : !isAllRequiredFieldsCompleted() ? (
-                  "⚠️ 필수 항목을 완료해주세요"
-                ) : (
-                  "🎯 설문 제출하기"
-                )}
+                {submitting
+                  ? "📤 제출 중..."
+                  : !isAllRequiredFieldsCompleted()
+                    ? "⚠️ 필수 항목을 완료해주세요"
+                    : "🎯 설문 제출하기"}
               </button>
             </div>
           </form>
