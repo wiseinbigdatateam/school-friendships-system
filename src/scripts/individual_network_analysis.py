@@ -30,56 +30,28 @@ class IndividualNetworkAnalyzer:
         
     def create_individual_network(self, student_id: str, friendship_data: List[Dict], 
                                 student_info: List[Dict]) -> nx.Graph:
-        """개별 학생 중심의 네트워크 생성"""
+        """전체 학급 네트워크 생성 (개별 학생 분석을 위해)"""
         G = nx.Graph()
         
-        # 중심 학생 정보 찾기
-        center_student = None
+        # 모든 학생 노드 추가
+        student_map = {student['id']: student for student in student_info}
         for student in student_info:
-            if student['id'] == student_id:
-                center_student = student
-                break
+            G.add_node(student['id'], 
+                      name=student['name'],
+                      grade=student['grade'],
+                      class_name=student['class'],
+                      is_center=(student['id'] == student_id))
         
-        if not center_student:
-            logger.error(f"중심 학생 {student_id}를 찾을 수 없습니다.")
-            return G
-        
-        # 중심 학생 노드 추가
-        G.add_node(student_id, 
-                  name=center_student['name'],
-                  grade=center_student['grade'],
-                  class_name=center_student['class'],
-                  is_center=True)
-        
-        # 중심 학생과 연결된 친구들 찾기
-        connected_friends = set()
+        # 모든 친구 관계 엣지 추가 (전체 학급 네트워크)
         for record in friendship_data:
-            if record['student_id'] == student_id:
-                connected_friends.add(record['friend_student_id'])
-            elif record['friend_student_id'] == student_id:
-                connected_friends.add(record['student_id'])
-        
-        # 연결된 친구들 노드 추가
-        for friend_id in connected_friends:
-            friend_info = next((s for s in student_info if s['id'] == friend_id), None)
-            if friend_info:
-                G.add_node(friend_id,
-                          name=friend_info['name'],
-                          grade=friend_info['grade'],
-                          class_name=friend_info['class'],
-                          is_center=False)
-        
-        # 친구 관계 엣지 추가
-        for record in friendship_data:
-            if (record['student_id'] == student_id and record['friend_student_id'] in connected_friends) or \
-               (record['friend_student_id'] == student_id and record['student_id'] in connected_friends):
+            if record['student_id'] in student_map and record['friend_student_id'] in student_map:
                 G.add_edge(record['student_id'], 
                           record['friend_student_id'],
                           weight=record.get('strength_score', 1),
                           relationship_type=record.get('relationship_type', 'friend'))
         
         self.network = G
-        logger.info(f"개별 네트워크 생성 완료: {G.number_of_nodes()}명, {G.number_of_edges()}개 관계")
+        logger.info(f"전체 학급 네트워크 생성 완료: {G.number_of_nodes()}명, {G.number_of_edges()}개 관계")
         return G
     
     def calculate_individual_metrics(self, G: nx.Graph, student_id: str) -> Dict[str, Any]:
@@ -143,17 +115,17 @@ class IndividualNetworkAnalyzer:
         }
     
     def classify_friendship_type(self, degree: int, degree_centrality: float) -> str:
-        """교우관계 유형 분류"""
+        """교우관계 유형 분류 (학급별 분석과 동일한 기준)"""
         if degree == 0:
-            return "고립형"
+            return "외톨이형"
         elif degree <= 2:
-            return "소수 친구형"
+            return "소수 친구 학생"
         elif degree <= 5:
-            return "평균형"
+            return "평균적인 학생"
         elif degree <= 8:
-            return "친구 많은형"
+            return "친구 많은 학생"
         else:
-            return "사교형"
+            return "사교 스타"
     
     def assess_isolation_risk(self, degree: int, degree_centrality: float, network_density: float) -> Dict[str, Any]:
         """고립 위험도 평가"""
@@ -344,20 +316,40 @@ class IndividualNetworkAnalyzer:
         
         return recommendations
     
+    def detect_communities(self, G: nx.Graph) -> Dict[str, int]:
+        """커뮤니티 탐지 (학급별 분석과 동일한 방법)"""
+        try:
+            from community import community_louvain
+            communities = community_louvain.best_partition(G)
+        except ImportError:
+            # Louvain이 없으면 연결 요소 기반 커뮤니티 탐지
+            communities = {}
+            for i, component in enumerate(nx.connected_components(G)):
+                for node in component:
+                    communities[node] = i
+        
+        return communities
+
     def analyze_individual_student(self, student_id: str, friendship_data: List[Dict], 
                                  student_info: List[Dict]) -> Dict[str, Any]:
         """개별 학생 네트워크 분석 실행"""
         logger.info(f"개별 학생 {student_id} 네트워크 분석 시작")
         
-        # 개별 네트워크 생성
+        # 전체 학급 네트워크 생성
         G = self.create_individual_network(student_id, friendship_data, student_info)
         
         if G.number_of_nodes() == 0:
             logger.warning(f"학생 {student_id}에 대한 네트워크 데이터가 없습니다.")
             return {}
         
+        # 커뮤니티 탐지
+        communities = self.detect_communities(G)
+        
         # 개별 지표 계산
         metrics = self.calculate_individual_metrics(G, student_id)
+        
+        # 커뮤니티 정보 추가
+        metrics['community_id'] = communities.get(student_id, 0)
         
         # 맞춤형 지도 방안 생성
         recommendations = self.generate_guidance_recommendations(metrics)
@@ -370,11 +362,13 @@ class IndividualNetworkAnalyzer:
                 'total_nodes': G.number_of_nodes(),
                 'total_edges': G.number_of_edges(),
                 'network_density': nx.density(G),
-                'average_clustering': nx.average_clustering(G)
+                'average_clustering': nx.average_clustering(G),
+                'communities_count': len(set(communities.values()))
             },
             'individual_metrics': metrics,
             'recommendations': recommendations,
-            'network_data': self.prepare_network_data(G, student_info)
+            'network_data': self.prepare_network_data(G, student_info),
+            'communities': communities
         }
         
         self.analysis_result = analysis_result

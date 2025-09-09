@@ -51,6 +51,7 @@ interface PythonAnalysisResult {
     total_edges: number;
     network_density: number;
     average_clustering: number;
+    communities_count: number;
   };
   individual_metrics: {
     student_id: string;
@@ -65,6 +66,7 @@ interface PythonAnalysisResult {
     network_density: number;
     clustering_coefficient: number;
     friendship_type: string;
+    community_id: number;
     isolation_risk: {
       level: string;
       score: number;
@@ -112,6 +114,7 @@ interface PythonAnalysisResult {
       relationship_type: string;
     }>;
   };
+  communities: { [student_id: string]: number };
 }
 
 const IndividualAnalysis: React.FC = () => {
@@ -489,15 +492,13 @@ const IndividualAnalysis: React.FC = () => {
   // Python 분석용 친구 관계 데이터 준비
   const prepareFriendshipDataForPython = async () => {
     try {
-      // 선택된 학생의 설문 응답 데이터 조회
-      const { data: studentResponse, error: responseError } = await supabase
+      // 전체 학급의 설문 응답 데이터 조회 (선택된 학생만이 아닌 모든 학생)
+      const { data: allResponses, error: responseError } = await supabase
         .from("survey_responses")
         .select("*")
-        .eq("survey_id", selectedSurvey)
-        .eq("student_id", selectedStudent)
-        .single();
+        .eq("survey_id", selectedSurvey);
 
-      if (responseError || !studentResponse) {
+      if (responseError || !allResponses || allResponses.length === 0) {
         return [];
       }
 
@@ -518,7 +519,7 @@ const IndividualAnalysis: React.FC = () => {
       const metadata = surveyData?.survey_templates?.metadata as any;
       const maxSelections = metadata?.max_selections || [];
 
-      // 친구 관계 데이터 변환
+      // 전체 학급의 친구 관계 데이터 변환
       const friendshipData: Array<{
         student_id: string;
         friend_student_id: string;
@@ -526,39 +527,42 @@ const IndividualAnalysis: React.FC = () => {
         strength_score: number;
       }> = [];
       
-      if (studentResponse.responses) {
-        const answers = typeof studentResponse.responses === "string"
-          ? JSON.parse(studentResponse.responses)
-          : studentResponse.responses;
+      // 모든 학생의 응답을 처리
+      allResponses.forEach((response) => {
+        if (response.responses) {
+          const answers = typeof response.responses === "string"
+            ? JSON.parse(response.responses)
+            : response.responses;
 
-        Object.entries(answers).forEach(([questionKey, answer]: [string, any]) => {
-          const questionIndex = parseInt(questionKey.replace("q", "")) - 1;
-          const maxSelection = maxSelections[questionIndex] || 10;
+          Object.entries(answers).forEach(([questionKey, answer]: [string, any]) => {
+            const questionIndex = parseInt(questionKey.replace("q", "")) - 1;
+            const maxSelection = maxSelections[questionIndex] || 10;
 
-          if (Array.isArray(answer)) {
-            const limitedAnswers = answer.slice(0, maxSelection);
-            limitedAnswers.forEach((friendId: string) => {
-              if (friendId && friendId !== selectedStudent) {
+            if (Array.isArray(answer)) {
+              const limitedAnswers = answer.slice(0, maxSelection);
+              limitedAnswers.forEach((friendId: string) => {
+                if (friendId && friendId !== response.student_id) {
+                  friendshipData.push({
+                    student_id: response.student_id,
+                    friend_student_id: friendId,
+                    relationship_type: 'friend',
+                    strength_score: 1.0
+                  });
+                }
+              });
+            } else if (typeof answer === "string" && answer !== response.student_id) {
+              if (maxSelection >= 1) {
                 friendshipData.push({
-                  student_id: selectedStudent,
-                  friend_student_id: friendId,
+                  student_id: response.student_id,
+                  friend_student_id: answer,
                   relationship_type: 'friend',
                   strength_score: 1.0
                 });
               }
-            });
-          } else if (typeof answer === "string" && answer !== selectedStudent) {
-            if (maxSelection >= 1) {
-              friendshipData.push({
-                student_id: selectedStudent,
-                friend_student_id: answer,
-                relationship_type: 'friend',
-                strength_score: 1.0
-              });
             }
-          }
-        });
-      }
+          });
+        }
+      });
 
       return friendshipData;
     } catch (error) {
@@ -1294,6 +1298,7 @@ const IndividualAnalysis: React.FC = () => {
                                     <li>• 총 연결 수: {pythonAnalysisResult.network_stats.total_edges}개</li>
                                     <li>• 네트워크 밀도: {(pythonAnalysisResult.network_stats.network_density * 100).toFixed(1)}%</li>
                                     <li>• 평균 클러스터링: {(pythonAnalysisResult.network_stats.average_clustering * 100).toFixed(1)}%</li>
+                                    <li>• 총 커뮤니티 수: {pythonAnalysisResult.network_stats.communities_count}개</li>
                                   </ul>
                                 </div>
                                 <div className="rounded-lg border border-blue-100 bg-white p-4">
@@ -1303,6 +1308,7 @@ const IndividualAnalysis: React.FC = () => {
                                     <li>• 연결 중심성: {(pythonAnalysisResult.individual_metrics.centrality_metrics.degree * 100).toFixed(1)}%</li>
                                     <li>• 매개 중심성: {(pythonAnalysisResult.individual_metrics.centrality_metrics.betweenness * 100).toFixed(1)}%</li>
                                     <li>• 근접 중심성: {(pythonAnalysisResult.individual_metrics.centrality_metrics.closeness * 100).toFixed(1)}%</li>
+                                    <li>• 소속 커뮤니티: {pythonAnalysisResult.individual_metrics.community_id + 1}번 그룹</li>
                                   </ul>
                                 </div>
                               </div>
