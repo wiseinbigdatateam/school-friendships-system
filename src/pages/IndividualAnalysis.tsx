@@ -43,6 +43,77 @@ interface Student {
   is_active?: boolean | null;
 }
 
+interface PythonAnalysisResult {
+  student_id: string;
+  analysis_timestamp: string;
+  network_stats: {
+    total_nodes: number;
+    total_edges: number;
+    network_density: number;
+    average_clustering: number;
+  };
+  individual_metrics: {
+    student_id: string;
+    degree: number;
+    neighbors: string[];
+    centrality_metrics: {
+      degree: number;
+      betweenness: number;
+      closeness: number;
+      eigenvector: number;
+    };
+    network_density: number;
+    clustering_coefficient: number;
+    friendship_type: string;
+    isolation_risk: {
+      level: string;
+      score: number;
+      description: string;
+      factors: {
+        connection_count: number;
+        centrality: number;
+        network_density: number;
+      };
+    };
+    social_influence: {
+      level: string;
+      score: number;
+      description: string;
+      metrics: {
+        degree: number;
+        betweenness: number;
+        closeness: number;
+        eigenvector: number;
+      };
+    };
+    total_nodes: number;
+    total_edges: number;
+  };
+  recommendations: {
+    immediate_actions: string[];
+    short_term_goals: string[];
+    long_term_goals: string[];
+    monitoring_points: string[];
+    intervention_level: string;
+  };
+  network_data: {
+    nodes: Array<{
+      id: string;
+      name: string;
+      grade: string;
+      class: string;
+      is_center: boolean;
+      degree: number;
+    }>;
+    edges: Array<{
+      source: string;
+      target: string;
+      weight: number;
+      relationship_type: string;
+    }>;
+  };
+}
+
 const IndividualAnalysis: React.FC = () => {
   const [surveys, setSurveys] = useState<Survey[]>([]);
   const [students, setStudents] = useState<Student[]>([]);
@@ -52,10 +123,13 @@ const IndividualAnalysis: React.FC = () => {
   const [individualNetworkData, setIndividualNetworkData] = useState<any[]>([]);
   const [maxSelections, setMaxSelections] = useState<number[]>([]);
   const [networkLoading, setNetworkLoading] = useState(false);
-  const [activeTab, setActiveTab] = useState<"core" | "ai">("core");
+  const [activeTab, setActiveTab] = useState<"core" | "ai" | "python">("core");
   const [aiReport, setAiReport] = useState<GeneratedReport | null>(null);
   const [aiReportLoading, setAiReportLoading] = useState(false);
   const [aiReportError, setAiReportError] = useState<string | null>(null);
+  const [pythonAnalysisResult, setPythonAnalysisResult] = useState<PythonAnalysisResult | null>(null);
+  const [pythonAnalysisLoading, setPythonAnalysisLoading] = useState(false);
+  const [pythonAnalysisError, setPythonAnalysisError] = useState<string | null>(null);
 
   useEffect(() => {
     fetchSurveys();
@@ -359,6 +433,140 @@ const IndividualAnalysis: React.FC = () => {
     }
   }, [selectedStudentData, individualNetworkData]);
 
+  // Python 네트워크 분석 실행 함수
+  const runPythonAnalysis = useCallback(async () => {
+    if (!selectedStudentData || !selectedSurvey) return;
+
+    setPythonAnalysisLoading(true);
+    setPythonAnalysisError(null);
+
+    try {
+      // 설문 응답 데이터를 Python 분석 형식으로 변환
+      const friendshipData = await prepareFriendshipDataForPython();
+      
+      if (!friendshipData || friendshipData.length === 0) {
+        throw new Error("분석할 친구 관계 데이터가 없습니다.");
+      }
+
+      // Python API 호출
+      const response = await fetch('http://localhost:5001/api/individual-analysis', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          student_id: selectedStudent,
+          friendship_data: friendshipData,
+          student_info: students.map(student => ({
+            id: student.id,
+            name: student.name,
+            grade: student.grade,
+            class: student.class
+          }))
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error(`Python 분석 API 오류: ${response.status}`);
+      }
+
+      const result = await response.json();
+      
+      if (result.success) {
+        setPythonAnalysisResult(result.data);
+      } else {
+        throw new Error(result.error || 'Python 분석 실패');
+      }
+
+    } catch (error) {
+      console.error("Python 분석 오류:", error);
+      setPythonAnalysisError(error instanceof Error ? error.message : '알 수 없는 오류가 발생했습니다.');
+    } finally {
+      setPythonAnalysisLoading(false);
+    }
+  }, [selectedStudentData, selectedSurvey, students, selectedStudent]);
+
+  // Python 분석용 친구 관계 데이터 준비
+  const prepareFriendshipDataForPython = async () => {
+    try {
+      // 선택된 학생의 설문 응답 데이터 조회
+      const { data: studentResponse, error: responseError } = await supabase
+        .from("survey_responses")
+        .select("*")
+        .eq("survey_id", selectedSurvey)
+        .eq("student_id", selectedStudent)
+        .single();
+
+      if (responseError || !studentResponse) {
+        return [];
+      }
+
+      // 설문 템플릿 메타데이터 조회
+      const { data: surveyData, error: surveyError } = await supabase
+        .from("surveys")
+        .select(`
+          *,
+          survey_templates!surveys_template_id_fkey(metadata)
+        `)
+        .eq("id", selectedSurvey)
+        .single();
+
+      if (surveyError || !surveyData) {
+        return [];
+      }
+
+      const metadata = surveyData?.survey_templates?.metadata as any;
+      const maxSelections = metadata?.max_selections || [];
+
+      // 친구 관계 데이터 변환
+      const friendshipData: Array<{
+        student_id: string;
+        friend_student_id: string;
+        relationship_type: string;
+        strength_score: number;
+      }> = [];
+      
+      if (studentResponse.responses) {
+        const answers = typeof studentResponse.responses === "string"
+          ? JSON.parse(studentResponse.responses)
+          : studentResponse.responses;
+
+        Object.entries(answers).forEach(([questionKey, answer]: [string, any]) => {
+          const questionIndex = parseInt(questionKey.replace("q", "")) - 1;
+          const maxSelection = maxSelections[questionIndex] || 10;
+
+          if (Array.isArray(answer)) {
+            const limitedAnswers = answer.slice(0, maxSelection);
+            limitedAnswers.forEach((friendId: string) => {
+              if (friendId && friendId !== selectedStudent) {
+                friendshipData.push({
+                  student_id: selectedStudent,
+                  friend_student_id: friendId,
+                  relationship_type: 'friend',
+                  strength_score: 1.0
+                });
+              }
+            });
+          } else if (typeof answer === "string" && answer !== selectedStudent) {
+            if (maxSelection >= 1) {
+              friendshipData.push({
+                student_id: selectedStudent,
+                friend_student_id: answer,
+                relationship_type: 'friend',
+                strength_score: 1.0
+              });
+            }
+          }
+        });
+      }
+
+      return friendshipData;
+    } catch (error) {
+      console.error("친구 관계 데이터 준비 오류:", error);
+      return [];
+    }
+  };
+
   // AI리포트 탭이 활성화될 때 리포트 생성
   useEffect(() => {
     if (
@@ -378,6 +586,27 @@ const IndividualAnalysis: React.FC = () => {
     selectedStudentData,
     individualNetworkData.length,
     generateAIReport,
+  ]);
+
+  // Python 분석 탭이 활성화될 때 분석 실행
+  useEffect(() => {
+    if (
+      activeTab === "python" &&
+      selectedStudentData &&
+      selectedSurvey
+    ) {
+      // 학생이 변경되면 기존 Python 분석 결과를 초기화하고 새로 분석
+      if (selectedStudent) {
+        setPythonAnalysisResult(null);
+        runPythonAnalysis();
+      }
+    }
+  }, [
+    activeTab,
+    selectedStudent,
+    selectedStudentData,
+    selectedSurvey,
+    runPythonAnalysis,
   ]);
 
   if (loading) {
@@ -491,6 +720,16 @@ const IndividualAnalysis: React.FC = () => {
                           }`}
                         >
                           AI리포트
+                        </button>
+                        <button
+                          onClick={() => setActiveTab("python")}
+                          className={`rounded-md px-4 py-2 text-sm font-medium transition-colors ${
+                            activeTab === "python"
+                              ? "bg-white text-[#3F80EA] shadow-sm"
+                              : "text-gray-600 hover:text-gray-900"
+                          }`}
+                        >
+                          Python분석
                         </button>
                       </div>
                     </div>
@@ -1012,6 +1251,188 @@ const IndividualAnalysis: React.FC = () => {
                               </p>
                               <p className="text-sm">
                                 네트워크 데이터를 먼저 로드해주세요.
+                              </p>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {activeTab === "python" && (
+                      <div className="space-y-6">
+                        {pythonAnalysisLoading ? (
+                          <div className="py-8 text-center">
+                            <div className="mx-auto mb-4 h-8 w-8 animate-spin rounded-full border-b-2 border-[#3F80EA]"></div>
+                            <p className="text-gray-600">
+                              Python 네트워크 분석을 실행하는 중...
+                            </p>
+                            <p className="mt-2 text-sm text-gray-500">
+                              NetworkX를 사용한 고급 네트워크 분석을 수행하고 있습니다.
+                            </p>
+                          </div>
+                        ) : pythonAnalysisError ? (
+                          <div className="py-8 text-center">
+                            <div className="mb-4 text-red-500">
+                              <p className="mb-2 text-lg font-medium">
+                                Python 분석 중 오류가 발생했습니다
+                              </p>
+                              <p className="text-sm">{pythonAnalysisError}</p>
+                            </div>
+                          </div>
+                        ) : pythonAnalysisResult ? (
+                          <div className="space-y-6">
+                            {/* 네트워크 통계 */}
+                            <div className="rounded-lg border border-blue-200 bg-blue-50 p-6">
+                              <h4 className="mb-4 text-lg font-semibold text-blue-800">
+                                네트워크 통계
+                              </h4>
+                              <div className="grid grid-cols-2 gap-4">
+                                <div className="rounded-lg border border-blue-100 bg-white p-4">
+                                  <h5 className="mb-2 text-sm font-semibold text-blue-700">기본 정보</h5>
+                                  <ul className="space-y-1 text-sm text-gray-700">
+                                    <li>• 총 노드 수: {pythonAnalysisResult.network_stats.total_nodes}개</li>
+                                    <li>• 총 연결 수: {pythonAnalysisResult.network_stats.total_edges}개</li>
+                                    <li>• 네트워크 밀도: {(pythonAnalysisResult.network_stats.network_density * 100).toFixed(1)}%</li>
+                                    <li>• 평균 클러스터링: {(pythonAnalysisResult.network_stats.average_clustering * 100).toFixed(1)}%</li>
+                                  </ul>
+                                </div>
+                                <div className="rounded-lg border border-blue-100 bg-white p-4">
+                                  <h5 className="mb-2 text-sm font-semibold text-blue-700">개별 지표</h5>
+                                  <ul className="space-y-1 text-sm text-gray-700">
+                                    <li>• 연결 수: {pythonAnalysisResult.individual_metrics.degree}개</li>
+                                    <li>• 연결 중심성: {(pythonAnalysisResult.individual_metrics.centrality_metrics.degree * 100).toFixed(1)}%</li>
+                                    <li>• 매개 중심성: {(pythonAnalysisResult.individual_metrics.centrality_metrics.betweenness * 100).toFixed(1)}%</li>
+                                    <li>• 근접 중심성: {(pythonAnalysisResult.individual_metrics.centrality_metrics.closeness * 100).toFixed(1)}%</li>
+                                  </ul>
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* 교우관계 유형 및 위험도 평가 */}
+                            <div className="rounded-lg border border-yellow-200 bg-yellow-50 p-6">
+                              <h4 className="mb-4 text-lg font-semibold text-yellow-800">
+                                교우관계 유형 및 위험도 평가
+                              </h4>
+                              <div className="grid grid-cols-2 gap-4">
+                                <div className="rounded-lg border border-yellow-100 bg-white p-4">
+                                  <h5 className="mb-2 text-sm font-semibold text-yellow-700">교우관계 유형</h5>
+                                  <p className="text-lg font-medium text-gray-800">
+                                    {pythonAnalysisResult.individual_metrics.friendship_type}
+                                  </p>
+                                </div>
+                                <div className="rounded-lg border border-yellow-100 bg-white p-4">
+                                  <h5 className="mb-2 text-sm font-semibold text-yellow-700">고립 위험도</h5>
+                                  <div className="space-y-1">
+                                    <p className="text-lg font-medium text-gray-800">
+                                      {pythonAnalysisResult.individual_metrics.isolation_risk.level}
+                                    </p>
+                                    <p className="text-sm text-gray-600">
+                                      {pythonAnalysisResult.individual_metrics.isolation_risk.description}
+                                    </p>
+                                    <p className="text-xs text-gray-500">
+                                      위험도 점수: {pythonAnalysisResult.individual_metrics.isolation_risk.score}/100
+                                    </p>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* 사회적 영향력 */}
+                            <div className="rounded-lg border border-green-200 bg-green-50 p-6">
+                              <h4 className="mb-4 text-lg font-semibold text-green-800">
+                                사회적 영향력 분석
+                              </h4>
+                              <div className="rounded-lg border border-green-100 bg-white p-4">
+                                <div className="space-y-2">
+                                  <p className="text-lg font-medium text-gray-800">
+                                    영향력 수준: {pythonAnalysisResult.individual_metrics.social_influence.level}
+                                  </p>
+                                  <p className="text-sm text-gray-600">
+                                    {pythonAnalysisResult.individual_metrics.social_influence.description}
+                                  </p>
+                                  <p className="text-xs text-gray-500">
+                                    영향력 점수: {pythonAnalysisResult.individual_metrics.social_influence.score.toFixed(1)}/100
+                                  </p>
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* 맞춤형 지도 방안 */}
+                            <div className="rounded-lg border border-purple-200 bg-purple-50 p-6">
+                              <h4 className="mb-4 text-lg font-semibold text-purple-800">
+                                맞춤형 지도 방안
+                              </h4>
+                              <div className="space-y-4">
+                                {pythonAnalysisResult.recommendations.immediate_actions.length > 0 && (
+                                  <div className="rounded-lg border border-purple-100 bg-white p-4">
+                                    <h5 className="mb-3 text-sm font-semibold text-purple-700">
+                                      즉시 조치 사항
+                                    </h5>
+                                    <ul className="space-y-2 text-sm text-gray-600">
+                                      {pythonAnalysisResult.recommendations.immediate_actions.map((action, index) => (
+                                        <li key={index} className="flex items-start">
+                                          <span className="mr-2 mt-0.5 text-purple-600">•</span>
+                                          <span>{action}</span>
+                                        </li>
+                                      ))}
+                                    </ul>
+                                  </div>
+                                )}
+                                
+                                <div className="grid gap-4 md:grid-cols-2">
+                                  <div className="rounded-lg border border-purple-100 bg-white p-4">
+                                    <h5 className="mb-3 text-sm font-semibold text-purple-700">
+                                      단기 목표
+                                    </h5>
+                                    <ul className="space-y-2 text-sm text-gray-600">
+                                      {pythonAnalysisResult.recommendations.short_term_goals.map((goal, index) => (
+                                        <li key={index} className="flex items-start">
+                                          <span className="mr-2 mt-0.5 text-purple-600">•</span>
+                                          <span>{goal}</span>
+                                        </li>
+                                      ))}
+                                    </ul>
+                                  </div>
+                                  
+                                  <div className="rounded-lg border border-purple-100 bg-white p-4">
+                                    <h5 className="mb-3 text-sm font-semibold text-purple-700">
+                                      장기 목표
+                                    </h5>
+                                    <ul className="space-y-2 text-sm text-gray-600">
+                                      {pythonAnalysisResult.recommendations.long_term_goals.map((goal, index) => (
+                                        <li key={index} className="flex items-start">
+                                          <span className="mr-2 mt-0.5 text-purple-600">•</span>
+                                          <span>{goal}</span>
+                                        </li>
+                                      ))}
+                                    </ul>
+                                  </div>
+                                </div>
+
+                                <div className="rounded-lg border border-purple-100 bg-white p-4">
+                                  <h5 className="mb-3 text-sm font-semibold text-purple-700">
+                                    모니터링 포인트
+                                  </h5>
+                                  <ul className="space-y-2 text-sm text-gray-600">
+                                    {pythonAnalysisResult.recommendations.monitoring_points.map((point, index) => (
+                                      <li key={index} className="flex items-start">
+                                        <span className="mr-2 mt-0.5 text-purple-600">•</span>
+                                        <span>{point}</span>
+                                      </li>
+                                    ))}
+                                  </ul>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="py-8 text-center">
+                            <div className="mb-4 text-gray-500">
+                              <p className="mb-2 text-lg font-medium">
+                                Python 분석을 실행할 수 없습니다
+                              </p>
+                              <p className="text-sm">
+                                학생과 설문을 선택한 후 다시 시도해주세요.
                               </p>
                             </div>
                           </div>
