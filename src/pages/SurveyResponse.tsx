@@ -875,7 +875,7 @@ const SurveyResponse: React.FC = () => {
                               }
 
                               return maxSelections > 1 ? (
-                                <span className="font-medium text-blue-600">
+                                <span className="font-medium text-[#3F80EA]">
                                   {" "}
                                   (최대 {maxSelections}명 선택 가능)
                                 </span>
@@ -1036,7 +1036,7 @@ const SurveyResponse: React.FC = () => {
                                           e.target.value,
                                         )
                                       }
-                                      className="mr-3 h-4 w-4 border-gray-300 text-blue-600 focus:ring-blue-500"
+                                      className="mr-3 h-4 w-4 border-gray-300 text-[#3F80EA] focus:ring-blue-500"
                                       required={question.required}
                                     />
                                     <span className="text-gray-900">
@@ -1094,7 +1094,7 @@ const SurveyResponse: React.FC = () => {
         <div className="w-full max-w-md rounded-lg border border-gray-200 bg-white p-8 text-center shadow-sm">
           <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-blue-100">
             <svg
-              className="h-8 w-8 text-blue-600"
+              className="h-8 w-8 text-[#3F80EA]"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -1107,11 +1107,11 @@ const SurveyResponse: React.FC = () => {
               />
             </svg>
           </div>
-          <h2 className="mb-3 text-2xl font-bold text-blue-600">
+          <h2 className="mb-3 text-2xl font-bold text-[#3F80EA]">
             📝 이미 응답 완료!
           </h2>
           <p className="mb-4 text-lg text-gray-700">
-            <span className="font-semibold text-blue-600">
+            <span className="font-semibold text-[#3F80EA]">
               {selectedStudent.name}
             </span>
             님은 이미 이 설문에 응답하셨습니다.
@@ -1146,7 +1146,7 @@ const SurveyResponse: React.FC = () => {
             </button>
             <button
               onClick={() => navigate("/")}
-              className="w-full rounded-lg bg-blue-600 px-6 py-3 text-white hover:bg-blue-700"
+              className="w-full rounded-lg bg-[#3F80EA] px-6 py-3 text-white hover:bg-blue-600"
             >
               🏠 홈으로 돌아가기
             </button>
@@ -1180,7 +1180,7 @@ const SurveyResponse: React.FC = () => {
             🎉 설문 완료!
           </h2>
           <p className="mb-4 text-lg text-gray-700">
-            <span className="font-semibold text-blue-600">
+            <span className="font-semibold text-[#3F80EA]">
               {selectedStudent.name}
             </span>
             님, 설문 응답이 성공적으로 완료되었습니다!
@@ -1201,7 +1201,7 @@ const SurveyResponse: React.FC = () => {
           </div>
           <button
             onClick={() => navigate("/")}
-            className="rounded-lg bg-blue-600 px-6 py-3 text-white hover:bg-blue-700"
+            className="rounded-lg bg-[#3F80EA] px-6 py-3 text-white hover:bg-blue-600"
           >
             홈으로 돌아가기
           </button>
