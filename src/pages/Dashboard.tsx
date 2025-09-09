@@ -319,13 +319,14 @@ const Dashboard: React.FC = () => {
                 });
 
                 if (currentUser?.role === "school_admin") {
-                  // 학교관리자인 경우 모든 설문 포함
+                  // 학교관리자: 해당 교육청 학교의 모든 학년 반의 설문
                   console.log(`📋 학교관리자용 설문 "${survey.title}" 매칭 결과:`, {
                     includeAll: true,
+                    reason: "학교관리자는 학교 전체 설문 접근 가능"
                   });
                   return true;
                 } else if (currentUser?.role === "grade_teacher") {
-                  // 학년 부장인 경우 담당 학년의 모든 설문 포함
+                  // 학년부장: 해당 교육청 학교 선생님의 학년 모든 반의 설문
                   const assignedGrade = currentUser?.grade_level || "1";
                   const gradeMatch = Array.isArray(targetGrades)
                     ? targetGrades.includes(assignedGrade)
@@ -333,10 +334,11 @@ const Dashboard: React.FC = () => {
                   console.log(`📋 학년부장용 설문 "${survey.title}" 매칭 결과:`, {
                     assignedGrade,
                     gradeMatch,
+                    reason: "학년부장은 담당 학년의 모든 반 설문 접근 가능"
                   });
                   return gradeMatch;
-                } else {
-                  // 담임교사인 경우 특정 학급만 매칭
+                } else if (currentUser?.role === "homeroom_teacher") {
+                  // 담임교사: 해당 교육청 학교 선생님의 학년 반의 설문
                   const gradeMatch = Array.isArray(targetGrades)
                     ? targetGrades.includes(gradeLevel)
                     : targetGrades === gradeLevel;
@@ -347,12 +349,21 @@ const Dashboard: React.FC = () => {
 
                   const isMatch = gradeMatch && classMatch;
                   console.log(`📋 담임교사용 설문 "${survey.title}" 매칭 결과:`, {
+                    gradeLevel,
+                    classNumber,
                     gradeMatch,
                     classMatch,
                     isMatch,
+                    reason: "담임교사는 담당 학급 설문만 접근 가능"
                   });
-
                   return isMatch;
+                } else {
+                  // 기타 역할의 경우 기본적으로 모든 설문 표시하지 않음
+                  console.log(`📋 기타 역할용 설문 "${survey.title}" 매칭 결과:`, {
+                    userRole: currentUser?.role,
+                    reason: "알 수 없는 역할로 설문 접근 제한"
+                  });
+                  return false;
                 }
               }) || [];
 
@@ -709,7 +720,13 @@ const Dashboard: React.FC = () => {
           <div className="mb-6 w-full">
             <div className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
               <h3 className="mb-4 text-lg font-semibold text-gray-900">
-                설문 프로젝트 총 {surveyProjects.length}개
+                {currentUser?.role === "school_admin" 
+                  ? `학교 전체 설문 프로젝트 총 ${surveyProjects.length}개`
+                  : currentUser?.role === "grade_teacher" 
+                  ? `${currentUser?.grade_level || gradeLevel}학년 설문 프로젝트 총 ${surveyProjects.length}개`
+                  : currentUser?.role === "homeroom_teacher"
+                  ? `${gradeLevel}학년 ${classNumber}반 설문 프로젝트 총 ${surveyProjects.length}개`
+                  : `설문 프로젝트 총 ${surveyProjects.length}개`}
               </h3>
               <div className="flex h-fit w-full gap-2 overflow-x-auto">
                 {surveyProjects.map((project) => (
@@ -765,10 +782,12 @@ const Dashboard: React.FC = () => {
               <h3 className="mb-6 text-center text-lg font-semibold text-gray-900">
                 {schoolName || "와이즈 초등학교"} [
                 {currentUser?.role === "school_admin" 
-                  ? "전학년 전체"
+                  ? "학교 전체 모니터링"
                   : currentUser?.role === "grade_teacher" 
-                  ? `${gradeLevel}학년 전체` 
-                  : `${gradeLevel}학년 ${classNumber}반`}]
+                  ? `${currentUser?.grade_level || gradeLevel}학년 전체 모니터링` 
+                  : currentUser?.role === "homeroom_teacher"
+                  ? `${gradeLevel}학년 ${classNumber}반 모니터링`
+                  : "모니터링"}]
               </h3>
               <div className="grid grid-cols-4 gap-8">
                 {/* 설문 참여 예상 학생 수 */}
