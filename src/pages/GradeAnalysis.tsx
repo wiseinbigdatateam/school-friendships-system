@@ -15,16 +15,23 @@ interface Survey {
   id: string;
   title: string;
   status: string;
-  created_at: string;
-  target_grades: string[];
-  target_classes: string[];
+  created_at: string | null;
+  target_grades: string[] | null;
+  target_classes: string[] | null;
 }
 
 interface NetworkAnalysisResult {
   id: string;
-  survey_id: string;
-  analysis_data: any;
-  created_at: string;
+  survey_id: string | null;
+  analysis_data?: any;
+  created_at?: string | null;
+  analysis_type?: string;
+  calculated_at?: string | null;
+  centrality_scores?: any;
+  community_membership?: string | null;
+  recommendations?: any;
+  risk_indicators?: any;
+  student_id?: string | null;
 }
 
 const GradeAnalysis: React.FC = () => {
@@ -52,7 +59,7 @@ const GradeAnalysis: React.FC = () => {
       const { data: studentsData, error } = await supabase
         .from("students")
         .select("*")
-        .eq("current_school_id", user?.school_id)
+        .eq("current_school_id", user?.school_id || "")
         .eq("grade", grade)
         .order("class", { ascending: true })
         .order("student_number", { ascending: true });
@@ -76,8 +83,7 @@ const GradeAnalysis: React.FC = () => {
       const { data: surveysData, error } = await supabase
         .from("surveys")
         .select("*")
-        .eq("school_id", user?.school_id)
-        .contains("target_grades", [grade])
+        .eq("school_id", user?.school_id || "")
         .in("status", ["active", "completed"])
         .order("created_at", { ascending: false });
 
@@ -86,11 +92,17 @@ const GradeAnalysis: React.FC = () => {
         return;
       }
 
-      setSurveys(surveysData || []);
+      // 학년에 맞는 설문만 필터링
+      const filteredSurveys = surveysData?.filter(survey => {
+        const targetGrades = survey.target_grades;
+        return targetGrades && targetGrades.includes(grade);
+      }) || [];
+
+      setSurveys(filteredSurveys);
       
       // 첫 번째 설문을 기본 선택
-      if (surveysData && surveysData.length > 0) {
-        setSelectedSurvey(surveysData[0]);
+      if (filteredSurveys.length > 0) {
+        setSelectedSurvey(filteredSurveys[0]);
       }
     } catch (error) {
       console.error("설문 데이터 로드 오류:", error);
@@ -129,7 +141,7 @@ const GradeAnalysis: React.FC = () => {
     if (!selectedAnalysis || !students.length) return;
 
     try {
-      const analysisData = selectedAnalysis.analysis_data;
+      const analysisData = selectedAnalysis.analysis_data || selectedAnalysis;
       const grade = getGradeTeacherGrade();
       
       // 학년 전체 학생들의 데이터를 통합
@@ -146,7 +158,7 @@ const GradeAnalysis: React.FC = () => {
       }, {});
 
       // 학년 전체 네트워크 데이터 생성
-      const gradeNetworkData = {
+      const gradeNetworkData: any = {
         nodes: gradeStudents.map(student => ({
           id: student.id,
           label: student.name,
@@ -154,7 +166,7 @@ const GradeAnalysis: React.FC = () => {
           title: `${student.name} (${student.grade}-${student.class})`,
           color: getClassColor(student.class)
         })),
-        edges: [],
+        edges: [] as any[],
         statistics: {
           totalStudents: gradeStudents.length,
           totalClasses: Object.keys(classGroups).length,
@@ -278,7 +290,7 @@ const GradeAnalysis: React.FC = () => {
                 상태: {survey.status === "completed" ? "완료" : "진행중"}
               </p>
               <p className="mt-1 text-sm text-gray-500">
-                생성일: {new Date(survey.created_at).toLocaleDateString("ko-KR")}
+                생성일: {survey.created_at ? new Date(survey.created_at).toLocaleDateString("ko-KR") : "날짜 없음"}
               </p>
             </button>
           ))}
@@ -304,7 +316,7 @@ const GradeAnalysis: React.FC = () => {
                   분석 결과 #{analysisResults.indexOf(result) + 1}
                 </h3>
                 <p className="mt-1 text-sm text-gray-500">
-                  생성일: {new Date(result.created_at).toLocaleDateString("ko-KR")}
+                  생성일: {result.created_at ? new Date(result.created_at).toLocaleDateString("ko-KR") : "날짜 없음"}
                 </p>
               </button>
             ))}
@@ -374,9 +386,8 @@ const GradeAnalysis: React.FC = () => {
             <p>• 점선은 학급 간 연결을 나타냅니다</p>
           </div>
           <NetworkChartComponent
-            data={gradeData}
-            height={600}
-            showStatistics={true}
+            chartData={[gradeData]}
+            activeTab={0}
           />
         </div>
       )}
