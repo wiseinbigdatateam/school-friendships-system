@@ -1657,7 +1657,7 @@ const StudentManagement: React.FC = () => {
               // { field: 'grade', label: '학년' },
               // { field: 'class', label: '반' },
               { field: "student_number", label: "번호" },
-              { field: "risk_level", label: "위험도" },
+              // { field: "risk_level", label: "위험도" },
               { field: "network_centrality", label: "교우관계 중심성" },
             ].map(({ field, label }) => (
               <button

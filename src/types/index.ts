@@ -276,10 +276,14 @@ export interface SurveyAnswer {
 export interface NetworkNode {
   id: string;
   name: string;
+  grade: string;
+  class: string;
+  friendship_type: string;
+  centrality: number;
+  community: number;
+  connection_count: number;
   department?: string;
   position?: string;
-  grade?: string;
-  centrality?: number;
   cluster?: number;
   isIsolated?: boolean;
   attributes?: Record<string, any>;
@@ -289,6 +293,7 @@ export interface NetworkEdge {
   source: string;
   target: string;
   weight: number;
+  relationship_type?: string;
   relationshipType?: string;
   attributes?: Record<string, any>;
 }
@@ -304,6 +309,13 @@ export interface NetworkData {
     clusters: number;
     isolatedNodes: number;
   };
+}
+
+export interface NetworkAnalysisData {
+  nodes: NetworkNode[];
+  edges: NetworkEdge[];
+  metrics: NetworkMetrics;
+  friendship_types: { [key: string]: number };
 }
 
 // 통계 및 분석 타입
@@ -360,6 +372,22 @@ export interface NetworkMetrics {
   isolatedIndividuals: number;
   highCentralityIndividuals: number;
   clusterCount: number;
+  // 추가 속성들
+  total_students: number;
+  total_relationships: number;
+  total_nodes: number;
+  total_edges: number;
+  density: number;
+  network_density: number;
+  average_degree: number;
+  average_path_length: number;
+  clustering_coefficient: number;
+  modularity: number;
+  connected_components: number;
+  average_degree_centrality: number;
+  average_closeness_centrality: number;
+  average_betweenness_centrality: number;
+  average_eigenvector_centrality: number;
 }
 
 export interface Alert {

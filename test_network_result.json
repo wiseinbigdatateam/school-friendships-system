@@ -1,0 +1,302 @@
+{
+  "network_stats": {
+    "total_students": 10,
+    "total_relationships": 15,
+    "average_degree": 3.0,
+    "density": 0.3333333333333333,
+    "clustering_coefficient": 0.45,
+    "average_path_length": 1.9555555555555555,
+    "connected_components": 1
+  },
+  "friendship_type_distribution": {
+    "평균적인 학생": 7,
+    "소수 친구 학생": 3
+  },
+  "student_details": {
+    "강서아": {
+      "name": "강서아",
+      "grade": "1",
+      "class": "1",
+      "friendship_type": "평균적인 학생",
+      "centrality_metrics": {
+        "degree": 0.4444444444444444,
+        "betweenness": 0.2407407407407407,
+        "closeness": 0.6428571428571429,
+        "eigenvector": 0.4538680476967778
+      },
+      "community_id": 0,
+      "connection_count": 4,
+      "neighbors": [
+        "김지유",
+        "김채원",
+        "오예준",
+        "윤주원"
+      ]
+    },
+    "김지유": {
+      "name": "김지유",
+      "grade": "1",
+      "class": "1",
+      "friendship_type": "평균적인 학생",
+      "centrality_metrics": {
+        "degree": 0.4444444444444444,
+        "betweenness": 0.28703703703703703,
+        "closeness": 0.6,
+        "eigenvector": 0.34448210955632186
+      },
+      "community_id": 0,
+      "connection_count": 4,
+      "neighbors": [
+        "강서아",
+        "박서윤",
+        "박지우",
+        "오서아"
+      ]
+    },
+    "김채원": {
+      "name": "김채원",
+      "grade": "1",
+      "class": "1",
+      "friendship_type": "평균적인 학생",
+      "centrality_metrics": {
+        "degree": 0.4444444444444444,
+        "betweenness": 0.21527777777777776,
+        "closeness": 0.5625,
+        "eigenvector": 0.41119165210443104
+      },
+      "community_id": 0,
+      "connection_count": 4,
+      "neighbors": [
+        "강서아",
+        "윤시우",
+        "윤주원",
+        "윤채원"
+      ]
+    },
+    "박서윤": {
+      "name": "박서윤",
+      "grade": "1",
+      "class": "1",
+      "friendship_type": "소수 친구 학생",
+      "centrality_metrics": {
+        "degree": 0.2222222222222222,
+        "betweenness": 0.041666666666666664,
+        "closeness": 0.45,
+        "eigenvector": 0.20896673935889618
+      },
+      "community_id": 0,
+      "connection_count": 2,
+      "neighbors": [
+        "김지유",
+        "오예준"
+      ]
+    },
+    "박지우": {
+      "name": "박지우",
+      "grade": "1",
+      "class": "1",
+      "friendship_type": "소수 친구 학생",
+      "centrality_metrics": {
+        "degree": 0.2222222222222222,
+        "betweenness": 0.0,
+        "closeness": 0.45,
+        "eigenvector": 0.186556418565924
+      },
+      "community_id": 0,
+      "connection_count": 2,
+      "neighbors": [
+        "김지유",
+        "오서아"
+      ]
+    },
+    "오서아": {
+      "name": "오서아",
+      "grade": "1",
+      "class": "1",
+      "friendship_type": "평균적인 학생",
+      "centrality_metrics": {
+        "degree": 0.3333333333333333,
+        "betweenness": 0.14583333333333331,
+        "closeness": 0.5294117647058824,
+        "eigenvector": 0.2519591066900635
+      },
+      "community_id": 0,
+      "connection_count": 3,
+      "neighbors": [
+        "김지유",
+        "박지우",
+        "윤시우"
+      ]
+    },
+    "오예준": {
+      "name": "오예준",
+      "grade": "1",
+      "class": "1",
+      "friendship_type": "평균적인 학생",
+      "centrality_metrics": {
+        "degree": 0.3333333333333333,
+        "betweenness": 0.07407407407407408,
+        "closeness": 0.47368421052631576,
+        "eigenvector": 0.32361066036585684
+      },
+      "community_id": 0,
+      "connection_count": 3,
+      "neighbors": [
+        "강서아",
+        "박서윤",
+        "윤주원"
+      ]
+    },
+    "윤시우": {
+      "name": "윤시우",
+      "grade": "1",
+      "class": "1",
+      "friendship_type": "평균적인 학생",
+      "centrality_metrics": {
+        "degree": 0.3333333333333333,
+        "betweenness": 0.13194444444444445,
+        "closeness": 0.5294117647058824,
+        "eigenvector": 0.2745034075477597
+      },
+      "community_id": 0,
+      "connection_count": 3,
+      "neighbors": [
+        "김채원",
+        "오서아",
+        "윤채원"
+      ]
+    },
+    "윤주원": {
+      "name": "윤주원",
+      "grade": "1",
+      "class": "1",
+      "friendship_type": "평균적인 학생",
+      "centrality_metrics": {
+        "degree": 0.3333333333333333,
+        "betweenness": 0.05787037037037036,
+        "closeness": 0.5294117647058824,
+        "eigenvector": 0.3717921153936149
+      },
+      "community_id": 0,
+      "connection_count": 3,
+      "neighbors": [
+        "김채원",
+        "오예준",
+        "강서아"
+      ]
+    },
+    "윤채원": {
+      "name": "윤채원",
+      "grade": "1",
+      "class": "1",
+      "friendship_type": "소수 친구 학생",
+      "centrality_metrics": {
+        "degree": 0.2222222222222222,
+        "betweenness": 0.0,
+        "closeness": 0.42857142857142855,
+        "eigenvector": 0.21447179879430742
+      },
+      "community_id": 0,
+      "connection_count": 2,
+      "neighbors": [
+        "김채원",
+        "윤시우"
+      ]
+    }
+  },
+  "communities": [
+    {
+      "id": 0,
+      "size": 10,
+      "members": [
+        "오서아",
+        "박서윤",
+        "강서아",
+        "오예준",
+        "박지우",
+        "윤주원",
+        "김채원",
+        "윤시우",
+        "김지유",
+        "윤채원"
+      ],
+      "internal_density": 0.3333333333333333
+    }
+  ],
+  "centrality_metrics": {
+    "강서아": {
+      "degree": 0.4444444444444444,
+      "betweenness": 0.2407407407407407,
+      "closeness": 0.6428571428571429,
+      "eigenvector": 0.4538680476967778
+    },
+    "김지유": {
+      "degree": 0.4444444444444444,
+      "betweenness": 0.28703703703703703,
+      "closeness": 0.6,
+      "eigenvector": 0.34448210955632186
+    },
+    "김채원": {
+      "degree": 0.4444444444444444,
+      "betweenness": 0.21527777777777776,
+      "closeness": 0.5625,
+      "eigenvector": 0.41119165210443104
+    },
+    "박서윤": {
+      "degree": 0.2222222222222222,
+      "betweenness": 0.041666666666666664,
+      "closeness": 0.45,
+      "eigenvector": 0.20896673935889618
+    },
+    "박지우": {
+      "degree": 0.2222222222222222,
+      "betweenness": 0.0,
+      "closeness": 0.45,
+      "eigenvector": 0.186556418565924
+    },
+    "오서아": {
+      "degree": 0.3333333333333333,
+      "betweenness": 0.14583333333333331,
+      "closeness": 0.5294117647058824,
+      "eigenvector": 0.2519591066900635
+    },
+    "오예준": {
+      "degree": 0.3333333333333333,
+      "betweenness": 0.07407407407407408,
+      "closeness": 0.47368421052631576,
+      "eigenvector": 0.32361066036585684
+    },
+    "윤시우": {
+      "degree": 0.3333333333333333,
+      "betweenness": 0.13194444444444445,
+      "closeness": 0.5294117647058824,
+      "eigenvector": 0.2745034075477597
+    },
+    "윤주원": {
+      "degree": 0.3333333333333333,
+      "betweenness": 0.05787037037037036,
+      "closeness": 0.5294117647058824,
+      "eigenvector": 0.3717921153936149
+    },
+    "윤채원": {
+      "degree": 0.2222222222222222,
+      "betweenness": 0.0,
+      "closeness": 0.42857142857142855,
+      "eigenvector": 0.21447179879430742
+    }
+  },
+  "community_membership": {
+    "오서아": 0,
+    "박서윤": 0,
+    "강서아": 0,
+    "오예준": 0,
+    "박지우": 0,
+    "윤주원": 0,
+    "김채원": 0,
+    "윤시우": 0,
+    "김지유": 0,
+    "윤채원": 0
+  },
+  "analysis_timestamp": "2025-09-09T08:47:09.759150",
+  "survey_id": null
+}

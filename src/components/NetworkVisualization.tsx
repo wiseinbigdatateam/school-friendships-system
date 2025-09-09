@@ -1,36 +1,13 @@
-import React, { useEffect, useRef, useState } from "react";
-import * as d3 from "d3";
-
-interface NetworkNode {
-  id: string;
-  name: string;
-  grade: string;
-  class: string;
-  friendship_type: string;
-  centrality: number;
-  community: number;
-  connection_count: number;
-  x?: number;
-  y?: number;
-  fx?: number | null;
-  fy?: number | null;
-}
-
-interface NetworkEdge {
-  source: string;
-  target: string;
-  weight: number;
-  relationship_type: string;
-}
-
-interface NetworkData {
-  nodes: NetworkNode[];
-  edges: NetworkEdge[];
-}
+import React, { useEffect, useRef, useState, useMemo } from 'react';
+import { Network } from 'vis-network';
+import { NetworkNode, NetworkEdge } from '../types';
 
 interface NetworkVisualizationProps {
-  data: NetworkData;
-  period: string;
+  data: {
+    nodes: NetworkNode[];
+    edges: NetworkEdge[];
+  };
+  period?: string;
   width?: number;
   height?: number;
   onNodeClick?: (node: NetworkNode) => void;
@@ -39,260 +16,195 @@ interface NetworkVisualizationProps {
 const NetworkVisualization: React.FC<NetworkVisualizationProps> = ({
   data,
   period,
-  width = 800,
-  height = 550,
+  width = 900,
+  height = 750,
   onNodeClick,
 }) => {
-  const svgRef = useRef<SVGSVGElement>(null);
+  const networkRef = useRef<HTMLDivElement>(null);
+  const networkInstanceRef = useRef<Network | null>(null);
   const [selectedNode, setSelectedNode] = useState<NetworkNode | null>(null);
 
+  // 색상 매핑
+  const colorMap = useMemo((): { [key: string]: string } => ({
+    '외톨이형': '#FF6B6B',
+    '소수 친구 학생': '#FFD700', // 노란색
+    '평균적인 학생': '#87CEEB', // 하늘색
+    '친구 많은 학생': '#4169E1', // 진한 파란색
+    '사교 스타': '#FFEAA7'
+  }), []);
+
   useEffect(() => {
-    if (!data || !data.nodes || !data.edges || !svgRef.current) return;
+    if (!networkRef.current || !data.nodes.length) return;
 
-    // 기존 SVG 내용 클리어
-    d3.select(svgRef.current).selectAll("*").remove();
-
-    const svg = d3.select(svgRef.current);
-    const g = svg.append("g");
-
-    // 심플한 색상 팔레트
-    const colorScale = d3
-      .scaleOrdinal<string, string>()
-      .domain([
-        "외톨이형",
-        "소수 친구 학생",
-        "평균적인 학생",
-        "친구 많은 학생",
-        "사교 스타",
-      ])
-      .range(["#ef4444", "#eab308", "#60a5fa", "#1d4ed8", "#22c55e"]);
-
-    // 노드 크기 스케일 (중심성 기반)
-    const sizeScale = d3
-      .scaleLinear()
-      .domain([0, d3.max(data.nodes, (d) => d.centrality) || 1])
-      .range([12, 25]);
-
-    // 엣지 두께 스케일
-    const edgeWidthScale = d3
-      .scaleLinear()
-      .domain([0, d3.max(data.edges, (d) => d.weight) || 1])
-      .range([1, 3]);
-
-    // 시뮬레이션 설정
-    const simulation = d3
-      .forceSimulation(data.nodes as any)
-      .force(
-        "link",
-        d3
-          .forceLink(data.edges)
-          .id((d: any) => d.id)
-          .distance(80),
-      )
-      .force("charge", d3.forceManyBody().strength(-300))
-      .force("center", d3.forceCenter(width / 2, height / 2))
-      .force(
-        "collision",
-        d3.forceCollide().radius((d: any) => sizeScale(d.centrality) + 8),
-      );
-
-    // 엣지 그리기
-    const links = g
-      .append("g")
-      .attr("class", "links")
-      .selectAll("line")
-      .data(data.edges)
-      .enter()
-      .append("line")
-      .attr("stroke", "#999")
-      .attr("stroke-opacity", 1)
-      // .attr("stroke-width", (d) => edgeWidthScale(d.weight))
-      .attr("stroke-width", 1)
-      .style("stroke-linecap", "round");
-
-    // 노드 그리기
-    const nodes = g
-      .append("g")
-      .attr("class", "nodes")
-      .selectAll("circle")
-      .data(data.nodes)
-      .enter()
-      .append("circle")
-      .attr("r", (d) => 12)
-      .attr("fill", (d) => colorScale(d.friendship_type))
-      // .attr("stroke", "#ffffff")
-      // .attr("stroke-width", 1.5)
-      .style("cursor", "pointer")
-      .style("filter", "drop-shadow(0 2px 4px rgba(0,0,0,0.1))")
-      .on("click", (event, d) => {
-        setSelectedNode(d);
-        onNodeClick?.(d);
-      })
-      .on("mouseenter", function (event, d) {
-        d3.select(this)
-          .transition()
-          .duration(200)
-          .attr("r", sizeScale(d.centrality) + 3)
-          .style("filter", "drop-shadow(0 4px 8px rgba(0,0,0,0.2))");
-
-        // 연결된 엣지 하이라이트
-        links
-          .transition()
-          .duration(200)
-          .attr("stroke-opacity", (link: any) =>
-            link.source.id === d.id || link.target.id === d.id ? 0.8 : 0.2,
-          );
-      })
-      .on("mouseleave", function (event, d) {
-        d3.select(this)
-          .transition()
-          .duration(200)
-          .attr("r", sizeScale(d.centrality))
-          .style("filter", "drop-shadow(0 2px 4px rgba(0,0,0,0.1))");
-
-        // 엣지 원래 상태로 복원
-        links.transition().duration(200).attr("stroke-opacity", 0.4);
-      });
-
-    // 노드 라벨
-    const labels = g
-      .append("g")
-      .attr("class", "labels")
-      .selectAll("text")
-      .data(data.nodes)
-      .enter()
-      .append("text")
-      .text((d) => d.name)
-      .attr("font-size", 14)
-      .attr("font-weight", "500")
-      .attr("text-anchor", "middle")
-      .attr("dx", 32)
-      .attr("dy", 5)
-      .attr("fill", "#374151")
-      .style("pointer-events", "none");
-    // .style("text-shadow", "0 1px 2px rgba(255,255,255,0.8)");
-
-    // 심플한 툴팁
-    const tooltip = d3
-      .select("body")
-      .append("div")
-      .attr("class", "network-tooltip")
-      .style("position", "absolute")
-      .style("background", "rgba(31, 41, 55, 0.9)")
-      .style("color", "white")
-      .style("padding", "8px 12px")
-      .style("border-radius", "6px")
-      .style("font-size", "12px")
-      .style("font-weight", "500")
-      .style("pointer-events", "none")
-      .style("z-index", "1000")
-      .style("opacity", 0)
-      .style("box-shadow", "0 4px 12px rgba(0,0,0,0.3)")
-      .style("border", "1px solid rgba(255,255,255,0.1)");
-
-    function showTooltip(event: any, d: NetworkNode) {
-      tooltip.transition().duration(200).style("opacity", 0.9);
-
-      tooltip
-        .html(
-          `
-        <strong>${d.name}</strong><br/>
-        ${d.grade}학년 ${d.class}반<br/>
-        ${d.friendship_type}<br/>
-        연결: ${d.connection_count}명
-      `,
-        )
-        .style("left", event.pageX + 10 + "px")
-        .style("top", event.pageY - 10 + "px");
+    // 기존 네트워크 인스턴스 정리
+    if (networkInstanceRef.current) {
+      networkInstanceRef.current.destroy();
+      networkInstanceRef.current = null;
     }
 
-    function hideTooltip() {
-      tooltip.transition().duration(200).style("opacity", 0);
-    }
+    // vis-network용 데이터 변환
+    const visNodes = data.nodes.map(node => ({
+      id: node.id,
+      label: node.name,
+      color: {
+        background: colorMap[node.friendship_type] || '#94a3b8',
+        border: '#ffffff',
+        highlight: {
+          background: colorMap[node.friendship_type] || '#94a3b8',
+          border: '#3b82f6'
+        },
+        hover: {
+          background: colorMap[node.friendship_type] || '#94a3b8',
+          border: '#3b82f6'
+        }
+      },
+      size: 25,
+      font: {
+        size: 12,
+        color: '#333333',
+        face: 'Arial, sans-serif',
+        strokeWidth: 0
+      },
+      title: `${node.name}\n${node.friendship_type}\n연결 수: ${node.connection_count || 0}`,
+      // 원본 데이터 저장
+      originalData: node
+    }));
 
-    // 노드에 툴팁 이벤트 추가
-    nodes.on("mouseenter", showTooltip).on("mouseleave", hideTooltip);
+    const visEdges = data.edges.map(edge => ({
+      id: `${edge.source}-${edge.target}`,
+      from: edge.source,
+      to: edge.target,
+      color: {
+        color: '#999999',
+        highlight: '#3b82f6',
+        hover: '#3b82f6'
+      },
+      width: 1,
+      smooth: false,
+      title: `관계: ${edge.relationship_type || '기타'}`
+    }));
 
-    // 드래그 기능
-    nodes.call(
-      d3
-        .drag<any, NetworkNode>()
-        .on("start", (event, d) => {
-          if (!event.active) simulation.alphaTarget(0.3).restart();
-          d.fx = d.x;
-          d.fy = d.y;
-        })
-        .on("drag", (event, d) => {
-          d.fx = event.x;
-          d.fy = event.y;
-        })
-        .on("end", (event, d) => {
-          if (!event.active) simulation.alphaTarget(0);
-          d.fx = null;
-          d.fy = null;
-        }) as any,
-    );
+    // 네트워크 옵션 설정
+    const options = {
+      nodes: {
+        shape: 'circle',
+        size: 25,
+        font: {
+          size: 12,
+          color: '#333333',
+          face: 'Arial, sans-serif',
+          strokeWidth: 0
+        },
+        borderWidth: 0,
+        shadow: {
+          enabled: false
+        }
+      },
+      edges: {
+        width: 1,
+        color: {
+          color: '#999999',
+          highlight: '#3b82f6',
+          hover: '#3b82f6'
+        },
+        smooth: false,
+        shadow: {
+          enabled: false
+        }
+      },
+      physics: {
+        enabled: true,
+        stabilization: {
+          enabled: true,
+          iterations: 200,
+          updateInterval: 25
+        },
+        barnesHut: {
+          gravitationalConstant: -800,
+          centralGravity: 0.1,
+          springLength: 200,
+          springConstant: 0.01,
+          damping: 0.09,
+          avoidOverlap: 0.5
+        }
+      },
+      interaction: {
+        hover: true,
+        hoverConnectedEdges: true,
+        selectConnectedEdges: false,
+        dragNodes: true, // 노드 드래그 활성화
+        dragView: false,
+        zoomView: false,
+        zoomSpeed: 1,
+        tooltipDelay: 200
+      },
+      layout: {
+        improvedLayout: true,
+        clusterThreshold: 150
+      }
+    };
 
-    // 시뮬레이션 업데이트
-    simulation.on("tick", () => {
-      links
-        .attr("x1", (d: any) => d.source.x)
-        .attr("y1", (d: any) => d.source.y)
-        .attr("x2", (d: any) => d.target.x)
-        .attr("y2", (d: any) => d.target.y);
+    // 네트워크 생성
+    const network = new Network(networkRef.current, { nodes: visNodes, edges: visEdges }, options);
+    networkInstanceRef.current = network;
 
-      nodes.attr("cx", (d: any) => d.x).attr("cy", (d: any) => d.y);
-
-      labels.attr("x", (d: any) => d.x).attr("y", (d: any) => d.y);
+    // 이벤트 리스너 등록
+    network.on('click', (params) => {
+      if (params.nodes.length > 0) {
+        const nodeId = params.nodes[0];
+        const node = data.nodes.find(n => n.id === nodeId);
+        if (node) {
+          setSelectedNode(node);
+          onNodeClick?.(node);
+        }
+      }
     });
 
-    // 클린업
+    // 네트워크가 안정화되면 줌 조정
+    network.on('stabilizationIterationsDone', () => {
+      network.fit();
+    });
+
     return () => {
-      simulation.stop();
-      tooltip.remove();
+      if (networkInstanceRef.current) {
+        networkInstanceRef.current.destroy();
+        networkInstanceRef.current = null;
+      }
     };
-  }, [data, period, width, height, onNodeClick]);
+  }, [data, period, width, height, onNodeClick, colorMap]);
 
   return (
-    <div className="network-visualization">
-      <div className="mb-4">
-        <h3 className="mb-3 text-lg font-semibold text-gray-800">
-          {period} 교우관계 네트워크
-        </h3>
-
-        {/* 심플한 범례 */}
-        <div className="mb-4 flex flex-wrap gap-3">
+    <div className="network-visualization relative">
+      {/* 범례 */}
+      <div className="absolute left-4 top-4 z-10 rounded-lg bg-white/90 p-3 shadow-lg backdrop-blur-sm">
+        <div className="space-y-2">
           {[
-            "외톨이형",
-            "소수 친구 학생",
-            "평균적인 학생",
-            "친구 많은 학생",
-            "사교 스타",
-          ].map((type) => (
+            { type: "외톨이형", color: "#FF6B6B", count: data.nodes.filter(n => n.friendship_type === "외톨이형").length },
+            { type: "소수 친구 학생", color: "#4ECDC4", count: data.nodes.filter(n => n.friendship_type === "소수 친구 학생").length },
+            { type: "평균적인 학생", color: "#45B7D1", count: data.nodes.filter(n => n.friendship_type === "평균적인 학생").length },
+            { type: "친구 많은 학생", color: "#96CEB4", count: data.nodes.filter(n => n.friendship_type === "친구 많은 학생").length },
+            { type: "사교 스타", color: "#FFEAA7", count: data.nodes.filter(n => n.friendship_type === "사교 스타").length },
+          ].map(({ type, color, count }) => (
             <div key={type} className="flex items-center gap-2">
               <div
-                className="h-3 w-3 rounded-full"
-                style={{
-                  backgroundColor:
-                    type === "외톨이형"
-                      ? "#ef4444"
-                      : type === "소수 친구 학생"
-                        ? "#f59e0b"
-                        : type === "평균적인 학생"
-                          ? "#10b981"
-                          : type === "친구 많은 학생"
-                            ? "#06b6d4"
-                            : "#8b5cf6",
-                }}
+                className="h-4 w-4 rounded-full"
+                style={{ backgroundColor: color }}
               />
-              <span className="text-sm text-gray-600">{type}</span>
+              <span className="text-sm font-medium text-gray-700">
+                {type}: {count}명
+              </span>
             </div>
           ))}
         </div>
       </div>
 
+      {/* 네트워크 시각화 */}
       <div className="overflow-hidden rounded-lg border border-gray-200 bg-white">
-        <svg ref={svgRef} width={width} height={height} className="w-full" />
+        <div 
+          ref={networkRef} 
+          className="w-full"
+          style={{ width: `${width}px`, height: `${height}px` }}
+        />
       </div>
 
       {selectedNode && (
@@ -325,11 +237,11 @@ const NetworkVisualization: React.FC<NetworkVisualizationProps> = ({
               {selectedNode.connection_count}명
             </div>
             <div>
-              <span className="font-medium text-gray-600">중심성:</span>{" "}
+              <span className="font-medium text-gray-600">연결 정도:</span>{" "}
               {(selectedNode.centrality * 100).toFixed(1)}%
             </div>
             <div>
-              <span className="font-medium text-gray-600">커뮤니티:</span>{" "}
+              <span className="font-medium text-gray-600">친구 그룹:</span>{" "}
               {selectedNode.community + 1}번 그룹
             </div>
           </div>

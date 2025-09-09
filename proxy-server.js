@@ -2,6 +2,9 @@ const express = require('express');
 const cors = require('cors');
 const axios = require('axios');
 const nodemailer = require('nodemailer');
+const { spawn } = require('child_process');
+const path = require('path');
+const fs = require('fs');
 require('dotenv').config();
 
 const app = express();
@@ -130,6 +133,129 @@ app.post('/api/naver-works/send-email', async (req, res) => {
   }
 });
 
+// Python 네트워크 분석 스크립트 실행 API
+app.post('/api/network-analysis/run', async (req, res) => {
+  try {
+    const { surveyId, surveyData, studentInfo } = req.body;
+    
+    console.log('🐍 Python 네트워크 분석 요청 받음');
+    console.log('📊 설문 ID:', surveyId);
+    console.log('👥 학생 수:', studentInfo?.length || 0);
+    console.log('🔗 관계 수:', surveyData?.length || 0);
+    
+    // 임시 데이터 파일 생성
+    const tempDir = path.join(__dirname, 'temp');
+    if (!fs.existsSync(tempDir)) {
+      fs.mkdirSync(tempDir, { recursive: true });
+    }
+    
+    const timestamp = Date.now();
+    const dataFile = path.join(tempDir, `network_data_${timestamp}.json`);
+    const outputFile = path.join(tempDir, `network_result_${timestamp}.json`);
+    
+    // 입력 데이터 파일 생성
+    const inputData = {
+      survey_id: surveyId,
+      survey_data: surveyData,
+      student_info: studentInfo,
+      timestamp: new Date().toISOString()
+    };
+    
+    fs.writeFileSync(dataFile, JSON.stringify(inputData, null, 2), 'utf8');
+    console.log('📄 입력 데이터 파일 생성:', dataFile);
+    
+    // Python 스크립트 실행
+    const pythonScript = path.join(__dirname, 'src', 'scripts', 'network_analysis_api.py');
+    
+    if (!fs.existsSync(pythonScript)) {
+      throw new Error(`Python 스크립트를 찾을 수 없습니다: ${pythonScript}`);
+    }
+    
+    console.log('🚀 Python 스크립트 실행 시작...');
+    
+    // 가상환경의 Python 사용
+    const venvPython = path.join(__dirname, 'venv', 'bin', 'python3');
+    const pythonCommand = fs.existsSync(venvPython) ? venvPython : 'python3';
+    
+    console.log('🐍 Python 실행 경로:', pythonCommand);
+    
+    const pythonProcess = spawn(pythonCommand, [pythonScript, dataFile, outputFile], {
+      cwd: __dirname,
+      stdio: ['pipe', 'pipe', 'pipe']
+    });
+    
+    let stdout = '';
+    let stderr = '';
+    
+    pythonProcess.stdout.on('data', (data) => {
+      stdout += data.toString();
+      console.log('🐍 Python 출력:', data.toString().trim());
+    });
+    
+    pythonProcess.stderr.on('data', (data) => {
+      stderr += data.toString();
+      console.error('🐍 Python 오류:', data.toString().trim());
+    });
+    
+    // Python 프로세스 완료 대기
+    const result = await new Promise((resolve, reject) => {
+      pythonProcess.on('close', (code) => {
+        console.log(`🐍 Python 프로세스 종료 (코드: ${code})`);
+        
+        if (code === 0) {
+          // 성공적으로 완료된 경우 결과 파일 읽기
+          try {
+            if (fs.existsSync(outputFile)) {
+              const resultData = JSON.parse(fs.readFileSync(outputFile, 'utf8'));
+              resolve(resultData);
+            } else {
+              reject(new Error('결과 파일이 생성되지 않았습니다.'));
+            }
+          } catch (error) {
+            reject(new Error(`결과 파일 읽기 오류: ${error.message}`));
+          }
+        } else {
+          reject(new Error(`Python 스크립트 실행 실패 (코드: ${code})\n${stderr}`));
+        }
+      });
+      
+      pythonProcess.on('error', (error) => {
+        reject(new Error(`Python 프로세스 오류: ${error.message}`));
+      });
+      
+      // 타임아웃 설정 (5분)
+      setTimeout(() => {
+        pythonProcess.kill();
+        reject(new Error('Python 스크립트 실행 타임아웃 (5분)'));
+      }, 300000);
+    });
+    
+    // 임시 파일 정리
+    try {
+      if (fs.existsSync(dataFile)) fs.unlinkSync(dataFile);
+      if (fs.existsSync(outputFile)) fs.unlinkSync(outputFile);
+      console.log('🧹 임시 파일 정리 완료');
+    } catch (cleanupError) {
+      console.warn('⚠️ 임시 파일 정리 실패:', cleanupError.message);
+    }
+    
+    console.log('✅ Python 네트워크 분석 완료');
+    res.json({
+      success: true,
+      data: result,
+      timestamp: new Date().toISOString()
+    });
+    
+  } catch (error) {
+    console.error('❌ Python 네트워크 분석 오류:', error.message);
+    res.status(500).json({
+      success: false,
+      error: error.message,
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
 // 상태 확인 엔드포인트
 app.get('/api/status', (req, res) => {
   const emailUser = process.env.NAVER_WORKS_EMAIL_USER;
@@ -142,6 +268,7 @@ app.get('/api/status', (req, res) => {
     port: PORT,
     mode: isConfigured ? '실제 이메일 발송' : '시뮬레이션',
     emailConfigured: isConfigured,
+    pythonAnalysisAvailable: true,
     timestamp: new Date().toISOString()
   });
 });
