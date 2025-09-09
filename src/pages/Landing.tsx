@@ -24,7 +24,7 @@ const Landing: React.FC = () => {
       <section className="relative flex h-[700px] items-center justify-center overflow-hidden max-md:h-[480px]">
         {/* 배경 이미지  */}
         <div
-          className="absolute top-0 z-0 h-[700px] w-full bg-cover bg-center bg-no-repeat max-md:h-[480px]"
+          className="kenburns-top absolute top-0 z-0 h-[700px] w-full bg-cover bg-center bg-no-repeat max-md:h-[480px]"
           style={{
             backgroundImage: `url('/mask_bg.png')`,
           }}
@@ -44,7 +44,7 @@ const Landing: React.FC = () => {
           </p>
           <button
             onClick={handleSolutionClick}
-            className="slide-in-bck-center w-[191px] rounded-[50px] bg-sky-700 px-8 py-4 text-xl text-white transition-all delay-700 duration-200 hover:bg-sky-500 max-md:w-[150px] max-md:px-6 max-md:py-3 max-md:text-base"
+            className="color-change-2x w-[191px] rounded-[50px] bg-sky-700 px-8 py-4 text-xl text-white transition-all duration-200 max-md:w-[150px] max-md:px-6 max-md:py-3 max-md:text-base"
           >
             솔루션 체험하기
           </button>
