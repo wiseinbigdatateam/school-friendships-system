@@ -317,7 +317,7 @@ const ClassSurvey: React.FC = () => {
         .from("surveys")
         .select("id, title, created_at, template_id, status, school_id, target_grades, target_classes")
         .in("template_id", targetTemplateIds)
-        .in("status", ["active", "completed"]) // draft와 archived 제외
+        .eq("status", "completed") // 완료된 설문만
         .order("created_at", { ascending: false });
 
       // 학교 ID 필터링
