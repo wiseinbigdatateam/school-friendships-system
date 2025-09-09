@@ -50,8 +50,8 @@ const GradeAnalysis: React.FC = () => {
       // 학교관리자는 전학년 전체
       return "all";
     } else if (user?.role === "grade_teacher") {
-      // 학년부장은 담당 학년만
-      return "1"; // 임시로 1학년으로 설정
+      // 학년부장은 담당 학년만 (사용자 프로필에서 가져옴)
+      return user?.grade_level || "1"; // 사용자 프로필의 grade_level 사용
     }
     return "1";
   };
@@ -61,6 +61,7 @@ const GradeAnalysis: React.FC = () => {
     try {
       const gradeScope = getUserGradeScope();
       
+      // 교육청ID와 학교ID로 필터링
       let query = supabase
         .from("students")
         .select("*")
@@ -68,6 +69,11 @@ const GradeAnalysis: React.FC = () => {
         .order("grade", { ascending: true })
         .order("class", { ascending: true })
         .order("student_number", { ascending: true });
+
+      // 교육청ID가 있는 경우 추가 필터링
+      if (user?.district_id) {
+        query = query.eq("district_id", user.district_id);
+      }
 
       // 학교관리자가 아닌 경우 특정 학년만 필터링
       if (gradeScope !== "all") {
@@ -92,12 +98,20 @@ const GradeAnalysis: React.FC = () => {
     try {
       const gradeScope = getUserGradeScope();
       
-      const { data: surveysData, error } = await supabase
+      // 교육청ID와 학교ID로 필터링
+      let query = supabase
         .from("surveys")
         .select("*")
         .eq("school_id", user?.school_id || "")
         .in("status", ["active", "completed"])
         .order("created_at", { ascending: false });
+
+      // 교육청ID가 있는 경우 추가 필터링
+      if (user?.district_id) {
+        query = query.eq("district_id", user.district_id);
+      }
+
+      const { data: surveysData, error } = await query;
 
       if (error) {
         console.error("설문 데이터 로드 실패:", error);

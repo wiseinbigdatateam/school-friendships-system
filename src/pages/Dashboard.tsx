@@ -256,14 +256,19 @@ const Dashboard: React.FC = () => {
           .select("*")
           .eq("current_school_id", schoolId);
 
+        // 교육청ID가 있는 경우 추가 필터링
+        if (currentUser?.district_id) {
+          studentsQuery = studentsQuery.eq("district_id", currentUser.district_id);
+        }
+
         // school_admin인 경우 전학년 전체 데이터 조회
         if (currentUser?.role === "school_admin") {
           // 학교관리자는 전학년 전체 데이터 조회
           studentsQuery = studentsQuery.order("grade", { ascending: true });
         } else if (currentUser?.role === "grade_teacher") {
-          // grade_teacher인 경우 학년 전체 데이터 조회
-          // 임시로 1학년 전체로 설정 (실제로는 사용자 정보에서 담당 학년을 가져와야 함)
-          studentsQuery = studentsQuery.eq("grade", "1");
+          // grade_teacher인 경우 담당 학년 전체 데이터 조회
+          const assignedGrade = currentUser?.grade_level || "1";
+          studentsQuery = studentsQuery.eq("grade", assignedGrade);
         } else {
           // 담임교사인 경우 특정 학급만 조회
           studentsQuery = studentsQuery
@@ -284,12 +289,19 @@ const Dashboard: React.FC = () => {
         if (studentsData && studentsData.length > 0) {
           // 5. 설문 목록 조회 (active와 completed 상태만 포함)
           console.log("🔍 설문 조회 시작:", { schoolId });
-          const { data: surveys, error: surveysError } = await supabase
+          let surveysQuery = supabase
             .from("surveys")
             .select("*")
             .eq("school_id", schoolId)
             .in("status", ["active", "completed"]) // draft 제외
             .order("created_at", { ascending: false });
+
+          // 교육청ID가 있는 경우 추가 필터링
+          if (currentUser?.district_id) {
+            surveysQuery = surveysQuery.eq("district_id", currentUser.district_id);
+          }
+
+          const { data: surveys, error: surveysError } = await surveysQuery;
 
           if (surveysError) {
             console.error("❌ 설문 조회 실패:", surveysError);
@@ -317,11 +329,13 @@ const Dashboard: React.FC = () => {
                   });
                   return true;
                 } else if (currentUser?.role === "grade_teacher") {
-                  // 학년 부장인 경우 해당 학년의 모든 설문 포함
+                  // 학년 부장인 경우 담당 학년의 모든 설문 포함
+                  const assignedGrade = currentUser?.grade_level || "1";
                   const gradeMatch = Array.isArray(targetGrades)
-                    ? targetGrades.includes("1") // 임시로 1학년으로 설정
-                    : targetGrades === "1";
+                    ? targetGrades.includes(assignedGrade)
+                    : targetGrades === assignedGrade;
                   console.log(`📋 학년부장용 설문 "${survey.title}" 매칭 결과:`, {
+                    assignedGrade,
                     gradeMatch,
                   });
                   return gradeMatch;

@@ -51,6 +51,7 @@ export interface User {
   lifelongEducationId?: string; // 영구 교육 식별자
   schoolId: string; // 기존 호환성을 위한 필드
   school_id?: string; // Supabase users 테이블의 실제 컬럼명
+  district_id?: string; // 교육청 ID
   name: string;
   email: string;
   phone: string;
@@ -58,6 +59,7 @@ export interface User {
   permissions: string[];
   grade?: string;
   class?: string;
+  grade_level?: string; // 담당 학년 (학년부장용)
   createdAt: Date;
   lastLogin?: Date;
   isActive: boolean;

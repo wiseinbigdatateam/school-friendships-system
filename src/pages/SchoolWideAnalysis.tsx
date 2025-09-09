@@ -56,16 +56,30 @@ const SchoolWideAnalysis: React.FC = () => {
   const [schoolData, setSchoolData] = useState<any>(null);
   const [gradeStatistics, setGradeStatistics] = useState<GradeStatistics[]>([]);
 
-  // 학교 전체 학생 데이터 로드
+  // 학교 전체 학생 데이터 로드 (학교 관리자만 접근 가능)
   const loadSchoolStudents = async () => {
     try {
-      const { data: studentsData, error } = await supabase
+      // 학교 관리자가 아닌 경우 접근 거부
+      if (user?.role !== "school_admin") {
+        console.error("학교 관리자만 접근 가능합니다.");
+        return;
+      }
+
+      // 교육청ID와 학교ID로 필터링
+      let query = supabase
         .from("students")
         .select("*")
         .eq("current_school_id", user?.school_id || "")
         .order("grade", { ascending: true })
         .order("class", { ascending: true })
         .order("student_number", { ascending: true });
+
+      // 교육청ID가 있는 경우 추가 필터링
+      if (user?.district_id) {
+        query = query.eq("district_id", user.district_id);
+      }
+
+      const { data: studentsData, error } = await query;
 
       if (error) {
         console.error("학생 데이터 로드 실패:", error);
@@ -78,15 +92,29 @@ const SchoolWideAnalysis: React.FC = () => {
     }
   };
 
-  // 학교 전체 설문 데이터 로드
+  // 학교 전체 설문 데이터 로드 (학교 관리자만 접근 가능)
   const loadSchoolSurveys = async () => {
     try {
-      const { data: surveysData, error } = await supabase
+      // 학교 관리자가 아닌 경우 접근 거부
+      if (user?.role !== "school_admin") {
+        console.error("학교 관리자만 접근 가능합니다.");
+        return;
+      }
+
+      // 교육청ID와 학교ID로 필터링
+      let query = supabase
         .from("surveys")
         .select("*")
         .eq("school_id", user?.school_id || "")
         .in("status", ["active", "completed"])
         .order("created_at", { ascending: false });
+
+      // 교육청ID가 있는 경우 추가 필터링
+      if (user?.district_id) {
+        query = query.eq("district_id", user.district_id);
+      }
+
+      const { data: surveysData, error } = await query;
 
       if (error) {
         console.error("설문 데이터 로드 실패:", error);
