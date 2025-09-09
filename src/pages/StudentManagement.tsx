@@ -270,9 +270,9 @@ const StudentManagement: React.FC = () => {
       if (networkError) throw networkError;
 
       // 교사 메모 조회 (users 테이블과 조인하여 teacher_name 가져오기)
-      const { data: memosData, error: memosError } = await supabase
-        .from("teacher_memos")
-        .select(`
+      const { data: memosData, error: memosError } = await supabase.from(
+        "teacher_memos",
+      ).select(`
           *,
           users!teacher_memos_teacher_id_fkey (
             name,
@@ -322,7 +322,8 @@ const StudentManagement: React.FC = () => {
         }
 
         // 메모 데이터 매핑
-        const studentMemos = memosData?.filter((m) => m.student_id === student.id) || [];
+        const studentMemos =
+          memosData?.filter((m) => m.student_id === student.id) || [];
         const mappedMemos: TeacherMemo[] = studentMemos.map((memo) => ({
           id: memo.id,
           content: memo.content,
@@ -1211,9 +1212,11 @@ const StudentManagement: React.FC = () => {
           : student,
       );
       setStudents(updatedStudents);
-      
+
       // 현재 선택된 학생의 상태도 업데이트
-      const updatedStudent = updatedStudents.find(s => s.id === selectedStudent.id);
+      const updatedStudent = updatedStudents.find(
+        (s) => s.id === selectedStudent.id,
+      );
       if (updatedStudent) {
         setSelectedStudent(updatedStudent);
       }
@@ -1246,7 +1249,7 @@ const StudentManagement: React.FC = () => {
         .from("teacher_memos")
         .update({
           content: editMemoContent.trim(),
-          updated_at: new Date().toISOString()
+          updated_at: new Date().toISOString(),
         })
         .eq("id", selectedMemo.id)
         .select()
@@ -1268,9 +1271,11 @@ const StudentManagement: React.FC = () => {
           : student,
       );
       setStudents(updatedStudents);
-      
+
       // 현재 선택된 학생의 상태도 업데이트
-      const updatedStudent = updatedStudents.find(s => s.id === selectedStudent?.id);
+      const updatedStudent = updatedStudents.find(
+        (s) => s.id === selectedStudent?.id,
+      );
       if (updatedStudent) {
         setSelectedStudent(updatedStudent);
       }
@@ -1311,9 +1316,11 @@ const StudentManagement: React.FC = () => {
           : student,
       );
       setStudents(updatedStudents);
-      
+
       // 현재 선택된 학생의 상태도 업데이트
-      const updatedStudent = updatedStudents.find(s => s.id === selectedStudent?.id);
+      const updatedStudent = updatedStudents.find(
+        (s) => s.id === selectedStudent?.id,
+      );
       if (updatedStudent) {
         setSelectedStudent(updatedStudent);
       }
@@ -1539,26 +1546,26 @@ const StudentManagement: React.FC = () => {
         </div>
 
         {/* 위험도 통계 */}
-        <div className="mb-6 rounded-lg bg-gray-50 from-red-50 to-yellow-50 p-4">
+        <div className="mb-6 rounded-lg p-4">
           <h3 className="mb-3 text-lg font-semibold text-gray-900">
-            📊 유형별 학생 현황
+            유형별 학생 현황
           </h3>
           <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-            <div className="rounded-lg bg-red-100 p-3 text-center">
+            <div className="rounded-lg p-2 text-center">
               <div className="text-2xl font-bold text-red-800">
                 {getHighRiskStudentCount()}
               </div>
               <div className="text-sm font-medium text-red-700">주의 필요</div>
               <div className="text-xs text-red-600">중심성 &lt; 0.3</div>
             </div>
-            <div className="rounded-lg bg-yellow-100 p-3 text-center">
+            <div className="rounded-lg p-2 text-center">
               <div className="text-2xl font-bold text-yellow-800">
                 {getRiskLevelCounts().medium}
               </div>
               <div className="text-sm font-medium text-yellow-700">관찰 중</div>
               <div className="text-xs text-yellow-600">중심성 0.3~0.6</div>
             </div>
-            <div className="rounded-lg bg-green-100 p-3 text-center">
+            <div className="rounded-lg p-2 text-center">
               <div className="text-2xl font-bold text-green-800">
                 {getRiskLevelCounts().low}
               </div>
@@ -1657,7 +1664,7 @@ const StudentManagement: React.FC = () => {
               // { field: 'grade', label: '학년' },
               // { field: 'class', label: '반' },
               { field: "student_number", label: "번호" },
-              { field: "risk_level", label: "위험도" },
+              // { field: "risk_level", label: "위험도" },
               { field: "network_centrality", label: "교우관계 중심성" },
             ].map(({ field, label }) => (
               <button
@@ -1816,7 +1823,7 @@ const StudentManagement: React.FC = () => {
           <div className="max-h-[90vh] w-full max-w-4xl overflow-y-auto rounded-lg bg-white">
             {/* 모달 헤더 */}
             <div className="flex items-center justify-between border-b border-gray-200 p-6">
-              <h2 className="text-2xl font-bold text-gray-900">
+              <h2 className="text-lg font-bold text-gray-900">
                 {selectedStudent.name} 상세 정보
               </h2>
               <button
@@ -1834,10 +1841,10 @@ const StudentManagement: React.FC = () => {
                 typeof selectedStudent.network_metrics === "object" &&
                 selectedStudent.network_metrics !== null && (
                   <div>
-                    <h3 className="mb-4 text-lg font-semibold text-gray-900">
+                    <h3 className="mb-4 text-base font-semibold text-gray-900">
                       • 교우관계 분석
                     </h3>
-                    <div className="space-y-4">
+                    <div className="ml-4 space-y-4">
                       <div>
                         <h4 className="text-md mb-2 font-medium text-gray-700">
                           중심성 지수
@@ -1908,7 +1915,9 @@ const StudentManagement: React.FC = () => {
                         </span>
                       </div>
                       <div>
-                        <span className="text-gray-600">권장사항:</span>
+                        <span className="text-base text-gray-600">
+                          권장사항:
+                        </span>
                         <span className="ml-2 text-gray-900">
                           {safeStringify(
                             (selectedStudent.network_metrics as any)
@@ -1922,7 +1931,7 @@ const StudentManagement: React.FC = () => {
 
               {/* 교사 메모 */}
               <div>
-                <h3 className="mb-4 text-lg font-semibold text-gray-900">
+                <h3 className="mb-4 text-base font-semibold text-gray-900">
                   • 교사 메모
                 </h3>
                 {selectedStudent.teacher_memos &&
@@ -1936,12 +1945,12 @@ const StudentManagement: React.FC = () => {
                         onClick={() => handleEditMemo(memo)}
                       >
                         <div className="flex items-center space-x-2">
-                          <span className="text-sm text-gray-600 whitespace-nowrap">
+                          <span className="whitespace-nowrap text-sm text-gray-600">
                             {memo.created_at
                               ? new Date(memo.created_at).toLocaleDateString()
                               : "날짜 없음"}
                           </span>
-                          <span className="text-gray-900 truncate">
+                          <span className="truncate text-gray-900">
                             {(() => {
                               try {
                                 const content = memo.content;
@@ -1964,10 +1973,10 @@ const StudentManagement: React.FC = () => {
               </div>
               {/* 기본 정보 */}
               <div>
-                <h3 className="mb-4 text-lg font-semibold text-gray-900">
+                <h3 className="mb-4 text-base font-semibold text-gray-900">
                   • 기본 정보
                 </h3>
-                <div className="grid grid-cols-2 gap-4 text-sm">
+                <div className="ml-4 grid grid-cols-2 gap-4 text-sm">
                   <div>
                     <span className="text-gray-600">학생 번호:</span>
                     <span className="ml-2 font-medium text-blue-600 text-gray-900">
@@ -2011,12 +2020,12 @@ const StudentManagement: React.FC = () => {
 
               {/* 학부모 연락처 */}
               <div>
-                <h3 className="mb-4 text-lg font-semibold text-gray-900">
+                <h3 className="mb-4 text-base font-semibold text-gray-900">
                   • 학부모 연락처
                 </h3>
                 {selectedStudent.parent_contact &&
                 typeof selectedStudent.parent_contact === "object" ? (
-                  <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div className="ml-4 grid grid-cols-2 gap-4 text-sm">
                     <div>
                       <span className="text-gray-600">어머니:</span>
                       <span className="ml-2 text-gray-900">
