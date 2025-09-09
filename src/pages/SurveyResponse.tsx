@@ -52,6 +52,7 @@ const SurveyResponse: React.FC = () => {
     null,
   );
   const [existingResponse, setExistingResponse] = useState<any>(null);
+  const [schoolName, setSchoolName] = useState<string>("");
 
   // 각 질문별 검색어 상태 추가
   const [questionSearchTerms, setQuestionSearchTerms] = useState<
@@ -93,6 +94,27 @@ const SurveyResponse: React.FC = () => {
 
           // 설문 데이터에 이미 max_selections이 포함되어 있음
           setSurvey(surveyData);
+
+          // 학교 이름 조회
+          if (surveyData.school_id) {
+            try {
+              const { data: schoolData, error: schoolError } = await supabase
+                .from("schools")
+                .select("name")
+                .eq("id", surveyData.school_id)
+                .single();
+
+              if (!schoolError && schoolData) {
+                setSchoolName(schoolData.name);
+                console.log("🔍 학교 이름 조회 완료:", schoolData.name);
+              } else {
+                setSchoolName("알 수 없는 학교");
+              }
+            } catch (schoolError) {
+              console.error("학교 이름 조회 오류:", schoolError);
+              setSchoolName("알 수 없는 학교");
+            }
+          }
 
           let templateData: any = null;
 
@@ -531,7 +553,7 @@ const SurveyResponse: React.FC = () => {
 
         <div className="z-50">
           <div className="mb-2 rounded-lg border border-gray-200 bg-white px-6 py-3 text-base font-semibold shadow-sm">
-            OO 초등학교
+            {schoolName || "OO 초등학교"}
           </div>
           {/* 설문 헤더 */}
           <div className="mb-6 rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
@@ -740,7 +762,7 @@ const SurveyResponse: React.FC = () => {
 
         <div className="relative z-50 mx-auto max-w-4xl px-4">
           <div className="mb-2 rounded-lg border border-gray-200 bg-white px-6 py-3 text-base font-semibold shadow-sm">
-            OO 초등학교
+            {schoolName || "OO 초등학교"}
           </div>
           {/* 설문 헤더 */}
           <div className="mb-6 rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
