@@ -208,13 +208,43 @@ const Reports: React.FC = () => {
         const report = data[0] as any;
         // DB 데이터를 GeneratedReport 형식으로 변환
         const convertedReport: GeneratedReport = {
+          // 새로운 구조 (기본값으로 설정)
+          comprehensiveDiagnosis: {
+            studentType: '일반형',
+            summary: report.summary || '분석 결과가 없습니다.',
+            keyCharacteristics: [],
+            challenges: []
+          },
+          detailedAnalysis: {
+            schoolLifeSatisfaction: {
+              surveyResults: [],
+              analysis: '설문 결과 분석이 필요합니다.'
+            },
+            peerNetworkAnalysis: {
+              receivedChoices: 0,
+              madeChoices: 0,
+              networkPosition: '분석 필요',
+              analysis: '네트워크 분석이 필요합니다.'
+            }
+          },
+          strengthsAndImprovements: {
+            strengths: [],
+            improvementAreas: []
+          },
+          customizedSolutions: {
+            overallGoal: report.guidance_plan || '학생의 전인적 성장을 지원합니다.',
+            shortTermSolutions: [],
+            midTermSolutions: [],
+            longTermSolutions: []
+          },
+          // 기존 필드들 (호환성을 위해 유지)
           summary: report.summary,
           currentStatus: report.current_status,
           riskAssessment: report.risk_assessment,
           guidancePlan: report.guidance_plan,
-          specificActions: report.specific_actions,
-          monitoringPoints: report.monitoring_points,
-          expectedOutcomes: report.expected_outcomes
+          specificActions: report.specific_actions || [],
+          monitoringPoints: report.monitoring_points || [],
+          expectedOutcomes: report.expected_outcomes || []
         };
         setAiReport(convertedReport);
       } else {
@@ -1303,12 +1333,12 @@ const Reports: React.FC = () => {
                       <div className="bg-white p-4 rounded-lg border border-purple-100">
                         <h5 className="font-medium text-purple-900 mb-2">🛠️ 구체적 지도 행동</h5>
                         <ul className="text-sm text-gray-700 space-y-1">
-                          {aiReport.specificActions.map((action, index) => (
+                          {aiReport.specificActions?.map((action, index) => (
                             <li key={index} className="flex items-start">
                               <span className="text-purple-600 mr-2">•</span>
                               {action}
                             </li>
-                          ))}
+                          )) || []}
                         </ul>
                       </div>
 
@@ -1316,12 +1346,12 @@ const Reports: React.FC = () => {
                       <div className="bg-white p-4 rounded-lg border border-purple-100">
                         <h5 className="font-medium text-purple-900 mb-2">👀 모니터링 포인트</h5>
                         <ul className="text-sm text-gray-700 space-y-1">
-                          {aiReport.monitoringPoints.map((point, index) => (
+                          {aiReport.monitoringPoints?.map((point, index) => (
                             <li key={index} className="flex items-start">
                               <span className="text-purple-600 mr-2">•</span>
                               {point}
                             </li>
-                          ))}
+                          )) || []}
                         </ul>
                       </div>
 
@@ -1329,12 +1359,12 @@ const Reports: React.FC = () => {
                       <div className="bg-white p-4 rounded-lg border border-purple-100">
                         <h5 className="font-medium text-purple-900 mb-2">📈 기대 성과</h5>
                         <ul className="text-sm text-gray-700 space-y-1">
-                          {aiReport.expectedOutcomes.map((outcome, index) => (
+                          {aiReport.expectedOutcomes?.map((outcome, index) => (
                             <li key={index} className="flex items-start">
                               <span className="text-purple-600 mr-2">•</span>
                               {outcome}
                             </li>
-                          ))}
+                          )) || []}
                         </ul>
                       </div>
                     </div>
