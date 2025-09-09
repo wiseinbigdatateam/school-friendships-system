@@ -261,31 +261,64 @@ ${JSON.stringify(additionalSurveyData, null, 2)}
 7. 모든 배열과 객체 필드는 완전히 채워져야 합니다.
 `;
 
-    const response = await fetch(OPENAI_API_URL, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${OPENAI_API_KEY}`
-      },
-      body: JSON.stringify({
-        model: 'gpt-4',
-        messages: [
-          {
-            role: 'system',
-            content: '당신은 교육 전문가이자 학생 상담 전문가입니다. 교우관계 분석 결과를 바탕으로 구체적이고 실용적인 지도 방안을 제시합니다.'
+    // API 호출 (재시도 로직 포함)
+    let response: Response;
+    let retryCount = 0;
+    const maxRetries = 3;
+    
+    while (retryCount < maxRetries) {
+      try {
+        response = await fetch(OPENAI_API_URL, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${OPENAI_API_KEY}`
           },
-          {
-            role: 'user',
-            content: prompt
-          }
-        ],
-        temperature: 0.7,
-        max_tokens: 2000
-      })
-    });
+          body: JSON.stringify({
+            model: 'gpt-4',
+            messages: [
+              {
+                role: 'system',
+                content: '당신은 교육 전문가이자 학생 상담 전문가입니다. 교우관계 분석 결과를 바탕으로 구체적이고 실용적인 지도 방안을 제시합니다.'
+              },
+              {
+                role: 'user',
+                content: prompt
+              }
+            ],
+            temperature: 0.7,
+            max_tokens: 2000
+          })
+        });
 
-    if (!response.ok) {
-      throw new Error(`OpenAI API 오류: ${response.status}`);
+        if (response.status === 429) {
+          // Rate limit - 재시도
+          retryCount++;
+          const waitTime = Math.pow(2, retryCount) * 1000; // 지수 백오프
+          console.log(`API 제한으로 인한 재시도 ${retryCount}/${maxRetries}, ${waitTime}ms 대기...`);
+          await new Promise(resolve => setTimeout(resolve, waitTime));
+          continue;
+        }
+
+        if (!response.ok) {
+          throw new Error(`OpenAI API 오류: ${response.status}`);
+        }
+
+        break; // 성공하면 루프 종료
+      } catch (error) {
+        if (retryCount >= maxRetries - 1) {
+          throw error; // 최대 재시도 횟수 초과
+        }
+        retryCount++;
+        const waitTime = Math.pow(2, retryCount) * 1000;
+        console.log(`API 호출 실패, 재시도 ${retryCount}/${maxRetries}, ${waitTime}ms 대기...`);
+        await new Promise(resolve => setTimeout(resolve, waitTime));
+      }
+    }
+
+    // response가 정의되지 않은 경우 (이론적으로 발생하지 않아야 함)
+    if (!response!) {
+      throw new Error('API 호출이 실패했습니다.');
     }
 
     const data = await response.json();
@@ -295,9 +328,26 @@ ${JSON.stringify(additionalSurveyData, null, 2)}
       throw new Error('API 응답에서 내용을 찾을 수 없습니다.');
     }
 
-    // JSON 파싱
+    // JSON 파싱 - 더 강력한 파싱 로직
     try {
-      const report = JSON.parse(content);
+      // JSON 문자열 정리 (불완전한 문자열 제거)
+      let cleanedContent = content.trim();
+      
+      // 마지막 불완전한 문자열 제거
+      if (cleanedContent.endsWith('"') && !cleanedContent.endsWith('"}}')) {
+        // 마지막 따옴표가 닫히지 않은 경우 제거
+        const lastQuoteIndex = cleanedContent.lastIndexOf('"');
+        if (lastQuoteIndex > 0) {
+          cleanedContent = cleanedContent.substring(0, lastQuoteIndex);
+        }
+      }
+      
+      // JSON 구조 완성 시도
+      if (!cleanedContent.endsWith('}')) {
+        cleanedContent += '}';
+      }
+      
+      const report = JSON.parse(cleanedContent);
       
       // 새로운 구조 검증
       if (!report.comprehensiveDiagnosis) {

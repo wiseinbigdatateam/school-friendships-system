@@ -33,7 +33,7 @@ export const emailService = {
         clientSecret: NAVER_WORKS_CONFIG.clientSecret ? '설정됨' : '미설정'
       });
         
-      const response = await axios.post(`${proxyUrl}/naver-works/token`, {
+      const response = await axios.post(`${proxyUrl}/api/naver-works/token`, {
         clientId: NAVER_WORKS_CONFIG.clientId,
         clientSecret: NAVER_WORKS_CONFIG.clientSecret
       });
@@ -103,7 +103,7 @@ export const emailService = {
 
       console.log('📤 이메일 발송 요청 데이터:', requestData);
 
-      const response = await axios.post(`${proxyUrl}/naver-works/send-email`, requestData);
+      const response = await axios.post(`${proxyUrl}/api/naver-works/send-email`, requestData);
 
       console.log('✅ 이메일 발송 성공:', response.data);
       return true;

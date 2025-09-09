@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { supabase } from '../utils/index';
+import { supabase } from '../lib/supabase';
 import { hashPassword } from '../utils/password';
 
 const Signup: React.FC = () => {

@@ -219,7 +219,7 @@ const Dashboard: React.FC = () => {
       try {
         // 1. 로그인한 사용자 확인 (선택적)
         const userStr = localStorage.getItem("user");
-        let user = null;
+        let user: any = null;
 
         if (userStr) {
           try {
@@ -250,13 +250,28 @@ const Dashboard: React.FC = () => {
         // 3. 학교 이름 설정
         setSchoolName("와이즈인컴퍼니");
 
-        // 4. 학생 목록 조회
-        const { data: studentsData, error: studentsError } = await supabase
+        // 4. 학생 목록 조회 (역할에 따라 다르게 처리)
+        let studentsQuery = supabase
           .from("students")
           .select("*")
-          .eq("current_school_id", schoolId)
-          .eq("grade", gradeLevel)
-          .eq("class", classNumber);
+          .eq("current_school_id", schoolId);
+
+        // school_admin인 경우 전학년 전체 데이터 조회
+        if (currentUser?.role === "school_admin") {
+          // 학교관리자는 전학년 전체 데이터 조회
+          studentsQuery = studentsQuery.order("grade", { ascending: true });
+        } else if (currentUser?.role === "grade_teacher") {
+          // grade_teacher인 경우 학년 전체 데이터 조회
+          // 임시로 1학년 전체로 설정 (실제로는 사용자 정보에서 담당 학년을 가져와야 함)
+          studentsQuery = studentsQuery.eq("grade", "1");
+        } else {
+          // 담임교사인 경우 특정 학급만 조회
+          studentsQuery = studentsQuery
+            .eq("grade", gradeLevel)
+            .eq("class", classNumber);
+        }
+
+        const { data: studentsData, error: studentsError } = await studentsQuery;
 
         if (studentsError) {
           console.error("❌ 학생 조회 실패:", studentsError);
@@ -281,35 +296,54 @@ const Dashboard: React.FC = () => {
           } else {
             console.log("✅ 원본 설문 데이터:", surveys);
             console.log("📊 총 설문 개수:", surveys?.length || 0);
-            // target_grades와 target_classes가 일치하는 설문만 필터링
+            // 역할에 따라 설문 필터링
             const filteredSurveys =
               surveys?.filter((survey) => {
                 const targetGrades = survey.target_grades;
                 const targetClasses = survey.target_classes;
 
                 console.log(`🔍 설문 "${survey.title}" 필터링 체크:`, {
+                  userRole: currentUser?.role,
                   gradeLevel,
                   classNumber,
                   targetGrades,
                   targetClasses,
                 });
 
-                const gradeMatch = Array.isArray(targetGrades)
-                  ? targetGrades.includes(gradeLevel)
-                  : targetGrades === gradeLevel;
+                if (currentUser?.role === "school_admin") {
+                  // 학교관리자인 경우 모든 설문 포함
+                  console.log(`📋 학교관리자용 설문 "${survey.title}" 매칭 결과:`, {
+                    includeAll: true,
+                  });
+                  return true;
+                } else if (currentUser?.role === "grade_teacher") {
+                  // 학년 부장인 경우 해당 학년의 모든 설문 포함
+                  const gradeMatch = Array.isArray(targetGrades)
+                    ? targetGrades.includes("1") // 임시로 1학년으로 설정
+                    : targetGrades === "1";
+                  console.log(`📋 학년부장용 설문 "${survey.title}" 매칭 결과:`, {
+                    gradeMatch,
+                  });
+                  return gradeMatch;
+                } else {
+                  // 담임교사인 경우 특정 학급만 매칭
+                  const gradeMatch = Array.isArray(targetGrades)
+                    ? targetGrades.includes(gradeLevel)
+                    : targetGrades === gradeLevel;
 
-                const classMatch = Array.isArray(targetClasses)
-                  ? targetClasses.includes(classNumber)
-                  : targetClasses === classNumber;
+                  const classMatch = Array.isArray(targetClasses)
+                    ? targetClasses.includes(classNumber)
+                    : targetClasses === classNumber;
 
-                const isMatch = gradeMatch && classMatch;
-                console.log(`📋 설문 "${survey.title}" 매칭 결과:`, {
-                  gradeMatch,
-                  classMatch,
-                  isMatch,
-                });
+                  const isMatch = gradeMatch && classMatch;
+                  console.log(`📋 담임교사용 설문 "${survey.title}" 매칭 결과:`, {
+                    gradeMatch,
+                    classMatch,
+                    isMatch,
+                  });
 
-                return isMatch;
+                  return isMatch;
+                }
               }) || [];
 
             console.log("🎯 필터링 후 설문 개수:", filteredSurveys.length);
@@ -719,8 +753,12 @@ const Dashboard: React.FC = () => {
             {/* 설문 참여 현황 요약 */}
             <div className="mb-6 rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
               <h3 className="mb-6 text-center text-lg font-semibold text-gray-900">
-                {schoolName || "와이즈 초등학교"} [{gradeLevel}학년{" "}
-                {classNumber}반]
+                {schoolName || "와이즈 초등학교"} [
+                {currentUser?.role === "school_admin" 
+                  ? "전학년 전체"
+                  : currentUser?.role === "grade_teacher" 
+                  ? `${gradeLevel}학년 전체` 
+                  : `${gradeLevel}학년 ${classNumber}반`}]
               </h3>
               <div className="grid grid-cols-4 gap-8">
                 {/* 설문 참여 예상 학생 수 */}
@@ -986,8 +1024,11 @@ const Dashboard: React.FC = () => {
                                   try {
                                     const responseData =
                                       studentResponse.responses as any;
-                                    const answerValue =
-                                      responseData[question.id];
+                                    // 질문 ID가 "q1", "q2" 형태인 경우 숫자 키로 변환
+                                    const questionKey = question.id.startsWith('q') 
+                                      ? question.id.substring(1) 
+                                      : question.id;
+                                    const answerValue = responseData[questionKey];
 
                                     if (answerValue) {
                                       // UUID를 이름으로 변환하는 함수

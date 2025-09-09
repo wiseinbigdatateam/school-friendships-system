@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
-import { supabase } from '../utils/index';
+import { supabase } from '../lib/supabase';
 import { User } from '../types';
 import { verifyPassword } from '../utils/password';
 
@@ -116,14 +116,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       const user: User = {
         id: userData.id,
         schoolId: userData.school_id || '', // 기존 호환성을 위한 필드
-        school_id: userData.school_id, // Supabase users 테이블의 실제 컬럼명
+        school_id: userData.school_id || '', // Supabase users 테이블의 실제 컬럼명
         name: userData.name,
         email: userData.email,
-        phone: userData.contact_info?.phone || '',
-        role: userData.role,
-        permissions: Array.isArray(userData.permissions) ? userData.permissions : [],
-        grade: userData.grade_level,
-        class: userData.class_number,
+        phone: (userData.contact_info as any)?.phone || '',
+        role: userData.role as any,
+        permissions: Array.isArray(userData.permissions) ? userData.permissions as string[] : [],
+        grade: userData.grade_level || undefined,
+        class: userData.class_number || undefined,
         createdAt: new Date(),
         lastLogin: new Date(),
         isActive: userData.is_active

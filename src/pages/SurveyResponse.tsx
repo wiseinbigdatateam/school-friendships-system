@@ -577,7 +577,7 @@ const SurveyResponse: React.FC = () => {
           {/* 학생 본인 확인 */}
           <div className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
             <h2 className="mb-4 text-center text-xl font-semibold text-gray-900">
-              본인 확인
+              확인
             </h2>
 
             {/* 이름 입력 */}
