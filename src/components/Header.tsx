@@ -144,179 +144,202 @@ const Header: React.FC<HeaderProps> = ({ logo, navigationItems }) => {
 
           {/* 설문관리 네비게이션 */}
           <nav className="hidden items-center space-x-6 md:flex">
-            {/* 모니터링 */}
-            <div className="relative">
-              <button
-                onClick={() => handleNavigationClick("/dashboard")}
-                className={`rounded-md px-3 py-2 text-sm font-medium transition-colors ${
-                  isCurrentPath("/dashboard")
-                    ? "bg-blue-50 text-blue-600"
-                    : "text-gray-700 hover:bg-gray-50 hover:text-blue-600"
-                }`}
-              >
-                모니터링
-              </button>
-            </div>
-
-            {/* 교우 현황 */}
-            <div className="relative">
-              <button
-                onClick={() => handleDropdownToggle("friendship")}
-                className={`flex items-center space-x-1 rounded-md px-3 py-2 text-sm font-medium transition-colors ${
-                  isCurrentPath("/survey-templates") ||
-                  isCurrentPath("/survey-management")
-                    ? "bg-blue-50 text-blue-600"
-                    : "text-gray-700 hover:bg-gray-50 hover:text-blue-600"
-                }`}
-              >
-                <span>진단 조사관리</span>
-                <svg
-                  className={`h-4 w-4 transition-transform ${
-                    activeDropdown === "friendship" ? "rotate-180" : ""
-                  }`}
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M19 9l-7 7-7-7"
-                  />
-                </svg>
-              </button>
-
-              {/* 드롭다운 메뉴 */}
-              {activeDropdown === "friendship" && (
-                <div className="absolute left-0 top-full z-50 mt-1 w-48 rounded-md border border-gray-200 bg-white shadow-lg">
-                  <div className="py-1">
-                    <button
-                      onClick={() => handleNavigationClick("/survey-templates")}
-                      className={`block w-full px-4 py-2 text-left text-sm transition-colors ${
-                        isCurrentPath("/survey-templates")
-                          ? "bg-blue-50 text-blue-600"
-                          : "text-gray-700 hover:bg-gray-50 hover:text-gray-900"
-                      }`}
-                    >
-                      설문 생성
-                    </button>
-                    <button
-                      onClick={() =>
-                        handleNavigationClick("/survey-management")
-                      }
-                      className={`block w-full px-4 py-2 text-left text-sm transition-colors ${
-                        isCurrentPath("/survey-management")
-                          ? "bg-blue-50 text-blue-600"
-                          : "text-gray-700 hover:bg-gray-50 hover:text-gray-900"
-                      }`}
-                    >
-                      설문 리스트
-                    </button>
-                  </div>
+            {/* 학년부장 또는 학교관리자인 경우 제한된 메뉴만 표시 */}
+            {user?.role === "grade_teacher" || user?.role === "school_admin" ? (
+              <>
+                {/* 모니터링 */}
+                <div className="relative">
+                  <button
+                    onClick={() => handleNavigationClick("/dashboard")}
+                    className={`rounded-md px-3 py-2 text-sm font-medium transition-colors ${
+                      isCurrentPath("/dashboard")
+                        ? "bg-blue-50 text-blue-600"
+                        : "text-gray-700 hover:bg-gray-50 hover:text-blue-600"
+                    }`}
+                  >
+                    모니터링
+                  </button>
                 </div>
-              )}
-            </div>
 
-            {/* 교우 현황 분석 */}
-            <div className="relative">
-              <button
-                onClick={() => handleDropdownToggle("analysis")}
-                className={`flex items-center space-x-1 rounded-md px-3 py-2 text-sm font-medium transition-colors ${
-                  isCurrentPath("/network-analysis") ||
-                  isCurrentPath("/individual-analysis")
-                    ? "bg-blue-50 text-blue-600"
-                    : "text-gray-700 hover:bg-gray-50 hover:text-blue-600"
-                }`}
-              >
-                <span>교우 관계 분석</span>
-                <svg
-                  className={`h-4 w-4 transition-transform ${
-                    activeDropdown === "analysis" ? "rotate-180" : ""
-                  }`}
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M19 9l-7 7-7-7"
-                  />
-                </svg>
-              </button>
-
-              {/* 드롭다운 메뉴 */}
-              {activeDropdown === "analysis" && (
-                <div className="absolute left-0 top-full z-50 mt-1 w-48 rounded-md border border-gray-200 bg-white shadow-lg">
-                  <div className="py-1">
-                    <button
-                      onClick={() => handleNavigationClick("/network-analysis-new")}
-                      className={`block w-full px-4 py-2 text-left text-sm transition-colors ${
-                        isCurrentPath("/network-analysis-new")
-                          ? "bg-blue-50 text-blue-600"
-                          : "text-gray-700 hover:bg-gray-50 hover:text-gray-900"
-                      }`}
-                    >
-                      학급별 분석결과
-                    </button>
-                    {user?.role === "grade_teacher" && (
-                      <button
-                        onClick={() => handleNavigationClick("/grade-analysis")}
-                        className={`block w-full px-4 py-2 text-left text-sm transition-colors ${
-                          isCurrentPath("/grade-analysis")
-                            ? "bg-blue-50 text-blue-600"
-                            : "text-gray-700 hover:bg-gray-50 hover:text-gray-900"
-                        }`}
-                      >
-                        학습별 분석결과
-                      </button>
-                    )}
-                    <button
-                      onClick={() =>
-                        handleNavigationClick("/individual-analysis")
-                      }
-                      className={`block w-full px-4 py-2 text-left text-sm transition-colors ${
-                        isCurrentPath("/individual-analysis")
-                          ? "bg-blue-50 text-blue-600"
-                          : "text-gray-700 hover:bg-gray-50 hover:text-gray-900"
-                      }`}
-                    >
-                      학생별 결과분석
-                    </button>
-                  </div>
+                {/* 교우 관계 분석 - 학습별 분석결과만 표시 */}
+                <div className="relative">
+                  <button
+                    onClick={() => handleNavigationClick("/grade-analysis")}
+                    className={`rounded-md px-3 py-2 text-sm font-medium transition-colors ${
+                      isCurrentPath("/grade-analysis")
+                        ? "bg-blue-50 text-blue-600"
+                        : "text-gray-700 hover:bg-gray-50 hover:text-blue-600"
+                    }`}
+                  >
+                    학습별 분석결과
+                  </button>
                 </div>
-              )}
-            </div>
+              </>
+            ) : (
+              <>
+                {/* 모니터링 */}
+                <div className="relative">
+                  <button
+                    onClick={() => handleNavigationClick("/dashboard")}
+                    className={`rounded-md px-3 py-2 text-sm font-medium transition-colors ${
+                      isCurrentPath("/dashboard")
+                        ? "bg-blue-50 text-blue-600"
+                        : "text-gray-700 hover:bg-gray-50 hover:text-blue-600"
+                    }`}
+                  >
+                    모니터링
+                  </button>
+                </div>
 
-            {/* 학급별 분석결과 */}
-            <div className="relative">
-              <button
-                onClick={() => handleNavigationClick("/class-survey")}
-                className={`rounded-md px-3 py-2 text-sm font-medium transition-colors ${
-                  isCurrentPath("/class-survey")
-                    ? "bg-blue-50 text-blue-600"
-                    : "text-gray-700 hover:bg-gray-50 hover:text-blue-600"
-                }`}
-              >
-                학급조사
-              </button>
-            </div>
+                {/* 교우 현황 */}
+                <div className="relative">
+                  <button
+                    onClick={() => handleDropdownToggle("friendship")}
+                    className={`flex items-center space-x-1 rounded-md px-3 py-2 text-sm font-medium transition-colors ${
+                      isCurrentPath("/survey-templates") ||
+                      isCurrentPath("/survey-management")
+                        ? "bg-blue-50 text-blue-600"
+                        : "text-gray-700 hover:bg-gray-50 hover:text-blue-600"
+                    }`}
+                  >
+                    <span>진단 조사관리</span>
+                    <svg
+                      className={`h-4 w-4 transition-transform ${
+                        activeDropdown === "friendship" ? "rotate-180" : ""
+                      }`}
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M19 9l-7 7-7-7"
+                      />
+                    </svg>
+                  </button>
 
-            {/* 학생 등록/관리 */}
-            <div className="relative">
-              <button
-                onClick={() => handleNavigationClick("/student-management")}
-                className={`rounded-md px-3 py-2 text-sm font-medium transition-colors ${
-                  isCurrentPath("/student-management")
-                    ? "bg-blue-50 text-blue-600"
-                    : "text-gray-700 hover:bg-gray-50 hover:text-blue-600"
-                }`}
-              >
-                학생 등록/관리
-              </button>
-            </div>
+                  {/* 드롭다운 메뉴 */}
+                  {activeDropdown === "friendship" && (
+                    <div className="absolute left-0 top-full z-50 mt-1 w-48 rounded-md border border-gray-200 bg-white shadow-lg">
+                      <div className="py-1">
+                        <button
+                          onClick={() => handleNavigationClick("/survey-templates")}
+                          className={`block w-full px-4 py-2 text-left text-sm transition-colors ${
+                            isCurrentPath("/survey-templates")
+                              ? "bg-blue-50 text-blue-600"
+                              : "text-gray-700 hover:bg-gray-50 hover:text-gray-900"
+                          }`}
+                        >
+                          설문 생성
+                        </button>
+                        <button
+                          onClick={() =>
+                            handleNavigationClick("/survey-management")
+                          }
+                          className={`block w-full px-4 py-2 text-left text-sm transition-colors ${
+                            isCurrentPath("/survey-management")
+                              ? "bg-blue-50 text-blue-600"
+                              : "text-gray-700 hover:bg-gray-50 hover:text-gray-900"
+                          }`}
+                        >
+                          설문 리스트
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* 교우 현황 분석 */}
+                <div className="relative">
+                  <button
+                    onClick={() => handleDropdownToggle("analysis")}
+                    className={`flex items-center space-x-1 rounded-md px-3 py-2 text-sm font-medium transition-colors ${
+                      isCurrentPath("/network-analysis") ||
+                      isCurrentPath("/individual-analysis")
+                        ? "bg-blue-50 text-blue-600"
+                        : "text-gray-700 hover:bg-gray-50 hover:text-blue-600"
+                    }`}
+                  >
+                    <span>교우 관계 분석</span>
+                    <svg
+                      className={`h-4 w-4 transition-transform ${
+                        activeDropdown === "analysis" ? "rotate-180" : ""
+                      }`}
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M19 9l-7 7-7-7"
+                      />
+                    </svg>
+                  </button>
+
+                  {/* 드롭다운 메뉴 */}
+                  {activeDropdown === "analysis" && (
+                    <div className="absolute left-0 top-full z-50 mt-1 w-48 rounded-md border border-gray-200 bg-white shadow-lg">
+                      <div className="py-1">
+                        <button
+                          onClick={() => handleNavigationClick("/network-analysis-new")}
+                          className={`block w-full px-4 py-2 text-left text-sm transition-colors ${
+                            isCurrentPath("/network-analysis-new")
+                              ? "bg-blue-50 text-blue-600"
+                              : "text-gray-700 hover:bg-gray-50 hover:text-gray-900"
+                          }`}
+                        >
+                          학급별 분석결과
+                        </button>
+                        <button
+                          onClick={() =>
+                            handleNavigationClick("/individual-analysis")
+                          }
+                          className={`block w-full px-4 py-2 text-left text-sm transition-colors ${
+                            isCurrentPath("/individual-analysis")
+                              ? "bg-blue-50 text-blue-600"
+                              : "text-gray-700 hover:bg-gray-50 hover:text-gray-900"
+                          }`}
+                        >
+                          학생별 결과분석
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* 학급별 분석결과 */}
+                <div className="relative">
+                  <button
+                    onClick={() => handleNavigationClick("/class-survey")}
+                    className={`rounded-md px-3 py-2 text-sm font-medium transition-colors ${
+                      isCurrentPath("/class-survey")
+                        ? "bg-blue-50 text-blue-600"
+                        : "text-gray-700 hover:bg-gray-50 hover:text-blue-600"
+                    }`}
+                  >
+                    학급조사
+                  </button>
+                </div>
+
+                {/* 학생 등록/관리 */}
+                <div className="relative">
+                  <button
+                    onClick={() => handleNavigationClick("/student-management")}
+                    className={`rounded-md px-3 py-2 text-sm font-medium transition-colors ${
+                      isCurrentPath("/student-management")
+                        ? "bg-blue-50 text-blue-600"
+                        : "text-gray-700 hover:bg-gray-50 hover:text-blue-600"
+                    }`}
+                  >
+                    학생 등록/관리
+                  </button>
+                </div>
+              </>
+            )}
           </nav>
 
           {/* 사용자 정보 및 알림 */}

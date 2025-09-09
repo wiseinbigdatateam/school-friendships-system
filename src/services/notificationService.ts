@@ -26,8 +26,6 @@ export class NotificationService {
    */
   static async getUserNotifications(userId: string): Promise<Notification[]> {
     try {
-
-      
       const { data, error } = await supabase
         .from('notifications')
         .select('*')
@@ -35,7 +33,6 @@ export class NotificationService {
         .order('created_at', { ascending: false });
 
       if (error) {
-
         return [];
       }
 
@@ -58,8 +55,6 @@ export class NotificationService {
    */
   static async getUnreadCount(userId: string): Promise<number> {
     try {
-
-      
       const { count, error } = await supabase
         .from('notifications')
         .select('*', { count: 'exact', head: true })
@@ -67,14 +62,11 @@ export class NotificationService {
         .eq('is_read', false);
 
       if (error) {
-
         return 0;
       }
 
-
       return count || 0;
     } catch (error) {
-
       return 0;
     }
   }

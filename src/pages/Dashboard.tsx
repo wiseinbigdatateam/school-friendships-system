@@ -256,8 +256,12 @@ const Dashboard: React.FC = () => {
           .select("*")
           .eq("current_school_id", schoolId);
 
-        // grade_teacher인 경우 학년 전체 데이터 조회
-        if (currentUser?.role === "grade_teacher") {
+        // school_admin인 경우 전학년 전체 데이터 조회
+        if (currentUser?.role === "school_admin") {
+          // 학교관리자는 전학년 전체 데이터 조회
+          studentsQuery = studentsQuery.order("grade", { ascending: true });
+        } else if (currentUser?.role === "grade_teacher") {
+          // grade_teacher인 경우 학년 전체 데이터 조회
           // 임시로 1학년 전체로 설정 (실제로는 사용자 정보에서 담당 학년을 가져와야 함)
           studentsQuery = studentsQuery.eq("grade", "1");
         } else {
@@ -306,7 +310,13 @@ const Dashboard: React.FC = () => {
                   targetClasses,
                 });
 
-                if (currentUser?.role === "grade_teacher") {
+                if (currentUser?.role === "school_admin") {
+                  // 학교관리자인 경우 모든 설문 포함
+                  console.log(`📋 학교관리자용 설문 "${survey.title}" 매칭 결과:`, {
+                    includeAll: true,
+                  });
+                  return true;
+                } else if (currentUser?.role === "grade_teacher") {
                   // 학년 부장인 경우 해당 학년의 모든 설문 포함
                   const gradeMatch = Array.isArray(targetGrades)
                     ? targetGrades.includes("1") // 임시로 1학년으로 설정
@@ -744,7 +754,9 @@ const Dashboard: React.FC = () => {
             <div className="mb-6 rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
               <h3 className="mb-6 text-center text-lg font-semibold text-gray-900">
                 {schoolName || "와이즈 초등학교"} [
-                {currentUser?.role === "grade_teacher" 
+                {currentUser?.role === "school_admin" 
+                  ? "전학년 전체"
+                  : currentUser?.role === "grade_teacher" 
                   ? `${gradeLevel}학년 전체` 
                   : `${gradeLevel}학년 ${classNumber}반`}]
               </h3>

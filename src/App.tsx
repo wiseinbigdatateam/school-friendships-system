@@ -132,7 +132,7 @@ const Header = lazy(() => import("./components/Header"));
 const App: React.FC = () => {
   return (
     <AuthProvider>
-      <Router>
+      <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
         <Routes>
           {/* 공개 라우트 - 즉시 로드 */}
           <Route path="/" element={<Landing />} />

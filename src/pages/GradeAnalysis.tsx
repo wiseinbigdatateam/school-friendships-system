@@ -44,25 +44,37 @@ const GradeAnalysis: React.FC = () => {
   const [selectedAnalysis, setSelectedAnalysis] = useState<NetworkAnalysisResult | null>(null);
   const [gradeData, setGradeData] = useState<any>(null);
 
-  // 학년 부장의 담당 학년 정보 가져오기
-  const getGradeTeacherGrade = () => {
-    // 실제로는 사용자 정보에서 담당 학년을 가져와야 함
-    // 임시로 1학년으로 설정
+  // 사용자 역할에 따른 담당 학년 정보 가져오기
+  const getUserGradeScope = () => {
+    if (user?.role === "school_admin") {
+      // 학교관리자는 전학년 전체
+      return "all";
+    } else if (user?.role === "grade_teacher") {
+      // 학년부장은 담당 학년만
+      return "1"; // 임시로 1학년으로 설정
+    }
     return "1";
   };
 
-  // 학년별 학생 데이터 로드
+  // 사용자 역할에 따른 학생 데이터 로드
   const loadGradeStudents = async () => {
     try {
-      const grade = getGradeTeacherGrade();
+      const gradeScope = getUserGradeScope();
       
-      const { data: studentsData, error } = await supabase
+      let query = supabase
         .from("students")
         .select("*")
         .eq("current_school_id", user?.school_id || "")
-        .eq("grade", grade)
+        .order("grade", { ascending: true })
         .order("class", { ascending: true })
         .order("student_number", { ascending: true });
+
+      // 학교관리자가 아닌 경우 특정 학년만 필터링
+      if (gradeScope !== "all") {
+        query = query.eq("grade", gradeScope);
+      }
+
+      const { data: studentsData, error } = await query;
 
       if (error) {
         console.error("학생 데이터 로드 실패:", error);
@@ -75,10 +87,10 @@ const GradeAnalysis: React.FC = () => {
     }
   };
 
-  // 학년별 설문 데이터 로드
+  // 사용자 역할에 따른 설문 데이터 로드
   const loadGradeSurveys = async () => {
     try {
-      const grade = getGradeTeacherGrade();
+      const gradeScope = getUserGradeScope();
       
       const { data: surveysData, error } = await supabase
         .from("surveys")
@@ -92,10 +104,14 @@ const GradeAnalysis: React.FC = () => {
         return;
       }
 
-      // 학년에 맞는 설문만 필터링
+      // 학교관리자인 경우 모든 설문, 학년부장인 경우 해당 학년 설문만 필터링
       const filteredSurveys = surveysData?.filter(survey => {
-        const targetGrades = survey.target_grades;
-        return targetGrades && targetGrades.includes(grade);
+        if (gradeScope === "all") {
+          return true; // 학교관리자는 모든 설문
+        } else {
+          const targetGrades = survey.target_grades;
+          return targetGrades && targetGrades.includes(gradeScope);
+        }
       }) || [];
 
       setSurveys(filteredSurveys);
@@ -142,14 +158,16 @@ const GradeAnalysis: React.FC = () => {
 
     try {
       const analysisData = selectedAnalysis.analysis_data || selectedAnalysis;
-      const grade = getGradeTeacherGrade();
+      const gradeScope = getUserGradeScope();
       
-      // 학년 전체 학생들의 데이터를 통합
-      const gradeStudents = students.filter(student => student.grade === grade);
+      // 사용자 역할에 따른 학생 데이터 필터링
+      const targetStudents = gradeScope === "all" 
+        ? students 
+        : students.filter(student => student.grade === gradeScope);
       
       // 학급별로 그룹화
-      const classGroups = gradeStudents.reduce((groups: any, student) => {
-        const classKey = student.class;
+      const classGroups = targetStudents.reduce((groups: any, student) => {
+        const classKey = `${student.grade}-${student.class}`;
         if (!groups[classKey]) {
           groups[classKey] = [];
         }
@@ -159,7 +177,7 @@ const GradeAnalysis: React.FC = () => {
 
       // 학년 전체 네트워크 데이터 생성
       const gradeNetworkData: any = {
-        nodes: gradeStudents.map(student => ({
+        nodes: targetStudents.map(student => ({
           id: student.id,
           label: student.name,
           group: student.class,
@@ -168,9 +186,9 @@ const GradeAnalysis: React.FC = () => {
         })),
         edges: [] as any[],
         statistics: {
-          totalStudents: gradeStudents.length,
+          totalStudents: targetStudents.length,
           totalClasses: Object.keys(classGroups).length,
-          averageClassSize: Math.round(gradeStudents.length / Object.keys(classGroups).length),
+          averageClassSize: Math.round(targetStudents.length / Object.keys(classGroups).length),
           classDistribution: Object.keys(classGroups).map(classKey => ({
             class: classKey,
             count: classGroups[classKey].length
@@ -180,10 +198,10 @@ const GradeAnalysis: React.FC = () => {
 
       // 학급 간 연결 분석 (같은 학년 내에서의 관계)
       const gradeEdges = [];
-      for (let i = 0; i < gradeStudents.length; i++) {
-        for (let j = i + 1; j < gradeStudents.length; j++) {
-          const student1 = gradeStudents[i];
-          const student2 = gradeStudents[j];
+      for (let i = 0; i < targetStudents.length; i++) {
+        for (let j = i + 1; j < targetStudents.length; j++) {
+          const student1 = targetStudents[i];
+          const student2 = targetStudents[j];
           
           // 같은 학급이 아닌 경우에만 학급 간 연결로 간주
           if (student1.class !== student2.class) {
@@ -257,17 +275,21 @@ const GradeAnalysis: React.FC = () => {
     );
   }
 
-  const grade = getGradeTeacherGrade();
+  const gradeScope = getUserGradeScope();
+  const pageTitle = gradeScope === "all" ? "전학년 학습별 분석결과" : `${gradeScope}학년 학습별 분석결과`;
+  const pageDescription = gradeScope === "all" 
+    ? "전학년 전체 학생들의 교우관계를 학급별로 분석합니다."
+    : `${gradeScope}학년 전체 학생들의 교우관계를 학급별로 분석합니다.`;
 
   return (
     <div className="mx-auto min-h-screen max-w-7xl bg-gray-50 px-4 py-8 sm:px-6 lg:px-8">
       {/* 페이지 헤더 */}
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-gray-900">
-          {grade}학년 학습별 분석결과
+          {pageTitle}
         </h1>
         <p className="mt-2 text-lg text-gray-600">
-          {grade}학년 전체 학생들의 교우관계를 학급별로 분석합니다.
+          {pageDescription}
         </p>
       </div>
 
@@ -327,7 +349,9 @@ const GradeAnalysis: React.FC = () => {
       {/* 학년별 통계 */}
       {gradeData && (
         <div className="mb-6 rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
-          <h2 className="mb-4 text-lg font-semibold text-gray-900">{grade}학년 통계</h2>
+          <h2 className="mb-4 text-lg font-semibold text-gray-900">
+            {gradeScope === "all" ? "전학년 통계" : `${gradeScope}학년 통계`}
+          </h2>
           <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
             <div className="text-center">
               <div className="text-3xl font-bold text-blue-600">
@@ -378,7 +402,7 @@ const GradeAnalysis: React.FC = () => {
       {gradeData && (
         <div className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
           <h2 className="mb-4 text-lg font-semibold text-gray-900">
-            {grade}학년 교우관계 네트워크
+            {gradeScope === "all" ? "전학년 교우관계 네트워크" : `${gradeScope}학년 교우관계 네트워크`}
           </h2>
           <div className="mb-4 text-sm text-gray-600">
             <p>• 각 노드는 학생을 나타냅니다</p>
@@ -412,7 +436,7 @@ const GradeAnalysis: React.FC = () => {
             분석할 설문이 없습니다
           </h3>
           <p className="mt-2 text-gray-600">
-            {grade}학년 대상 설문을 먼저 생성해주세요.
+            {gradeScope === "all" ? "전학년 대상 설문을 먼저 생성해주세요." : `${gradeScope}학년 대상 설문을 먼저 생성해주세요.`}
           </p>
         </div>
       )}

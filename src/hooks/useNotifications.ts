@@ -11,42 +11,21 @@ export const useNotifications = () => {
 
   // 알림 데이터 로드
   const loadNotifications = useCallback(async () => {
-    console.log('🔔 loadNotifications 호출됨:', { 
-      hasUser: !!user, 
-      userId: user?.id, 
-      userObject: user 
-    });
-    
     if (!user?.id) {
-      console.log('🔔 사용자 ID가 없어 알림을 로드할 수 없음');
       setLoading(false);
       return;
     }
 
     try {
-      console.log('🔔 알림 데이터 로드 시작:', { userId: user.id });
       setLoading(true);
       
       // 사용자별 알림 목록 조회
-      console.log('🔔 NotificationService.getUserNotifications 호출...');
       const data = await NotificationService.getUserNotifications(user.id);
-      console.log('🔔 getUserNotifications 결과:', { data, count: data?.length });
-      
       setNotifications(data);
       
       // 읽지 않은 알림 개수 조회
-      console.log('🔔 NotificationService.getUnreadCount 호출...');
       const count = await NotificationService.getUnreadCount(user.id);
-      console.log('🔔 getUnreadCount 결과:', { count });
-      
       setUnreadCount(count);
-      
-      console.log('🔔 알림 데이터 로드 완료:', { 
-        userId: user.id, 
-        totalCount: data.length, 
-        unreadCount: count,
-        notifications: data.map(n => ({ id: n.id, title: n.title, is_read: n.is_read }))
-      });
     } catch (error) {
       console.error('🔔 알림 로드 오류:', error);
     } finally {
@@ -58,14 +37,12 @@ export const useNotifications = () => {
   useEffect(() => {
     if (!user?.id) return;
 
-    console.log('🔔 실시간 구독 설정 시작:', { userId: user.id });
-
     // 초기 데이터 로드
     loadNotifications();
 
     // 실시간 구독 설정
     const channel = supabase
-      .channel('notifications')
+      .channel(`notifications-${user.id}`) // 사용자별 고유 채널명
       .on(
         'postgres_changes',
         {
@@ -75,14 +52,11 @@ export const useNotifications = () => {
           filter: `user_id=eq.${user.id}`
         },
         (payload) => {
-          console.log('🔔 실시간 알림 변경:', payload);
-          
           if (payload.eventType === 'INSERT') {
             // 새 알림 추가
             const newNotification = payload.new as Notification;
             setNotifications(prev => [newNotification, ...prev]);
             setUnreadCount(prev => prev + 1);
-            console.log('🔔 새 알림 추가됨:', newNotification);
           } else if (payload.eventType === 'UPDATE') {
             // 알림 업데이트 (읽음 처리 등)
             const updatedNotification = payload.new as Notification;
@@ -93,7 +67,6 @@ export const useNotifications = () => {
             // 읽지 않은 알림 개수 재계산
             if (updatedNotification.is_read) {
               setUnreadCount(prev => Math.max(0, prev - 1));
-              console.log('🔔 알림 읽음 처리됨:', updatedNotification.id);
             }
           } else if (payload.eventType === 'DELETE') {
             // 알림 삭제
@@ -105,35 +78,28 @@ export const useNotifications = () => {
             // 읽지 않은 알림 개수 재계산
             if (!deletedNotification.is_read) {
               setUnreadCount(prev => Math.max(0, prev - 1));
-              console.log('🔔 알림 삭제됨:', deletedNotification.id);
             }
           }
         }
       )
       .subscribe();
 
-    console.log('🔔 실시간 구독 설정 완료');
-
     return () => {
-      console.log('🔔 실시간 구독 해제');
       supabase.removeChannel(channel);
     };
-  }, [user, loadNotifications]);
+  }, [user?.id]); // loadNotifications 의존성 제거
 
   // 알림 읽음 처리
   const markAsRead = useCallback(async (notificationId: string) => {
     if (!user?.id) return false;
 
     try {
-      console.log('🔔 알림 읽음 처리 시도:', { notificationId, userId: user.id });
-      
       const success = await NotificationService.markAsRead(notificationId, user.id);
       if (success) {
         setNotifications(prev => 
           prev.map(n => n.id === notificationId ? { ...n, is_read: true } : n)
         );
         setUnreadCount(prev => Math.max(0, prev - 1));
-        console.log('🔔 알림 읽음 처리 완료:', notificationId);
       }
       return success;
     } catch (error) {
@@ -147,15 +113,12 @@ export const useNotifications = () => {
     if (!user?.id) return false;
 
     try {
-      console.log('🔔 모든 알림 읽음 처리 시도:', { userId: user.id });
-      
       const success = await NotificationService.markAllAsRead(user.id);
       if (success) {
         setNotifications(prev => 
           prev.map(n => ({ ...n, is_read: true }))
         );
         setUnreadCount(0);
-        console.log('🔔 모든 알림 읽음 처리 완료');
       }
       return success;
     } catch (error) {
@@ -169,8 +132,6 @@ export const useNotifications = () => {
     if (!user?.id) return false;
 
     try {
-      console.log('🔔 알림 삭제 시도:', { notificationId, userId: user.id });
-      
       const success = await NotificationService.deleteNotification(notificationId, user.id);
       if (success) {
         const notification = notifications.find(n => n.id === notificationId);
@@ -182,8 +143,6 @@ export const useNotifications = () => {
         if (notification && !notification.is_read) {
           setUnreadCount(prev => Math.max(0, prev - 1));
         }
-        
-        console.log('🔔 알림 삭제 완료:', notificationId);
       }
       return success;
     } catch (error) {
@@ -199,11 +158,7 @@ export const useNotifications = () => {
     if (!user?.id) return [];
 
     try {
-      console.log('🔔 최근 알림 조회:', { userId: user.id, limit });
-      
       const recentNotifications = await NotificationService.getRecentNotifications(user.id, limit);
-      console.log('🔔 최근 알림 조회 완료:', { count: recentNotifications.length });
-      
       return recentNotifications;
     } catch (error) {
       console.error('🔔 최근 알림 조회 오류:', error);
