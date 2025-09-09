@@ -295,9 +295,26 @@ ${JSON.stringify(additionalSurveyData, null, 2)}
       throw new Error('API 응답에서 내용을 찾을 수 없습니다.');
     }
 
-    // JSON 파싱
+    // JSON 파싱 - 더 강력한 파싱 로직
     try {
-      const report = JSON.parse(content);
+      // JSON 문자열 정리 (불완전한 문자열 제거)
+      let cleanedContent = content.trim();
+      
+      // 마지막 불완전한 문자열 제거
+      if (cleanedContent.endsWith('"') && !cleanedContent.endsWith('"}}')) {
+        // 마지막 따옴표가 닫히지 않은 경우 제거
+        const lastQuoteIndex = cleanedContent.lastIndexOf('"');
+        if (lastQuoteIndex > 0) {
+          cleanedContent = cleanedContent.substring(0, lastQuoteIndex);
+        }
+      }
+      
+      // JSON 구조 완성 시도
+      if (!cleanedContent.endsWith('}')) {
+        cleanedContent += '}';
+      }
+      
+      const report = JSON.parse(cleanedContent);
       
       // 새로운 구조 검증
       if (!report.comprehensiveDiagnosis) {
