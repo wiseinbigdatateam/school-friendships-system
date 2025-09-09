@@ -169,12 +169,12 @@ const Contact: React.FC = () => {
           </div>
 
           <div className="space-y-3">
-            <button
+            {/* <button
               onClick={resetForm}
               className="w-full rounded-lg border border-transparent bg-[#3F80EA] px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
             >
               추가 신청하기
-            </button>
+            </button> */}
 
             <Link
               to="/login"
@@ -199,7 +199,7 @@ const Contact: React.FC = () => {
             체험 신청하기
           </h1>
           <p className="text-gray-600">
-            궁금한 사항이나 도움이 필요한 내용을 언제든지 문의해주세요
+            와이즈온스쿨 체험을 위해 신청이 필요합니다
           </p>
         </div>
 
