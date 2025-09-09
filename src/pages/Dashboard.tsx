@@ -986,8 +986,11 @@ const Dashboard: React.FC = () => {
                                   try {
                                     const responseData =
                                       studentResponse.responses as any;
-                                    const answerValue =
-                                      responseData[question.id];
+                                    // 질문 ID가 "q1", "q2" 형태인 경우 숫자 키로 변환
+                                    const questionKey = question.id.startsWith('q') 
+                                      ? question.id.substring(1) 
+                                      : question.id;
+                                    const answerValue = responseData[questionKey];
 
                                     if (answerValue) {
                                       // UUID를 이름으로 변환하는 함수
