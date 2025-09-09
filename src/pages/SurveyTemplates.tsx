@@ -413,7 +413,7 @@ const SurveyTemplates: React.FC = () => {
 
             {/* 교우관계 설문인 경우 maxSelections 정보 표시 */}
             {template.category === "교우관계" && template.maxSelections && (
-              <div className="mt-2 rounded border border-blue-200 bg-blue-50 p-2">
+              <div className="mt-2 rounded-lg bg-blue-50 p-2">
                 <p className="mb-1 text-xs font-medium text-blue-800">
                   📝 질문별 최대 선택 가능 인원:
                 </p>
@@ -429,6 +429,23 @@ const SurveyTemplates: React.FC = () => {
                 </div>
               </div>
             )}
+
+            {/* 질문 목록 */}
+            <div className="mt-2 rounded-lg bg-gray-50 p-4">
+              <h4 className="mb-3 text-xs font-medium text-gray-900">
+                포함된 질문 ({template.questions.length}개)
+              </h4>
+              <div className="space-y-2">
+                {template.questions.map((question, index) => (
+                  <div key={index} className="flex items-start space-x-3">
+                    <span className="text-xs font-medium text-gray-600">
+                      Q{index + 1}.
+                    </span>
+                    <p className="flex-1 text-xs text-gray-700">{question}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -683,7 +700,7 @@ const SurveyConfigModal: React.FC<{
             {/* 질문 목록 */}
             <div className="mb-6 rounded-lg bg-gray-50 p-4">
               <h4 className="mb-3 font-medium text-gray-900">
-                포함된 질문 ({template.questions.length}개)
+                질문 ({template.questions.length}개)
               </h4>
               <div className="space-y-2">
                 {template.questions.map((question, index) => (

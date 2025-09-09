@@ -1122,7 +1122,7 @@ const SurveyManagement: React.FC = () => {
               개의 설문
             </p>
           </div>
-          <div>
+          <div className="flex gap-2">
             <nav
               className="isolate inline-flex -space-x-px rounded-md shadow-sm"
               aria-label="Pagination"
@@ -1153,7 +1153,7 @@ const SurveyManagement: React.FC = () => {
                   onClick={() => handlePageChange(page)}
                   className={`relative inline-flex items-center px-4 py-2 text-sm font-semibold ${
                     page === currentPage
-                      ? "z-10 bg-blue-600 text-white focus:z-20 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600"
+                      ? "z-10 bg-[#3F80EA] text-white focus:z-20 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600"
                       : "text-gray-900 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-20 focus:outline-offset-0"
                   }`}
                 >
@@ -1181,6 +1181,21 @@ const SurveyManagement: React.FC = () => {
                 </svg>
               </button>
             </nav>
+
+            {/* 페이지당 항목 수 선택 */}
+            <select
+              value={itemsPerPage}
+              onChange={(e) => {
+                setItemsPerPage(Number(e.target.value));
+                setCurrentPage(1); // 페이지당 항목 수 변경 시 첫 페이지로
+              }}
+              className="rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-transparent focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <option value={5}>5개씩</option>
+              <option value={10}>10개씩</option>
+              <option value={20}>20개씩</option>
+              <option value={50}>50개씩</option>
+            </select>
           </div>
         </div>
       </div>
@@ -1199,7 +1214,7 @@ const SurveyManagement: React.FC = () => {
     <div className="mx-auto min-h-screen max-w-7xl bg-gray-50 px-4 pb-16 sm:px-6 lg:px-8">
       {/* 헤더 */}
       <div className="mb-4">
-        <h1 className="mb-2 text-2xl font-bold text-gray-900">설문 관리</h1>
+        <h1 className="mb-2 text-2xl font-bold text-gray-900">설문 리스트</h1>
         <p className="text-gray-600">
           교우관계 분석을 위한 설문조사를 생성하고 관리합니다.
         </p>
@@ -1266,9 +1281,9 @@ const SurveyManagement: React.FC = () => {
       )}
 
       {/* 컨트롤 패널 */}
-      <div className="mb-4 rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
-        <div className="flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
-          <div className="flex flex-1 flex-col gap-4 sm:flex-row">
+      <div className="mb-4 rounded-lg border border-gray-200 bg-white p-5 shadow-sm">
+        <div className="flex flex-col items-end justify-between gap-4 sm:flex-row sm:items-center">
+          <div className="flex flex-1 flex-col justify-end gap-4 sm:flex-row">
             {/* 검색 */}
             <div className="relative">
               <input
@@ -1307,7 +1322,7 @@ const SurveyManagement: React.FC = () => {
             </select>
 
             {/* 페이지당 항목 수 선택 */}
-            <select
+            {/* <select
               value={itemsPerPage}
               onChange={(e) => {
                 setItemsPerPage(Number(e.target.value));
@@ -1319,7 +1334,7 @@ const SurveyManagement: React.FC = () => {
               <option value={10}>10개씩</option>
               <option value={20}>20개씩</option>
               <option value={50}>50개씩</option>
-            </select>
+            </select> */}
           </div>
 
           {/* 새 설문 생성 버튼 - 주석 처리 */}
@@ -1556,8 +1571,7 @@ const SurveyManagement: React.FC = () => {
                 </label>
                 <textarea
                   value={`안녕하세요! ${selectedSurveyForLink.title} 설문에 참여해주세요.\n\n설문 링크: ${window.location.origin}/survey/${selectedSurveyForLink.id}\n\n설문 기간: ${selectedSurveyForLink.start_date} ~ ${selectedSurveyForLink.end_date}\n\n많은 참여 부탁드립니다.`}
-                  readOnly
-                  rows={6}
+                  rows={7}
                   className="w-full resize-none rounded-lg border border-gray-300 bg-gray-50 px-3 py-2 text-sm text-gray-900"
                 />
                 <button
@@ -1567,7 +1581,7 @@ const SurveyManagement: React.FC = () => {
                     );
                     toast.success("메시지가 클립보드에 복사되었습니다!");
                   }}
-                  className="mt-2 rounded-lg bg-green-600 px-4 py-2 text-sm text-white transition-colors hover:bg-green-700"
+                  className="mt-2 rounded-lg bg-gray-400 px-4 py-2 text-sm text-white transition-colors hover:bg-gray-500"
                 >
                   메시지 복사
                 </button>

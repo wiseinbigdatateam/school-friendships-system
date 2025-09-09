@@ -553,8 +553,8 @@ const IndividualAnalysis: React.FC = () => {
                               AI 리포트를 생성하는 중...
                             </p>
                             <p className="mt-2 text-sm text-gray-500">
-                              진단 전문 LLM으로 개인별 분석 결과를 바탕으로 리포트를
-                              작성하고 있습니다.
+                              진단 전문 LLM으로 개인별 분석 결과를 바탕으로
+                              리포트를 작성하고 있습니다.
                             </p>
                           </div>
                         ) : aiReport ? (
@@ -1023,10 +1023,6 @@ const IndividualAnalysis: React.FC = () => {
                   {/* 개인별 요약 - 핵심결과 탭에서만 표시 */}
                   {activeTab === "core" && (
                     <div className="rounded-lg border border-gray-200 bg-white p-6">
-                      <h3 className="mb-4 text-lg font-medium text-gray-900">
-                        개인별 요약
-                      </h3>
-
                       {networkLoading ? (
                         <div className="py-8 text-center">
                           <div className="mx-auto mb-4 h-8 w-8 animate-spin rounded-full border-b-2 border-blue-600"></div>
@@ -1076,19 +1072,23 @@ const IndividualAnalysis: React.FC = () => {
 
                             return (
                               <div>
-                                <h4 className="text-md mb-2 font-medium text-gray-800">
-                                  {isPopular &&
-                                    "안정적 관계 형성 그룹 (주도형)"}
-                                  {isAverage && "보통 관계 그룹 (일반형)"}
-                                  {needsImprovement &&
-                                    "관계 개선 필요 그룹 (주변형)"}
-                                  {isolationRisk &&
-                                    "고립 위험 그룹 (고립위험형)"}
-                                </h4>
+                                <h3 className="mb-4 text-lg font-medium text-gray-900">
+                                  개인별 요약 :{" "}
+                                  <span className="text-md mb-2 bg-gradient-to-t from-yellow-200 from-50% to-transparent to-50% font-medium text-gray-800">
+                                    {" "}
+                                    {isPopular &&
+                                      "안정적 관계 형성 그룹 (주도형)"}
+                                    {isAverage && "보통 관계 그룹 (일반형)"}
+                                    {needsImprovement &&
+                                      "관계 개선 필요 그룹 (주변형)"}
+                                    {isolationRisk &&
+                                      "고립 위험 그룹 (고립위험형)"}
+                                  </span>
+                                </h3>
 
                                 <div className="space-y-4">
                                   <div>
-                                    <h5 className="mb-2 text-sm font-medium text-gray-700">
+                                    <h5 className="mb-2 text-sm font-medium text-cyan-500">
                                       1. 현재 상태 (Current Status)
                                     </h5>
                                     <ul className="ml-4 space-y-1 text-sm text-gray-600">
@@ -1136,7 +1136,7 @@ const IndividualAnalysis: React.FC = () => {
                                   </div>
 
                                   <div>
-                                    <h5 className="mb-2 text-sm font-medium text-gray-700">
+                                    <h5 className="mb-2 text-sm font-medium text-sky-500">
                                       2. 네트워크 안정성 (Network Stability)
                                     </h5>
                                     <ul className="ml-4 space-y-1 text-sm text-gray-600">
@@ -1165,7 +1165,7 @@ const IndividualAnalysis: React.FC = () => {
                                   </div>
 
                                   <div>
-                                    <h5 className="mb-2 text-sm font-medium text-gray-700">
+                                    <h5 className="mb-2 text-sm font-medium text-blue-500">
                                       3. 개선방안 (Improvement Plan)
                                     </h5>
                                     <ul className="ml-4 space-y-1 text-sm text-gray-600">
@@ -1220,7 +1220,7 @@ const IndividualAnalysis: React.FC = () => {
                                     </ul>
                                   </div>
                                   <div>
-                                    <h5 className="mb-2 text-sm font-medium text-gray-700">
+                                    <h5 className="mb-2 text-sm font-medium text-indigo-500">
                                       4. 모니터링 포인트 (Monitoring Points)
                                     </h5>
                                     <ul className="ml-4 space-y-1 text-sm text-gray-600">
