@@ -34,19 +34,17 @@ const Landing: React.FC = () => {
         <div className="absolute inset-0 z-10 h-[700px] w-full bg-black/40"></div>
 
         <div className="z-20 mx-auto flex w-full flex-col items-center gap-3 px-4 text-center text-white">
-          <h1 className="text-5xl font-bold leading-[120%] max-md:text-4xl">
-            <span className="animate-fade-in-up delay-100">AI 기반</span>
-            <br />
-            <span className="animate-fade-in-up delay-300">
-              소외학생 예방관리 플랫폼
+          <h1 className="text-6xl font-bold leading-[120%] max-md:text-4xl">
+            <span className="slide-in-bck-center delay-100">
+              AI기반 소외학생 예방관리 플랫폼
             </span>
           </h1>
-          <p className="animate-fade-in-up text-base delay-500 max-md:text-sm">
+          <p className="slide-in-bck-center text-base delay-300 max-md:text-sm">
             교사의 교권보호를 위한 데이터 기반 학생관리
           </p>
           <button
             onClick={handleSolutionClick}
-            className="w-[191px] rounded-[50px] bg-sky-700 px-8 py-4 text-xl text-white transition-all duration-200 hover:bg-sky-500 max-md:w-[150px] max-md:px-6 max-md:py-3 max-md:text-base"
+            className="slide-in-bck-center w-[191px] rounded-[50px] bg-sky-700 px-8 py-4 text-xl text-white transition-all delay-700 duration-200 hover:bg-sky-500 max-md:w-[150px] max-md:px-6 max-md:py-3 max-md:text-base"
           >
             솔루션 체험하기
           </button>

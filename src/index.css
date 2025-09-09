@@ -85,20 +85,35 @@
 }
 
 /* 랜딩 페이지 애니메이션 */
-@keyframes fadeInUp {
-  from {
+@-webkit-keyframes slide-in-bck-center {
+  0% {
+    -webkit-transform: translateZ(1000px) scale(0.6);
+    transform: translateZ(1000px) scale(0.6);
     opacity: 0;
-    transform: translateY(30px);
   }
-  to {
+  100% {
+    -webkit-transform: translateZ(0) scale(1);
+    transform: translateZ(0) scale(1);
     opacity: 1;
-    transform: translateY(0);
+  }
+}
+@keyframes slide-in-bck-center {
+  0% {
+    -webkit-transform: translateZ(1000px) scale(0.6);
+    transform: translateZ(1000px) scale(0.6);
+    opacity: 0;
+  }
+  100% {
+    -webkit-transform: translateZ(0) scale(1);
+    transform: translateZ(0) scale(1);
+    opacity: 1;
   }
 }
 
-.animate-fade-in-up {
-  animation: fadeInUp 0.8s ease-out forwards;
-  opacity: 0;
+.slide-in-bck-center {
+  -webkit-animation: slide-in-bck-center 0.5s
+    cubic-bezier(0.25, 0.46, 0.45, 0.94) both;
+  animation: slide-in-bck-center 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94) both;
 }
 
 .delay-100 {
@@ -109,6 +124,6 @@
   animation-delay: 0.3s;
 }
 
-.delay-500 {
-  animation-delay: 0.5s;
+.delay-700 {
+  animation-delay: 0.7s;
 }
