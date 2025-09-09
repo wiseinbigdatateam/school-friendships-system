@@ -262,7 +262,7 @@ ${JSON.stringify(additionalSurveyData, null, 2)}
 `;
 
     // API 호출 (재시도 로직 포함)
-    let response;
+    let response: Response;
     let retryCount = 0;
     const maxRetries = 3;
     
@@ -314,6 +314,11 @@ ${JSON.stringify(additionalSurveyData, null, 2)}
         console.log(`API 호출 실패, 재시도 ${retryCount}/${maxRetries}, ${waitTime}ms 대기...`);
         await new Promise(resolve => setTimeout(resolve, waitTime));
       }
+    }
+
+    // response가 정의되지 않은 경우 (이론적으로 발생하지 않아야 함)
+    if (!response!) {
+      throw new Error('API 호출이 실패했습니다.');
     }
 
     const data = await response.json();
