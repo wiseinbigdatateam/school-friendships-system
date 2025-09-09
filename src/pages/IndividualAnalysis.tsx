@@ -4,10 +4,7 @@ import { ChevronRightIcon } from "@heroicons/react/24/outline";
 import NetworkGraph from "../components/NetworkGraph";
 import { useAuth } from "../contexts/AuthContext";
 import {
-  generateStudentGuidanceReport,
-  generateFallbackReport,
   StudentAnalysisData,
-  GeneratedReport,
 } from "../services/chatgptService";
 import { generateAndSaveAIReport, getSavedAIReport, AIReportData } from '../services/aiReportService';
 
