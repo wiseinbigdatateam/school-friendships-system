@@ -1024,11 +1024,46 @@ const Dashboard: React.FC = () => {
                                   try {
                                     const responseData =
                                       studentResponse.responses as any;
-                                    // 질문 ID가 "q1", "q2" 형태인 경우 숫자 키로 변환
-                                    const questionKey = question.id.startsWith('q') 
-                                      ? question.id.substring(1) 
-                                      : question.id;
-                                    const answerValue = responseData[questionKey];
+                                    
+                                    // 디버깅을 위한 로그 추가
+                                    console.log(`🔍 학생 ${student.name}의 응답 데이터:`, {
+                                      questionId: question.id,
+                                      responseData: responseData,
+                                      availableKeys: Object.keys(responseData)
+                                    });
+
+                                    // 다양한 키 형태로 시도
+                                    let answerValue = null;
+                                    
+                                    // 1. 원본 질문 ID로 시도
+                                    if (responseData[question.id]) {
+                                      answerValue = responseData[question.id];
+                                    }
+                                    // 2. q1, q2 형태인 경우 숫자 키로 변환하여 시도
+                                    else if (question.id.startsWith('q')) {
+                                      const numericKey = question.id.substring(1);
+                                      if (responseData[numericKey]) {
+                                        answerValue = responseData[numericKey];
+                                      }
+                                    }
+                                    // 3. 질문 ID가 숫자인 경우 q 접두사 추가하여 시도
+                                    else if (/^\d+$/.test(question.id)) {
+                                      const qKey = `q${question.id}`;
+                                      if (responseData[qKey]) {
+                                        answerValue = responseData[qKey];
+                                      }
+                                    }
+                                    // 4. 모든 키를 순회하며 질문 텍스트와 매칭되는지 확인
+                                    else {
+                                      for (const key of Object.keys(responseData)) {
+                                        if (key.includes(question.id) || question.id.includes(key)) {
+                                          answerValue = responseData[key];
+                                          break;
+                                        }
+                                      }
+                                    }
+
+                                    console.log(`📊 질문 ${question.id}에 대한 답변:`, answerValue);
 
                                     if (answerValue) {
                                       // UUID를 이름으로 변환하는 함수
