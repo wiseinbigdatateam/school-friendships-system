@@ -2,11 +2,14 @@ import React, { useState, useEffect, useCallback } from "react";
 import { supabase } from "../lib/supabase";
 import { ChevronRightIcon } from "@heroicons/react/24/outline";
 import NetworkGraph from "../components/NetworkGraph";
-import { useAuth } from "../contexts/AuthContext";
+import HTMLRenderer from "../components/HTMLRenderer";
 import {
+  generateStudentGuidanceReport,
+  generateFallbackReport,
   StudentAnalysisData,
+  GeneratedReport,
 } from "../services/chatgptService";
-import { generateAndSaveAIReport, getSavedAIReport, AIReportData } from '../services/aiReportService';
+import { saveAIReport, getAIReport } from "../services/aiReportService";
 
 interface Survey {
   id: string;
@@ -117,7 +120,6 @@ interface PythonAnalysisResult {
 }
 
 const IndividualAnalysis: React.FC = () => {
-  const { user } = useAuth();
   const [surveys, setSurveys] = useState<Survey[]>([]);
   const [students, setStudents] = useState<Student[]>([]);
   const [selectedSurvey, setSelectedSurvey] = useState<string>("");
@@ -127,7 +129,7 @@ const IndividualAnalysis: React.FC = () => {
   const [maxSelections, setMaxSelections] = useState<number[]>([]);
   const [networkLoading, setNetworkLoading] = useState(false);
   const [activeTab, setActiveTab] = useState<"core" | "ai" | "python">("core");
-  const [aiReport, setAiReport] = useState<AIReportData | null>(null);
+  const [aiReport, setAiReport] = useState<GeneratedReport | null>(null);
   const [aiReportLoading, setAiReportLoading] = useState(false);
   const [pythonAnalysisResult, setPythonAnalysisResult] = useState<PythonAnalysisResult | null>(null);
   const [pythonAnalysisLoading, setPythonAnalysisLoading] = useState(false);
@@ -454,20 +456,15 @@ const IndividualAnalysis: React.FC = () => {
 
   // AI 리포트 생성 함수
   const generateAIReport = useCallback(async () => {
-    if (!selectedStudentData || !individualNetworkData.length || !user) return;
+    if (!selectedStudentData || !individualNetworkData.length) return;
 
     setAiReportLoading(true);
 
     try {
-      // 먼저 저장된 리포트가 있는지 확인
-      const savedReport = await getSavedAIReport(
-        selectedStudent,
-        selectedSurvey,
-        user.id
-      );
-
-      if (savedReport) {
-        setAiReport(savedReport);
+      // 먼저 기존 리포트가 있는지 확인
+      const existingReport = await getAIReport(selectedStudent, selectedSurvey);
+      if (existingReport) {
+        setAiReport(existingReport.report_data);
         setAiReportLoading(false);
         return;
       }
@@ -494,22 +491,52 @@ const IndividualAnalysis: React.FC = () => {
           centrality < 0.3 ? "낮음" : centrality < 0.6 ? "보통" : "높음",
       };
 
-      // AI 리포트 생성 및 저장
-      const report = await generateAndSaveAIReport(
-        selectedStudent,
-        selectedSurvey,
-        user.id,
-        analysisData
-      );
+      // ChatGPT API 호출
+      const report = await generateStudentGuidanceReport(analysisData);
+      
+      // DB에 저장
+      await saveAIReport(selectedStudent, selectedSurvey, report);
       
       setAiReport(report);
     } catch (error) {
       console.error("AI 리포트 생성 오류:", error);
-      setAiReport(null);
+
+      // 대체 리포트 생성 (오류 메시지 없이)
+      const centerStudent = individualNetworkData.find((s) => s.isCenter);
+      const centrality = centerStudent
+        ? centerStudent.friendCount /
+          Math.max(individualNetworkData.length - 1, 1)
+        : 0;
+
+      const analysisData: StudentAnalysisData = {
+        studentName: selectedStudentData.name,
+        grade: parseInt(selectedStudentData.grade),
+        class: parseInt(selectedStudentData.class),
+        centrality: centrality,
+        community: 0,
+        totalRelationships: centerStudent?.friendCount || 0,
+        isolationRisk:
+          centrality < 0.3 ? "높음" : centrality < 0.6 ? "보통" : "낮음",
+        friendshipDevelopment:
+          centrality < 0.3 ? "개선 필요" : centrality < 0.6 ? "보통" : "양호",
+        communityIntegration:
+          centrality < 0.3 ? "낮음" : centrality < 0.6 ? "보통" : "높음",
+      };
+
+      const fallbackReport = generateFallbackReport(analysisData);
+      
+      // 대체 리포트도 DB에 저장
+      try {
+        await saveAIReport(selectedStudent, selectedSurvey, fallbackReport);
+      } catch (saveError) {
+        console.error("대체 리포트 저장 오류:", saveError);
+      }
+      
+      setAiReport(fallbackReport);
     } finally {
       setAiReportLoading(false);
     }
-  }, [selectedStudentData, individualNetworkData, selectedStudent, selectedSurvey, user]);
+  }, [selectedStudentData, individualNetworkData, selectedStudent, selectedSurvey]);
 
   // Python 네트워크 분석 실행 함수
   const runPythonAnalysis = useCallback(async () => {
@@ -794,13 +821,457 @@ const IndividualAnalysis: React.FC = () => {
                             </p>
                           </div>
                         ) : aiReport ? (
-                          <div className="ai-report-container">
-                            <div 
-                              dangerouslySetInnerHTML={{ 
-                                __html: aiReport.html_content || '' 
-                              }}
-                              className="prose prose-sm max-w-none"
-                            />
+                          <div className="space-y-4">
+                            {/* 종합진단 */}
+                            <div className="rounded-lg border border-blue-200 bg-blue-50 p-6">
+                              <h4 className="mb-4 text-lg font-semibold text-blue-800">
+                                1) 종합진단
+                              </h4>
+                              <div className="rounded-lg border border-blue-100 bg-white p-4">
+                                <HTMLRenderer 
+                                  content={String(aiReport.summary || "")}
+                                  className="text-sm leading-relaxed text-gray-700"
+                                />
+                              </div>
+                            </div>
+
+                            {/* 현재 상태 */}
+                            <div className="rounded-lg border border-gray-200 bg-white p-6">
+                              <h4 className="mb-4 text-lg font-semibold text-gray-800">
+                                2) 현재 상태
+                              </h4>
+                              <div className="rounded-lg border border-gray-100 bg-gray-50 p-4">
+                                <HTMLRenderer 
+                                  content={typeof aiReport.currentStatus === "string" 
+                                    ? aiReport.currentStatus 
+                                    : JSON.stringify(aiReport.currentStatus)}
+                                  className="text-sm leading-relaxed text-gray-700"
+                                />
+                                {false && (
+                                  <div className="space-y-2">
+                                    {aiReport.currentStatus
+                                      ?.schoolLifeSatisfaction && (
+                                      <p className="text-sm text-gray-700">
+                                        <span className="font-medium">
+                                          학교생활 만족도:
+                                        </span>{" "}
+                                        {
+                                          aiReport.currentStatus
+                                            .schoolLifeSatisfaction
+                                        }
+                                      </p>
+                                    )}
+                                    {aiReport.currentStatus
+                                      ?.relationshipWithTeacher && (
+                                      <p className="text-sm text-gray-700">
+                                        <span className="font-medium">
+                                          교사 관계:
+                                        </span>{" "}
+                                        {
+                                          aiReport.currentStatus
+                                            .relationshipWithTeacher
+                                        }
+                                      </p>
+                                    )}
+                                    {aiReport.currentStatus
+                                      ?.peerRelationship && (
+                                      <p className="text-sm text-gray-700">
+                                        <span className="font-medium">
+                                          또래 관계:
+                                        </span>{" "}
+                                        {
+                                          aiReport.currentStatus
+                                            .peerRelationship
+                                        }
+                                      </p>
+                                    )}
+                                    {aiReport.currentStatus
+                                      ?.networkParticipation && (
+                                      <p className="text-sm text-gray-700">
+                                        <span className="font-medium">
+                                          네트워크 참여도:
+                                        </span>{" "}
+                                        {
+                                          aiReport.currentStatus
+                                            .networkParticipation
+                                        }
+                                      </p>
+                                    )}
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+
+                            {/* 위험 평가 */}
+                            <div className="rounded-lg border border-yellow-200 bg-yellow-50 p-6">
+                              <h4 className="mb-4 text-lg font-semibold text-yellow-800">
+                                3) 위험 평가
+                              </h4>
+                              <div className="rounded-lg border border-yellow-100 bg-white p-4">
+                                <HTMLRenderer 
+                                  content={typeof aiReport.riskAssessment === "string" 
+                                    ? aiReport.riskAssessment 
+                                    : JSON.stringify(aiReport.riskAssessment)}
+                                  className="text-sm leading-relaxed text-gray-700"
+                                />
+                                {false && (
+                                  <div className="space-y-2">
+                                    {aiReport.riskAssessment?.overall && (
+                                      <p className="text-sm text-gray-700">
+                                        <span className="font-medium">
+                                          전체 평가:
+                                        </span>{" "}
+                                        {aiReport.riskAssessment.overall}
+                                      </p>
+                                    )}
+                                    {aiReport.riskAssessment?.strengths && (
+                                      <p className="text-sm text-gray-700">
+                                        <span className="font-medium">
+                                          강점:
+                                        </span>{" "}
+                                        {aiReport.riskAssessment.strengths}
+                                      </p>
+                                    )}
+                                    {aiReport.riskAssessment?.concerns && (
+                                      <p className="text-sm text-gray-700">
+                                        <span className="font-medium">
+                                          우려사항:
+                                        </span>{" "}
+                                        {aiReport.riskAssessment.concerns}
+                                      </p>
+                                    )}
+                                    {aiReport.riskAssessment
+                                      ?.recommendations && (
+                                      <p className="text-sm text-gray-700">
+                                        <span className="font-medium">
+                                          권장사항:
+                                        </span>{" "}
+                                        {
+                                          aiReport.riskAssessment
+                                            .recommendations
+                                        }
+                                      </p>
+                                    )}
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+
+                            {/* 지도 계획 */}
+                            <div className="rounded-lg border border-green-200 bg-green-50 p-6">
+                              <h4 className="mb-4 text-lg font-semibold text-green-800">
+                                4) 맞춤 솔루션 및 제안
+                              </h4>
+
+                              <div className="mb-4 rounded-lg border border-green-100 bg-white p-4">
+                                <p className="mb-3 text-sm font-medium leading-relaxed text-gray-700">
+                                  목표:
+                                </p>
+                                <HTMLRenderer 
+                                  content={String(aiReport.guidancePlan || "")}
+                                  className="text-sm leading-relaxed text-gray-700"
+                                />
+                              </div>
+
+                              <div className="grid gap-4 md:grid-cols-3">
+                                <div className="rounded-lg border border-green-100 bg-white p-4">
+                                  <h5 className="mb-3 text-sm font-semibold text-green-700">
+                                    단기 솔루션 (즉시 실행)
+                                  </h5>
+                                  <ul className="space-y-2 text-xs text-gray-600">
+                                    {aiReport.specificActions.map(
+                                      (action, index) => (
+                                        <li
+                                          key={index}
+                                          className="flex items-start"
+                                        >
+                                          <span className="mr-2 mt-0.5 text-green-600">
+                                            •
+                                          </span>
+                                          <span>{String(action || "")}</span>
+                                        </li>
+                                      ),
+                                    )}
+                                  </ul>
+                                </div>
+                                <div className="rounded-lg border border-green-100 bg-white p-4">
+                                  <h5 className="mb-3 text-sm font-semibold text-green-700">
+                                    중기 솔루션 (계획적 도입)
+                                  </h5>
+                                  <ul className="space-y-2 text-xs text-gray-600">
+                                    {aiReport.monitoringPoints.map(
+                                      (point, index) => (
+                                        <li
+                                          key={index}
+                                          className="flex items-start"
+                                        >
+                                          <span className="mr-2 mt-0.5 text-green-600">
+                                            •
+                                          </span>
+                                          <span>{String(point || "")}</span>
+                                        </li>
+                                      ),
+                                    )}
+                                  </ul>
+                                </div>
+                                <div className="rounded-lg border border-green-100 bg-white p-4">
+                                  <h5 className="mb-3 text-sm font-semibold text-green-700">
+                                    장기 솔루션 (지속적 관리)
+                                  </h5>
+                                  <ul className="space-y-2 text-xs text-gray-600">
+                                    {aiReport.expectedOutcomes.map(
+                                      (outcome, index) => (
+                                        <li
+                                          key={index}
+                                          className="flex items-start"
+                                        >
+                                          <span className="mr-2 mt-0.5 text-green-600">
+                                            •
+                                          </span>
+                                          <span>{String(outcome || "")}</span>
+                                        </li>
+                                      ),
+                                    )}
+                                  </ul>
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* 개인별 요약 */}
+                            {aiReport.individualSummary && (
+                              <div className="rounded-lg border border-blue-200 bg-blue-50 p-6">
+                                <h4 className="mb-4 text-lg font-semibold text-blue-800">
+                                  5) 개인별 요약
+                                </h4>
+                                <div className="space-y-4">
+                                  <div className="rounded-lg border border-blue-100 bg-white p-4">
+                                    <h5 className="mb-3 text-sm font-semibold text-blue-700">
+                                      학생 유형
+                                    </h5>
+                                    <p className="text-sm text-gray-700">
+                                      {aiReport.individualSummary.studentType}
+                                    </p>
+                                  </div>
+
+                                  <div className="rounded-lg border border-blue-100 bg-white p-4">
+                                    <h5 className="mb-3 text-sm font-semibold text-blue-700">
+                                      현재 상태
+                                    </h5>
+                                    <div className="grid grid-cols-2 gap-2 text-xs">
+                                      <div>
+                                        <span className="font-medium text-gray-600">
+                                          학교생활 만족도:
+                                        </span>
+                                        <span className="ml-2 text-gray-700">
+                                          {
+                                            aiReport.individualSummary
+                                              .currentStatus.schoolSatisfaction
+                                          }
+                                        </span>
+                                      </div>
+                                      <div>
+                                        <span className="font-medium text-gray-600">
+                                          교사 관계:
+                                        </span>
+                                        <span className="ml-2 text-gray-700">
+                                          {
+                                            aiReport.individualSummary
+                                              .currentStatus.teacherRelationship
+                                          }
+                                        </span>
+                                      </div>
+                                      <div>
+                                        <span className="font-medium text-gray-600">
+                                          또래 관계:
+                                        </span>
+                                        <span className="ml-2 text-gray-700">
+                                          {
+                                            aiReport.individualSummary
+                                              .currentStatus.peerRelationship
+                                          }
+                                        </span>
+                                      </div>
+                                      <div>
+                                        <span className="font-medium text-gray-600">
+                                          네트워크 참여도:
+                                        </span>
+                                        <span className="ml-2 text-gray-700">
+                                          {
+                                            aiReport.individualSummary
+                                              .currentStatus
+                                              .networkParticipation
+                                          }
+                                        </span>
+                                      </div>
+                                    </div>
+                                  </div>
+
+                                  <div className="rounded-lg border border-blue-100 bg-white p-4">
+                                    <h5 className="mb-3 text-sm font-semibold text-blue-700">
+                                      네트워크 안정성
+                                    </h5>
+                                    <div className="grid grid-cols-2 gap-2 text-xs">
+                                      <div>
+                                        <span className="font-medium text-gray-600">
+                                          중심성 점수:
+                                        </span>
+                                        <span className="ml-2 text-gray-700">
+                                          {
+                                            aiReport.individualSummary
+                                              .networkStability.centralityScore
+                                          }
+                                        </span>
+                                      </div>
+                                      <div>
+                                        <span className="font-medium text-gray-600">
+                                          친구 수:
+                                        </span>
+                                        <span className="ml-2 text-gray-700">
+                                          {
+                                            aiReport.individualSummary
+                                              .networkStability.friendCount
+                                          }
+                                        </span>
+                                      </div>
+                                      <div>
+                                        <span className="font-medium text-gray-600">
+                                          네트워크 밀도:
+                                        </span>
+                                        <span className="ml-2 text-gray-700">
+                                          {
+                                            aiReport.individualSummary
+                                              .networkStability.networkDensity
+                                          }
+                                        </span>
+                                      </div>
+                                      <div>
+                                        <span className="font-medium text-gray-600">
+                                          그룹 분포:
+                                        </span>
+                                        <span className="ml-2 text-gray-700">
+                                          {
+                                            aiReport.individualSummary
+                                              .networkStability
+                                              .groupDistribution
+                                          }
+                                        </span>
+                                      </div>
+                                      <div>
+                                        <span className="font-medium text-gray-600">
+                                          고립 위험도:
+                                        </span>
+                                        <span className="ml-2 text-gray-700">
+                                          {
+                                            aiReport.individualSummary
+                                              .networkStability.isolationRisk
+                                          }
+                                        </span>
+                                      </div>
+                                    </div>
+                                  </div>
+
+                                  <div className="rounded-lg border border-blue-100 bg-white p-4">
+                                    <h5 className="mb-3 text-sm font-semibold text-blue-700">
+                                      개선방안
+                                    </h5>
+                                    <div className="space-y-3">
+                                      <div>
+                                        <h6 className="mb-1 text-xs font-medium text-gray-600">
+                                          단기 목표
+                                        </h6>
+                                        <ul className="space-y-1 text-xs text-gray-600">
+                                          {aiReport.individualSummary.improvementPlan.shortTerm.map(
+                                            (action, index) => (
+                                              <li
+                                                key={index}
+                                                className="flex items-start"
+                                              >
+                                                <span className="mr-2 mt-0.5 text-blue-600">
+                                                  •
+                                                </span>
+                                                <span>{action}</span>
+                                              </li>
+                                            ),
+                                          )}
+                                        </ul>
+                                      </div>
+                                      <div>
+                                        <h6 className="mb-1 text-xs font-medium text-gray-600">
+                                          장기 목표
+                                        </h6>
+                                        <ul className="space-y-1 text-xs text-gray-600">
+                                          {aiReport.individualSummary.improvementPlan.longTerm.map(
+                                            (action, index) => (
+                                              <li
+                                                key={index}
+                                                className="flex items-start"
+                                              >
+                                                <span className="mr-2 mt-0.5 text-blue-600">
+                                                  •
+                                                </span>
+                                                <span>{action}</span>
+                                              </li>
+                                            ),
+                                          )}
+                                        </ul>
+                                      </div>
+                                    </div>
+                                  </div>
+
+                                  <div className="rounded-lg border border-blue-100 bg-white p-4">
+                                    <h5 className="mb-3 text-sm font-semibold text-blue-700">
+                                      모니터링 포인트
+                                    </h5>
+                                    <div className="space-y-2 text-xs">
+                                      <div>
+                                        <span className="font-medium text-gray-600">
+                                          빈도:
+                                        </span>
+                                        <span className="ml-2 text-gray-700">
+                                          {
+                                            aiReport.individualSummary
+                                              .monitoringPoints.frequency
+                                          }
+                                        </span>
+                                      </div>
+                                      <div>
+                                        <span className="font-medium text-gray-600">
+                                          초점:
+                                        </span>
+                                        <span className="ml-2 text-gray-700">
+                                          {
+                                            aiReport.individualSummary
+                                              .monitoringPoints.focus
+                                          }
+                                        </span>
+                                      </div>
+                                      <div>
+                                        <span className="font-medium text-gray-600">
+                                          주요 영역:
+                                        </span>
+                                        <ul className="mt-1 space-y-1">
+                                          {aiReport.individualSummary.monitoringPoints.keyAreas.map(
+                                            (area, index) => (
+                                              <li
+                                                key={index}
+                                                className="flex items-start"
+                                              >
+                                                <span className="mr-2 mt-0.5 text-blue-600">
+                                                  •
+                                                </span>
+                                                <span className="text-gray-700">
+                                                  {area}
+                                                </span>
+                                              </li>
+                                            ),
+                                          )}
+                                        </ul>
+                                      </div>
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+                            )}
                           </div>
                         ) : (
                           <div className="py-8 text-center">
@@ -1259,3 +1730,8 @@ const IndividualAnalysis: React.FC = () => {
 };
 
 export default IndividualAnalysis;
+
+
+
+
+
