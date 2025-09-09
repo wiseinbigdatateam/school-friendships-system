@@ -34,6 +34,9 @@ const NetworkAnalysisPage: React.FC = () => {
   const [chartData, setChartData] = useState<NetworkAnalysisData[]>([]);
   const [selectedData, setSelectedData] = useState<SurveyProject[]>([]);
 
+  // 탭 컴포넌트에 전달할 데이터
+  const [activeTab, setActiveTab] = useState(1);
+
   // 초기 데이터 설정
   useEffect(() => {
     const fetchSurveys = async () => {
@@ -272,7 +275,7 @@ const NetworkAnalysisPage: React.FC = () => {
 
   return (
     <div className="mx-auto min-h-screen max-w-7xl bg-gray-50 px-4 pb-16 sm:px-6 lg:px-8">
-      <div className="">
+      <div className="flex flex-col">
         {/* 헤더 */}
         {/* <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900 mb-2">
@@ -374,8 +377,38 @@ const NetworkAnalysisPage: React.FC = () => {
 
         {/* 결과 : 그래프, 테이블 */}
         {chartData.length !== 0 && (
-          <div className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
-            <NetworkChartComponent chartData={chartData} />
+          <div className="flex flex-col rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
+            {/* 두 개의 차트를 비교할 때만 렌더링되는 탭 메뉴 */}
+            {chartData.length === 2 && (
+              <div className="flex items-center justify-between self-end px-6">
+                <div className="flex space-x-1 rounded-lg bg-gray-100 p-1">
+                  <button
+                    onClick={() => setActiveTab(1)}
+                    className={`rounded-md px-4 py-2 text-sm font-medium transition-colors ${
+                      activeTab === 1
+                        ? "bg-white text-[#3F80EA] shadow-sm"
+                        : "text-gray-600 hover:text-gray-900"
+                    }`}
+                  >
+                    첫 번째 설문
+                  </button>
+                  <button
+                    onClick={() => setActiveTab(2)}
+                    className={`rounded-md px-4 py-2 text-sm font-medium transition-colors ${
+                      activeTab === 2
+                        ? "bg-white text-[#3F80EA] shadow-sm"
+                        : "text-gray-600 hover:text-gray-900"
+                    }`}
+                  >
+                    두 번째 설문
+                  </button>
+                </div>
+              </div>
+            )}
+            <NetworkChartComponent
+              chartData={chartData}
+              activeTab={activeTab}
+            />
           </div>
         )}
       </div>
