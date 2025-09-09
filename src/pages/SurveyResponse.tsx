@@ -1017,13 +1017,13 @@ const SurveyResponse: React.FC = () => {
                           </p>
 
                           {/* 답변 옵션 */}
-                          <div className="space-y-3">
+                          <div className="space-y-1">
                             {question.answer_options &&
                               Object.entries(question.answer_options).map(
                                 ([key, value]) => (
                                   <label
                                     key={key}
-                                    className="flex cursor-pointer items-center rounded-lg border border-gray-200 p-3 transition-colors hover:bg-gray-50"
+                                    className="flex cursor-pointer items-center rounded-lg p-3 transition-colors hover:bg-gray-50"
                                   >
                                     <input
                                       type="radio"
