@@ -1025,12 +1025,6 @@ const Dashboard: React.FC = () => {
                                     const responseData =
                                       studentResponse.responses as any;
                                     
-                                    // 디버깅을 위한 로그 추가
-                                    console.log(`🔍 학생 ${student.name}의 응답 데이터:`, {
-                                      questionId: question.id,
-                                      responseData: responseData,
-                                      availableKeys: Object.keys(responseData)
-                                    });
 
                                     // 다양한 키 형태로 시도
                                     let answerValue = null;
@@ -1063,7 +1057,6 @@ const Dashboard: React.FC = () => {
                                       }
                                     }
 
-                                    console.log(`📊 질문 ${question.id}에 대한 답변:`, answerValue);
 
                                     if (answerValue) {
                                       // UUID를 이름으로 변환하는 함수
