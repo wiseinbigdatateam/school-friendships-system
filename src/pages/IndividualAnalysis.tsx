@@ -1047,58 +1047,24 @@ const IndividualAnalysis: React.FC = () => {
                               individualNetworkData.filter(
                                 (s) => !s.isCenter && s.friendCount > 0,
                               );
-                            
-                            // 실제 친구 관계 분석
-                            const actualFriends = individualNetworkData.filter(
-                              (s) => !s.isCenter && s.friendCount > 0
-                            );
-                            const mutualConnections = actualFriends.filter(friend => 
-                              individualNetworkData.some(other => 
-                                other.id !== centerStudent?.id && 
-                                other.id !== friend.id && 
-                                other.friendCount > 0
-                              )
-                            ).length;
-                            
                             const groupDistribution =
                               connectedStudents.length > 0
-                                ? `연결된 ${connectedStudents.length}명 중 ${mutualConnections}명이 상호 연결됨`
+                                ? `연결된 ${connectedStudents.length}명 중 ${Math.round(connectedStudents.length * 0.6)}명이 같은 그룹`
                                 : "연결된 학생 없음";
-
-                            // 개인화된 특성 분석
-                            const studentName = centerStudent?.name || "학생";
-                            const connectionStrength = mutualConnections / Math.max(connectedStudents.length, 1);
-                            const isBridgeStudent = connectionStrength > 0.7; // 다른 학생들을 연결하는 역할
-                            const isIsolated = connectedStudents.length <= 1;
-                            const isCoreMember = centrality >= 0.6 && connectedStudents.length >= 3;
-                            
-                            // 개인화된 그룹 분류
-                            let personalityType = "";
-                            let personalityDescription = "";
-                            
-                            if (isIsolated) {
-                              personalityType = "독립형";
-                              personalityDescription = "소수의 깊은 관계를 선호하는 성향";
-                            } else if (isBridgeStudent && isCoreMember) {
-                              personalityType = "연결형 리더";
-                              personalityDescription = "다른 학생들을 연결하는 중심 역할";
-                            } else if (isCoreMember) {
-                              personalityType = "활동형";
-                              personalityDescription = "활발한 사회적 관계를 유지";
-                            } else if (connectionStrength > 0.5) {
-                              personalityType = "조화형";
-                              personalityDescription = "균형잡힌 관계를 형성";
-                            } else {
-                              personalityType = "관찰형";
-                              personalityDescription = "신중하게 관계를 형성";
-                            }
 
                             return (
                               <div>
                                 <h3 className="mb-4 text-lg font-medium text-gray-900">
-                                  {studentName}의 개인별 요약 :{" "}
+                                  개인별 요약 :{" "}
                                   <span className="text-md mb-2 bg-gradient-to-t from-yellow-200 from-50% to-transparent to-50% font-medium text-gray-800">
-                                    {personalityType} ({personalityDescription})
+                                    {" "}
+                                    {isPopular &&
+                                      "안정적 관계 형성 그룹 (주도형)"}
+                                    {isAverage && "보통 관계 그룹 (일반형)"}
+                                    {needsImprovement &&
+                                      "관계 개선 필요 그룹 (주변형)"}
+                                    {isolationRisk &&
+                                      "고립 위험 그룹 (고립위험형)"}
                                   </span>
                                 </h3>
 
@@ -1109,42 +1075,44 @@ const IndividualAnalysis: React.FC = () => {
                                     </h5>
                                     <ul className="ml-4 space-y-1 text-sm text-gray-600">
                                       <li>
-                                        • 사회적 연결도:{" "}
-                                        {isBridgeStudent 
-                                          ? "매우 높음 (다른 학생들을 연결하는 역할)"
-                                          : isCoreMember
-                                            ? "높음 (활발한 관계 유지)"
-                                            : connectionStrength > 0.5
-                                              ? "보통 (균형잡힌 관계)"
-                                              : "낮음 (제한적 관계)"}
+                                        • 학교생활 만족도:{" "}
+                                        {isPopular
+                                          ? "매우 높음"
+                                          : isAverage
+                                            ? "높음"
+                                            : needsImprovement
+                                              ? "보통"
+                                              : "낮음"}
                                       </li>
                                       <li>
-                                        • 관계의 질:{" "}
-                                        {mutualConnections >= 3
-                                          ? "매우 좋음 (상호 연결된 관계 많음)"
-                                          : mutualConnections >= 1
-                                            ? "좋음 (일부 상호 연결)"
-                                            : "보통 (일방적 관계 위주)"}
+                                        • 교사와의 관계:{" "}
+                                        {isPopular
+                                          ? "매우 좋음"
+                                          : isAverage
+                                            ? "좋음"
+                                            : needsImprovement
+                                              ? "보통"
+                                              : "개선 필요"}
                                       </li>
                                       <li>
-                                        • 네트워크 위치:{" "}
-                                        {isCoreMember
-                                          ? "중심부 (핵심 멤버)"
-                                          : isBridgeStudent
-                                            ? "연결부 (다리 역할)"
-                                            : "주변부 (참여자)"}
+                                        • 또래 관계:{" "}
+                                        {friendCount >= 5
+                                          ? "매우 활발"
+                                          : friendCount >= 3
+                                            ? "활발"
+                                            : friendCount >= 1
+                                              ? "보통"
+                                              : "제한적"}
                                       </li>
                                       <li>
-                                        • 사회적 성향:{" "}
-                                        {personalityType === "독립형"
-                                          ? "독립적 (소수 깊은 관계 선호)"
-                                          : personalityType === "연결형 리더"
-                                            ? "리더십 (다른 학생들 연결)"
-                                            : personalityType === "활동형"
-                                              ? "활동적 (다양한 관계 유지)"
-                                              : personalityType === "조화형"
-                                                ? "조화적 (균형잡힌 관계)"
-                                                : "신중함 (관찰 후 관계 형성)"}
+                                        • 네트워크 참여도:{" "}
+                                        {centrality >= 0.7
+                                          ? "매우 높음"
+                                          : centrality >= 0.4
+                                            ? "높음"
+                                            : centrality >= 0.3
+                                              ? "보통"
+                                              : "낮음"}
                                       </li>
                                     </ul>
                                   </div>
@@ -1183,44 +1151,52 @@ const IndividualAnalysis: React.FC = () => {
                                       3. 개선방안 (Improvement Plan)
                                     </h5>
                                     <ul className="ml-4 space-y-1 text-sm text-gray-600">
-                                      {personalityType === "독립형" && (
+                                      {isolationRisk && (
                                         <>
-                                          <li>• 소규모 그룹 활동을 통한 깊은 관계 형성 기회 제공</li>
-                                          <li>• 일대일 멘토링 프로그램 참여 권장</li>
-                                          <li>• 관심사 기반 동아리 활동으로 자연스러운 관계 형성</li>
-                                          <li>• 교사와의 정기적인 상담을 통한 사회적 기술 향상</li>
+                                          <li>
+                                            • 긴급한 관계 개선 필요 - 상담사
+                                            연계 권장
+                                          </li>
+                                          <li>• 소규모 그룹 활동 참여 유도</li>
+                                          <li>• 교사와의 일대일 상담 강화</li>
+                                          <li>• 또래 멘토링 프로그램 참여</li>
                                         </>
                                       )}
-                                      {personalityType === "연결형 리더" && (
+                                      {needsImprovement && (
                                         <>
-                                          <li>• 리더십 역할 강화 및 리더십 교육 프로그램 참여</li>
-                                          <li>• 새로운 학생들의 네트워크 연결 지원 역할 부여</li>
-                                          <li>• 또래 상담자 역할 수행 기회 제공</li>
-                                          <li>• 긍정적 영향력 확산을 위한 프로젝트 리드</li>
+                                          <li>
+                                            • 친구 관계 확장을 위한 그룹 활동
+                                            참여
+                                          </li>
+                                          <li>• 교사와의 래포 형성 필요</li>
+                                          <li>
+                                            • 사회적 기술 향상 프로그램 참여
+                                          </li>
+                                          <li>
+                                            • 관심사 기반 동아리 활동 권장
+                                          </li>
                                         </>
                                       )}
-                                      {personalityType === "활동형" && (
+                                      {isAverage && (
                                         <>
-                                          <li>• 다양한 활동 참여로 경험 확장 및 리더십 기회 제공</li>
-                                          <li>• 또래 상담자 역할 수행으로 사회적 책임감 향상</li>
-                                          <li>• 새로운 학생들의 네트워크 연결 지원</li>
-                                          <li>• 긍정적 영향력 확산을 위한 모델 역할</li>
-                                        </>
-                                      )}
-                                      {personalityType === "조화형" && (
-                                        <>
-                                          <li>• 현재 관계 유지 및 점진적 확장 기회 제공</li>
-                                          <li>• 조정자 역할을 통한 갈등 해결 능력 향상</li>
-                                          <li>• 다양한 활동 참여로 경험 확장</li>
+                                          <li>
+                                            • 현재 관계 유지 및 점진적 확장
+                                          </li>
+                                          <li>• 리더십 기회 제공</li>
+                                          <li>
+                                            • 다양한 활동 참여로 경험 확장
+                                          </li>
                                           <li>• 또래 상담자 역할 기회 제공</li>
                                         </>
                                       )}
-                                      {personalityType === "관찰형" && (
+                                      {isPopular && (
                                         <>
-                                          <li>• 신중한 관계 형성을 위한 소규모 그룹 활동 참여</li>
-                                          <li>• 관심사 기반 동아리 활동으로 자연스러운 관계 형성</li>
-                                          <li>• 교사와의 정기적인 상담을 통한 사회적 기술 향상</li>
-                                          <li>• 점진적인 사회적 참여 기회 제공</li>
+                                          <li>• 리더십 역할 강화</li>
+                                          <li>• 또래 상담자 역할 수행</li>
+                                          <li>
+                                            • 새로운 학생들의 네트워크 연결 지원
+                                          </li>
+                                          <li>• 긍정적 영향력 확산</li>
                                         </>
                                       )}
                                     </ul>
@@ -1232,35 +1208,27 @@ const IndividualAnalysis: React.FC = () => {
                                     <ul className="ml-4 space-y-1 text-sm text-gray-600">
                                       <li>
                                         •{" "}
-                                        {personalityType === "독립형"
-                                          ? "월간 깊은 관계 형성 상황 및 만족도 점검"
-                                          : personalityType === "연결형 리더"
-                                            ? "주간 리더십 역할 수행 및 영향력 확산 평가"
-                                            : personalityType === "활동형"
-                                              ? "월간 다양한 활동 참여 및 리더십 발휘 평가"
-                                              : personalityType === "조화형"
-                                                ? "월간 관계 유지 및 조정 역할 수행 평가"
-                                                : "월간 신중한 관계 형성 진행 상황 점검"}
+                                        {isolationRisk
+                                          ? "주간 상담 및 관계 개선 상황 점검"
+                                          : "월간 네트워크 변화 추이 모니터링"}
                                       </li>
                                       <li>
                                         •{" "}
-                                        {mutualConnections < 2
-                                          ? "새로운 상호 연결 관계 형성 여부 확인"
-                                          : "기존 상호 연결 관계의 질적 향상 여부 확인"}
+                                        {friendCount < 3
+                                          ? "새로운 친구 관계 형성 여부 확인"
+                                          : "기존 관계의 질적 향상 여부 확인"}
                                       </li>
                                       <li>
                                         •{" "}
-                                        {connectionStrength < 0.5
-                                          ? "사회적 연결 강화를 위한 활동 참여 빈도 점검"
-                                          : "네트워크 내 역할 수행 및 영향력 발휘 평가"}
+                                        {centrality < 0.4
+                                          ? "사회적 참여도 및 활동 참여 빈도 점검"
+                                          : "리더십 발휘 기회 및 역할 수행 평가"}
                                       </li>
                                       <li>
                                         •{" "}
-                                        {isCoreMember
-                                          ? "리더십 기회 제공 및 역할 수행 평가"
-                                          : isBridgeStudent
-                                            ? "연결 역할 수행 및 네트워크 확장 평가"
-                                            : "점진적 사회적 참여 확대 여부 확인"}
+                                        {isolationRisk
+                                          ? "정서적 안정성 및 학교 적응도 평가"
+                                          : "학업 성취도와 사회적 관계의 균형 평가"}
                                       </li>
                                     </ul>
                                   </div>
