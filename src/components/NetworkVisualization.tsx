@@ -1,6 +1,6 @@
-import React, { useEffect, useRef, useState, useMemo } from 'react';
-import { Network } from 'vis-network';
-import { NetworkNode, NetworkEdge } from '../types';
+import React, { useEffect, useRef, useState, useMemo } from "react";
+import { Network } from "vis-network";
+import { NetworkNode, NetworkEdge } from "../types";
 
 interface NetworkVisualizationProps {
   data: {
@@ -25,13 +25,16 @@ const NetworkVisualization: React.FC<NetworkVisualizationProps> = ({
   const [selectedNode, setSelectedNode] = useState<NetworkNode | null>(null);
 
   // 색상 매핑
-  const colorMap = useMemo((): { [key: string]: string } => ({
-    '외톨이형': '#FF6B6B',
-    '소수 친구 학생': '#FFD700', // 노란색
-    '평균적인 학생': '#87CEEB', // 하늘색
-    '친구 많은 학생': '#4169E1', // 진한 파란색
-    '사교 스타': '#FFEAA7'
-  }), []);
+  const colorMap = useMemo(
+    (): { [key: string]: string } => ({
+      외톨이형: "#FF6B6B",
+      "소수 친구 학생": "#4ECDC4",
+      "평균적인 학생": "#45B7D1",
+      "친구 많은 학생": "#96CEB4",
+      "사교 스타": "#FFEAA7",
+    }),
+    [],
+  );
 
   useEffect(() => {
     if (!networkRef.current || !data.nodes.length) return;
@@ -43,81 +46,81 @@ const NetworkVisualization: React.FC<NetworkVisualizationProps> = ({
     }
 
     // vis-network용 데이터 변환
-    const visNodes = data.nodes.map(node => ({
+    const visNodes = data.nodes.map((node) => ({
       id: node.id,
       label: node.name,
       color: {
-        background: colorMap[node.friendship_type] || '#94a3b8',
-        border: '#ffffff',
+        background: colorMap[node.friendship_type] || "#94a3b8",
+        border: "#ffffff",
         highlight: {
-          background: colorMap[node.friendship_type] || '#94a3b8',
-          border: '#3b82f6'
+          background: colorMap[node.friendship_type] || "#94a3b8",
+          border: "#3F80EA",
         },
         hover: {
-          background: colorMap[node.friendship_type] || '#94a3b8',
-          border: '#3b82f6'
-        }
+          background: colorMap[node.friendship_type] || "#94a3b8",
+          border: "#3F80EA",
+        },
       },
       size: 25,
       font: {
         size: 12,
-        color: '#333333',
-        face: 'Arial, sans-serif',
-        strokeWidth: 0
+        color: "#333333",
+        face: "Arial, sans-serif",
+        strokeWidth: 0,
       },
       title: `${node.name}\n${node.friendship_type}\n연결 수: ${node.connection_count || 0}`,
       // 원본 데이터 저장
-      originalData: node
+      originalData: node,
     }));
 
-    const visEdges = data.edges.map(edge => ({
+    const visEdges = data.edges.map((edge) => ({
       id: `${edge.source}-${edge.target}`,
       from: edge.source,
       to: edge.target,
       color: {
-        color: '#999999',
-        highlight: '#3b82f6',
-        hover: '#3b82f6'
+        color: "#999999",
+        highlight: "#3F80EA",
+        hover: "#3F80EA",
       },
       width: 1,
       smooth: false,
-      title: `관계: ${edge.relationship_type || '기타'}`
+      title: `관계: ${edge.relationship_type || "기타"}`,
     }));
 
     // 네트워크 옵션 설정
     const options = {
       nodes: {
-        shape: 'circle',
+        shape: "circle",
         size: 25,
         font: {
           size: 12,
-          color: '#333333',
-          face: 'Arial, sans-serif',
-          strokeWidth: 0
+          color: "#333333",
+          face: "Arial, sans-serif",
+          strokeWidth: 0,
         },
         borderWidth: 0,
         shadow: {
-          enabled: false
-        }
+          enabled: false,
+        },
       },
       edges: {
         width: 1,
         color: {
-          color: '#999999',
-          highlight: '#3b82f6',
-          hover: '#3b82f6'
+          color: "#999999",
+          highlight: "#3F80EA",
+          hover: "#3F80EA",
         },
         smooth: false,
         shadow: {
-          enabled: false
-        }
+          enabled: false,
+        },
       },
       physics: {
         enabled: true,
         stabilization: {
           enabled: true,
           iterations: 200,
-          updateInterval: 25
+          updateInterval: 25,
         },
         barnesHut: {
           gravitationalConstant: -800,
@@ -125,8 +128,8 @@ const NetworkVisualization: React.FC<NetworkVisualizationProps> = ({
           springLength: 200,
           springConstant: 0.01,
           damping: 0.09,
-          avoidOverlap: 0.5
-        }
+          avoidOverlap: 0.5,
+        },
       },
       interaction: {
         hover: true,
@@ -136,23 +139,27 @@ const NetworkVisualization: React.FC<NetworkVisualizationProps> = ({
         dragView: false,
         zoomView: false,
         zoomSpeed: 1,
-        tooltipDelay: 200
+        tooltipDelay: 200,
       },
       layout: {
         improvedLayout: true,
-        clusterThreshold: 150
-      }
+        clusterThreshold: 150,
+      },
     };
 
     // 네트워크 생성
-    const network = new Network(networkRef.current, { nodes: visNodes, edges: visEdges }, options);
+    const network = new Network(
+      networkRef.current,
+      { nodes: visNodes, edges: visEdges },
+      options,
+    );
     networkInstanceRef.current = network;
 
     // 이벤트 리스너 등록
-    network.on('click', (params) => {
+    network.on("click", (params) => {
       if (params.nodes.length > 0) {
         const nodeId = params.nodes[0];
-        const node = data.nodes.find(n => n.id === nodeId);
+        const node = data.nodes.find((n) => n.id === nodeId);
         if (node) {
           setSelectedNode(node);
           onNodeClick?.(node);
@@ -161,7 +168,7 @@ const NetworkVisualization: React.FC<NetworkVisualizationProps> = ({
     });
 
     // 네트워크가 안정화되면 줌 조정
-    network.on('stabilizationIterationsDone', () => {
+    network.on("stabilizationIterationsDone", () => {
       network.fit();
     });
 
@@ -176,14 +183,42 @@ const NetworkVisualization: React.FC<NetworkVisualizationProps> = ({
   return (
     <div className="network-visualization relative">
       {/* 범례 */}
-      <div className="absolute left-4 top-4 z-10 rounded-lg bg-white/90 p-3 shadow-lg backdrop-blur-sm">
+      <div className="absolute right-4 top-4 z-10 rounded-lg bg-white/90 p-3 shadow-lg backdrop-blur-sm">
         <div className="space-y-2">
           {[
-            { type: "외톨이형", color: "#FF6B6B", count: data.nodes.filter(n => n.friendship_type === "외톨이형").length },
-            { type: "소수 친구 학생", color: "#4ECDC4", count: data.nodes.filter(n => n.friendship_type === "소수 친구 학생").length },
-            { type: "평균적인 학생", color: "#45B7D1", count: data.nodes.filter(n => n.friendship_type === "평균적인 학생").length },
-            { type: "친구 많은 학생", color: "#96CEB4", count: data.nodes.filter(n => n.friendship_type === "친구 많은 학생").length },
-            { type: "사교 스타", color: "#FFEAA7", count: data.nodes.filter(n => n.friendship_type === "사교 스타").length },
+            {
+              type: "외톨이형",
+              color: "#FF6B6B",
+              count: data.nodes.filter((n) => n.friendship_type === "외톨이형")
+                .length,
+            },
+            {
+              type: "소수 친구 학생",
+              color: "#4ECDC4",
+              count: data.nodes.filter(
+                (n) => n.friendship_type === "소수 친구 학생",
+              ).length,
+            },
+            {
+              type: "평균적인 학생",
+              color: "#45B7D1",
+              count: data.nodes.filter(
+                (n) => n.friendship_type === "평균적인 학생",
+              ).length,
+            },
+            {
+              type: "친구 많은 학생",
+              color: "#96CEB4",
+              count: data.nodes.filter(
+                (n) => n.friendship_type === "친구 많은 학생",
+              ).length,
+            },
+            {
+              type: "사교 스타",
+              color: "#FFEAA7",
+              count: data.nodes.filter((n) => n.friendship_type === "사교 스타")
+                .length,
+            },
           ].map(({ type, color, count }) => (
             <div key={type} className="flex items-center gap-2">
               <div
@@ -200,8 +235,8 @@ const NetworkVisualization: React.FC<NetworkVisualizationProps> = ({
 
       {/* 네트워크 시각화 */}
       <div className="overflow-hidden rounded-lg border border-gray-200 bg-white">
-        <div 
-          ref={networkRef} 
+        <div
+          ref={networkRef}
           className="w-full"
           style={{ width: `${width}px`, height: `${height}px` }}
         />
