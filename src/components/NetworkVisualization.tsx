@@ -183,7 +183,7 @@ const NetworkVisualization: React.FC<NetworkVisualizationProps> = ({
   return (
     <div className="network-visualization relative">
       {/* 범례 */}
-      <div className="absolute right-4 top-4 z-10 rounded-lg bg-white/90 p-3 shadow-lg backdrop-blur-sm">
+      <div className="absolute right-4 top-4 z-10 rounded-lg bg-white/90 p-3">
         <div className="space-y-2">
           {[
             {

@@ -57,7 +57,7 @@ const NetworkChartComponent: React.FC<NetworkChartComponentProps> = ({
       {activeTab === 1 && (
         <div className="rounded-lg bg-white p-4">
           <h3 className="mb-4 text-xl font-semibold text-gray-900">
-            📊 첫 번째 설문 - 학급 친구 관계 현황
+            첫 번째 설문 - 학급 친구 관계 현황
           </h3>
           <p className="mb-6 text-sm text-gray-600">
             첫 번째 선택한 설문의 학급 내 학생들의 친구 관계를 시각화합니다.
@@ -68,34 +68,34 @@ const NetworkChartComponent: React.FC<NetworkChartComponentProps> = ({
           </div>
 
           {/* 통계 정보 */}
-          <div className="mt-6 grid grid-cols-2 gap-4 md:grid-cols-4">
-            <div className="rounded-lg bg-blue-50 p-4">
-              <h4 className="text-sm font-medium text-blue-800">총 학생 수</h4>
-              <p className="text-2xl font-bold text-blue-900">
+          <div className="mt-6 grid grid-cols-1 gap-4 md:grid-cols-3">
+            <div className="flex flex-col items-center rounded-lg bg-gray-50 p-4">
+              <h4 className="text-sm font-medium text-blue-400">총 학생 수</h4>
+              <p className="text-2xl font-bold text-blue-400">
                 {firstGraphData.metrics.total_students}
               </p>
             </div>
-            <div className="rounded-lg bg-green-50 p-4">
+            {/* <div className="rounded-lg bg-green-50 p-4">
               <h4 className="text-sm font-medium text-green-800">
                 총 친구 관계
               </h4>
               <p className="text-2xl font-bold text-green-900">
                 {firstGraphData.metrics.total_relationships}
               </p>
-            </div>
-            <div className="rounded-lg bg-purple-50 p-4">
-              <h4 className="text-sm font-medium text-purple-800">
+            </div> */}
+            <div className="flex flex-col items-center rounded-lg bg-gray-50 p-4">
+              <h4 className="text-sm font-medium text-blue-500">
                 친구 관계 밀도
               </h4>
-              <p className="text-2xl font-bold text-purple-900">
+              <p className="text-2xl font-bold text-blue-500">
                 {(firstGraphData.metrics.network_density * 100).toFixed(1)}%
               </p>
             </div>
-            <div className="rounded-lg bg-orange-50 p-4">
-              <h4 className="text-sm font-medium text-orange-800">
+            <div className="flex flex-col items-center rounded-lg bg-gray-50 p-4">
+              <h4 className="text-sm font-medium text-blue-600">
                 친구 그룹 수
               </h4>
-              <p className="text-2xl font-bold text-orange-900">
+              <p className="text-2xl font-bold text-blue-600">
                 {firstGraphData.metrics.connected_components}
               </p>
             </div>
@@ -107,7 +107,7 @@ const NetworkChartComponent: React.FC<NetworkChartComponentProps> = ({
       {secondGraphData && activeTab === 2 && (
         <div className="rounded-lg bg-white p-4">
           <h3 className="mb-4 text-xl font-semibold text-gray-900">
-            📊 두 번째 설문 - 학급 친구 관계 현황
+            두 번째 설문 - 학급 친구 관계 현황
           </h3>
           <p className="mb-6 text-sm text-gray-600">
             두 번째 선택한 설문의 학급 내 학생들의 친구 관계를 시각화합니다.
@@ -118,34 +118,34 @@ const NetworkChartComponent: React.FC<NetworkChartComponentProps> = ({
           </div>
 
           {/* 통계 정보 */}
-          <div className="mt-6 grid grid-cols-2 gap-4 md:grid-cols-4">
-            <div className="rounded-lg bg-blue-50 p-4">
-              <h4 className="text-sm font-medium text-blue-800">총 학생 수</h4>
-              <p className="text-2xl font-bold text-blue-900">
+          <div className="mt-6 grid grid-cols-1 gap-4 md:grid-cols-3">
+            <div className="flex flex-col items-center rounded-lg bg-gray-50 p-4">
+              <h4 className="text-sm font-medium text-blue-400">총 학생 수</h4>
+              <p className="text-2xl font-bold text-blue-400">
                 {secondGraphData.metrics.total_students}
               </p>
             </div>
-            <div className="rounded-lg bg-green-50 p-4">
+            {/* <div className="rounded-lg bg-green-50 p-4">
               <h4 className="text-sm font-medium text-green-800">
                 총 친구 관계
               </h4>
               <p className="text-2xl font-bold text-green-900">
                 {secondGraphData.metrics.total_relationships}
               </p>
-            </div>
-            <div className="rounded-lg bg-purple-50 p-4">
-              <h4 className="text-sm font-medium text-purple-800">
+            </div> */}
+            <div className="flex flex-col items-center rounded-lg bg-gray-50 p-4">
+              <h4 className="text-sm font-medium text-blue-500">
                 친구 관계 밀도
               </h4>
-              <p className="text-2xl font-bold text-purple-900">
+              <p className="text-2xl font-bold text-blue-500">
                 {(secondGraphData.metrics.network_density * 100).toFixed(1)}%
               </p>
             </div>
-            <div className="rounded-lg bg-orange-50 p-4">
-              <h4 className="text-sm font-medium text-orange-800">
+            <div className="flex flex-col items-center rounded-lg bg-gray-50 p-4">
+              <h4 className="text-sm font-medium text-blue-600">
                 친구 그룹 수
               </h4>
-              <p className="text-2xl font-bold text-orange-900">
+              <p className="text-2xl font-bold text-blue-600">
                 {secondGraphData.metrics.connected_components}
               </p>
             </div>
@@ -157,7 +157,7 @@ const NetworkChartComponent: React.FC<NetworkChartComponentProps> = ({
       {firstGraphData && secondGraphData && (
         <div className="rounded-lg bg-white p-6">
           <h3 className="mb-4 text-xl font-semibold text-gray-900">
-            📊 학급 친구 관계 변화 분석
+            학급 친구 관계 변화 분석
           </h3>
           <p className="mb-6 text-sm text-gray-600">
             두 시기의 설문 결과를 비교하여 학급 내 친구 관계가 어떻게 변화했는지
