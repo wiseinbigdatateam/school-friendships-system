@@ -8,6 +8,7 @@ import {
   StudentAnalysisData,
   GeneratedReport,
 } from "../services/chatgptService";
+import { generateAndSaveAIReport, getSavedAIReport, AIReportData } from '../services/aiReportService';
 
 interface Survey {
   id: string;
@@ -127,7 +128,7 @@ const IndividualAnalysis: React.FC = () => {
   const [maxSelections, setMaxSelections] = useState<number[]>([]);
   const [networkLoading, setNetworkLoading] = useState(false);
   const [activeTab, setActiveTab] = useState<"core" | "ai" | "python">("core");
-  const [aiReport, setAiReport] = useState<GeneratedReport | null>(null);
+  const [aiReport, setAiReport] = useState<AIReportData | null>(null);
   const [aiReportLoading, setAiReportLoading] = useState(false);
   const [pythonAnalysisResult, setPythonAnalysisResult] = useState<PythonAnalysisResult | null>(null);
   const [pythonAnalysisLoading, setPythonAnalysisLoading] = useState(false);
@@ -454,11 +455,24 @@ const IndividualAnalysis: React.FC = () => {
 
   // AI 리포트 생성 함수
   const generateAIReport = useCallback(async () => {
-    if (!selectedStudentData || !individualNetworkData.length) return;
+    if (!selectedStudentData || !individualNetworkData.length || !user) return;
 
     setAiReportLoading(true);
 
     try {
+      // 먼저 저장된 리포트가 있는지 확인
+      const savedReport = await getSavedAIReport(
+        selectedStudent,
+        selectedSurvey,
+        user.id
+      );
+
+      if (savedReport) {
+        setAiReport(savedReport);
+        setAiReportLoading(false);
+        return;
+      }
+
       // 네트워크 분석 결과에서 데이터 추출
       const centerStudent = individualNetworkData.find((s) => s.isCenter);
       const centrality = centerStudent
@@ -481,40 +495,22 @@ const IndividualAnalysis: React.FC = () => {
           centrality < 0.3 ? "낮음" : centrality < 0.6 ? "보통" : "높음",
       };
 
-      // ChatGPT API 호출
-      const report = await generateStudentGuidanceReport(analysisData);
+      // AI 리포트 생성 및 저장
+      const report = await generateAndSaveAIReport(
+        selectedStudent,
+        selectedSurvey,
+        user.id,
+        analysisData
+      );
+      
       setAiReport(report);
     } catch (error) {
       console.error("AI 리포트 생성 오류:", error);
-
-      // 대체 리포트 생성 (오류 메시지 없이)
-      const centerStudent = individualNetworkData.find((s) => s.isCenter);
-      const centrality = centerStudent
-        ? centerStudent.friendCount /
-          Math.max(individualNetworkData.length - 1, 1)
-        : 0;
-
-      const analysisData: StudentAnalysisData = {
-        studentName: selectedStudentData.name,
-        grade: parseInt(selectedStudentData.grade),
-        class: parseInt(selectedStudentData.class),
-        centrality: centrality,
-        community: 0,
-        totalRelationships: centerStudent?.friendCount || 0,
-        isolationRisk:
-          centrality < 0.3 ? "높음" : centrality < 0.6 ? "보통" : "낮음",
-        friendshipDevelopment:
-          centrality < 0.3 ? "개선 필요" : centrality < 0.6 ? "보통" : "양호",
-        communityIntegration:
-          centrality < 0.3 ? "낮음" : centrality < 0.6 ? "보통" : "높음",
-      };
-
-      const fallbackReport = generateFallbackReport(analysisData);
-      setAiReport(fallbackReport);
+      setAiReport(null);
     } finally {
       setAiReportLoading(false);
     }
-  }, [selectedStudentData, individualNetworkData]);
+  }, [selectedStudentData, individualNetworkData, selectedStudent, selectedSurvey, user]);
 
   // Python 네트워크 분석 실행 함수
   const runPythonAnalysis = useCallback(async () => {
@@ -799,18 +795,14 @@ const IndividualAnalysis: React.FC = () => {
                             </p>
                           </div>
                         ) : aiReport ? (
-                          <div className="space-y-4">
-                            {/* 종합진단 */}
-                            <div className="rounded-lg border border-blue-200 bg-blue-50 p-6">
-                              <h4 className="mb-4 text-lg font-semibold text-blue-800">
-                                1) 종합진단
-                              </h4>
-                              <div className="rounded-lg border border-blue-100 bg-white p-4">
-                                <p className="text-sm leading-relaxed text-gray-700">
-                                  {String(aiReport.summary || "")}
-                                </p>
-                              </div>
-                            </div>
+                          <div className="ai-report-container">
+                            <div 
+                              dangerouslySetInnerHTML={{ 
+                                __html: aiReport.html_content || '' 
+                              }}
+                              className="prose prose-sm max-w-none"
+                            />
+                          </div>
 
                             {/* 현재 상태 */}
                             <div className="rounded-lg border border-gray-200 bg-white p-6">
