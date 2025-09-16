@@ -10,6 +10,7 @@ import {
 } from "../services/chatgptService";
 import { AIReportService } from "../services/aiReportService";
 import AIReportDisplay from "../components/AIReportDisplay";
+import { useAuth } from "../contexts/AuthContext";
 
 interface Survey {
   id: string;
@@ -27,6 +28,11 @@ interface Survey {
   updated_at?: string | null;
   questions?: any;
   settings?: any;
+  survey_templates?: {
+    id: string;
+    name: string;
+    metadata: any;
+  } | null;
 }
 
 interface Student {
@@ -43,6 +49,7 @@ interface Student {
   created_at?: string | null;
   updated_at?: string | null;
   is_active?: boolean | null;
+  network_metrics?: any;
 }
 
 interface PythonAnalysisResult {
@@ -120,6 +127,9 @@ interface PythonAnalysisResult {
 }
 
 const IndividualAnalysis: React.FC = () => {
+  const { user } = useAuth();
+  const [currentUser, setCurrentUser] = useState<any>(null);
+  const [teacherInfo, setTeacherInfo] = useState<any>(null);
   const [surveys, setSurveys] = useState<Survey[]>([]);
   const [students, setStudents] = useState<Student[]>([]);
   const [selectedSurvey, setSelectedSurvey] = useState<Survey | null>(null);
@@ -133,15 +143,128 @@ const IndividualAnalysis: React.FC = () => {
   const [aiReportLoading, setAiReportLoading] = useState(false);
   const [pythonAnalysisResult, setPythonAnalysisResult] = useState<PythonAnalysisResult | null>(null);
   const [pythonAnalysisLoading, setPythonAnalysisLoading] = useState(false);
+  const [surveyResponseCounts, setSurveyResponseCounts] = useState<{[key: string]: number}>({});
   const [pythonAnalysisError, setPythonAnalysisError] = useState<string | null>(null);
+  const [forceUpdate, setForceUpdate] = useState(0);
+
+  // 설문별 응답자 수 계산 함수 - 더 간단하고 확실한 방법
+  const calculateResponseCounts = async (surveys: Survey[]) => {
+    console.log("📊 응답자 수 계산 시작:", surveys.length, "개 설문");
+    
+    const counts: {[key: string]: number} = {};
+    
+    // 모든 설문의 응답 수를 한 번에 조회
+    try {
+      const surveyIds = surveys.map(survey => survey.id);
+      console.log("🔍 조회할 설문 ID들:", surveyIds);
+      
+      const { data, error } = await supabase
+        .from("survey_responses")
+        .select("survey_id")
+        .in("survey_id", surveyIds);
+      
+      if (error) {
+        console.error("❌ 응답자 수 조회 오류:", error);
+        return;
+      }
+      
+      console.log("📋 조회된 응답 데이터:", data);
+      console.log("📋 조회된 응답 데이터 개수:", data?.length || 0);
+      
+      // 설문별로 응답 수 계산
+      surveyIds.forEach(surveyId => {
+        const responseCount = data?.filter(response => response.survey_id === surveyId).length || 0;
+        counts[surveyId] = responseCount;
+        console.log(`✅ 설문 ${surveyId} 응답 수: ${responseCount}명`);
+      });
+      
+      console.log("📊 최종 응답자 수 결과:", counts);
+      
+      // 상태 업데이트 - 강제로 즉시 반영
+      setSurveyResponseCounts(counts);
+      console.log("🔄 상태 업데이트 완료:", counts);
+      
+      // 강제 리렌더링 트리거
+      setForceUpdate(prev => prev + 1);
+      console.log("🔄 강제 리렌더링 트리거");
+      
+      // 상태 업데이트 완료 로그
+      console.log("✅ 응답자 수 계산 완료");
+      
+    } catch (error) {
+      console.error("❌ 응답자 수 계산 중 오류:", error);
+    }
+  };
 
   useEffect(() => {
-    fetchSurveys();
-    fetchStudents();
+    fetchCurrentUser();
   }, []);
+
+  useEffect(() => {
+    if (teacherInfo) {
+      fetchSurveys();
+      fetchStudents();
+    }
+  }, [teacherInfo]);
+
+  // 강제 리렌더링을 위한 useEffect
+  useEffect(() => {
+    console.log("🔄 강제 리렌더링 발생:", forceUpdate);
+    console.log("📊 현재 surveyResponseCounts:", surveyResponseCounts);
+  }, [forceUpdate, surveyResponseCounts]);
+
+  const fetchCurrentUser = async () => {
+    try {
+      // 로컬 스토리지에서 사용자 정보 확인
+      const userStr = localStorage.getItem("wiseon_user");
+      const authToken = localStorage.getItem("wiseon_auth_token");
+
+      if (!userStr || !authToken) {
+        console.log("🔍 로그인 정보가 없습니다. 로그인 페이지로 이동합니다.");
+        window.location.href = "/login";
+        return;
+      }
+
+      const user = JSON.parse(userStr);
+      setCurrentUser(user);
+
+      // 사용자의 담임 정보 조회
+      const { data: teacherData, error: teacherError } = await supabase
+        .from("users")
+        .select("*")
+        .eq("id", user.id)
+        .single();
+
+      if (teacherError) throw teacherError;
+      setTeacherInfo(teacherData);
+
+      console.log("🔍 IndividualAnalysis 사용자 정보 설정 완료:", {
+        user,
+        teacherData,
+      });
+    } catch (error) {
+      console.error("사용자 정보 조회 오류:", error);
+      // 에러 발생 시 로그인 페이지로 이동
+      window.location.href = "/login";
+    }
+  };
 
   const fetchSurveys = async () => {
     try {
+      if (!teacherInfo) {
+        console.log("교사 정보가 없습니다.");
+        setSurveys([]);
+        return;
+      }
+
+      console.log("🔍 IndividualAnalysis 설문 조회 시작:", {
+        userId: teacherInfo.id,
+        userRole: teacherInfo.role,
+        schoolId: teacherInfo.school_id,
+        gradeLevel: teacherInfo.grade_level,
+        classNumber: teacherInfo.class_number
+      });
+
       // 먼저 설문 템플릿에서 카테고리가 "교우관계"인 것만 찾기
       const { data: templates, error: templateError } = await supabase
         .from("survey_templates")
@@ -167,24 +290,101 @@ const IndividualAnalysis: React.FC = () => {
         return;
       }
 
-      // 해당 템플릿을 사용하는 설문들 가져오기
-      const { data, error } = await supabase
+      // 사용자 역할에 따른 설문 필터링
+      // 해당 템플릿을 사용하는 완료된 설문들만 가져오기 (템플릿 정보 포함)
+      let query = supabase
         .from("surveys")
-        .select("*")
+        .select(`
+          *,
+          survey_templates!surveys_template_id_fkey(
+            id,
+            name,
+            metadata
+          )
+        `)
         .in("template_id", friendshipTemplateIds)
-        .eq("status", "completed")
-        .order("created_at", { ascending: false });
+        .eq("status", "completed");
 
-      if (error) {
-        console.error("Survey error:", error);
-        throw error;
+      // 학교 ID로 필터링
+      if (teacherInfo.school_id) {
+        query = query.eq("school_id", teacherInfo.school_id);
+        console.log("🏫 학교 ID로 필터링:", teacherInfo.school_id);
       }
 
-      if (data && data.length > 0) {
-        setSurveys(data);
-        setSelectedSurvey(data[0]);
+      // 담임교사인 경우 학년/반으로 추가 필터링
+      if (teacherInfo.role === "homeroom_teacher" && teacherInfo.grade_level && teacherInfo.class_number) {
+        console.log("👨‍🏫 담임교사 - 학년/반 필터링:", {
+          gradeLevel: teacherInfo.grade_level,
+          classNumber: teacherInfo.class_number
+        });
+        
+        // 설문의 target_grades와 target_classes 확인
+        const { data: allSurveys, error } = await query.order("created_at", { ascending: false });
+        
+        if (error) {
+          console.error("Survey error:", error);
+          throw error;
+        }
+
+        // 학년/반 매칭 필터링
+        const filteredSurveys = allSurveys?.filter((survey: any) => {
+          const targetGrades = survey.target_grades || [];
+          const targetClasses = survey.target_classes || [];
+          
+          const gradeMatch = targetGrades.length === 0 || targetGrades.includes(teacherInfo.grade_level);
+          const classMatch = targetClasses.length === 0 || targetClasses.includes(teacherInfo.class_number);
+          
+          console.log(`🔍 설문 "${survey.title}" 필터링 체크:`, {
+            targetGrades,
+            targetClasses,
+            userGrade: teacherInfo.grade_level,
+            userClass: teacherInfo.class_number,
+            gradeMatch,
+            classMatch,
+            isMatch: gradeMatch && classMatch
+          });
+          
+          return gradeMatch && classMatch;
+        }) || [];
+
+        console.log("🎯 필터링 후 교우관계 설문 개수:", filteredSurveys.length);
+        
+        if (filteredSurveys.length > 0) {
+          console.log("📋 필터링된 설문들:", filteredSurveys.map(s => ({ id: s.id, title: s.title })));
+          setSurveys(filteredSurveys);
+          setSelectedSurvey(filteredSurveys[0]);
+          // 응답자 수 계산
+          console.log("🔄 응답자 수 계산 시작...");
+          await calculateResponseCounts(filteredSurveys);
+        } else {
+          setSurveys([]);
+        }
       } else {
-        setSurveys([]);
+        // 다른 역할의 경우 학교 전체 설문
+        const { data, error } = await query.order("created_at", { ascending: false });
+
+        if (error) {
+          console.error("Survey error:", error);
+          throw error;
+        }
+
+        if (data && data.length > 0) {
+          console.log("📋 전체 설문들:", data.map(s => ({ id: s.id, title: s.title })));
+          setSurveys(data);
+          setSelectedSurvey(data[0]);
+          // 응답자 수 계산
+          console.log("🔄 응답자 수 계산 시작...");
+          await calculateResponseCounts(data);
+          
+          // 즉시 테스트를 위한 추가 로그
+          setTimeout(() => {
+            console.log("🧪 상태 확인 - surveyResponseCounts:", surveyResponseCounts);
+            console.log("🧪 첫 번째 설문 ID:", data[0]?.id);
+            console.log("🧪 첫 번째 설문 응답 수:", surveyResponseCounts[data[0]?.id] || 0);
+          }, 1000);
+        } else {
+          setSurveys([]);
+        }
       }
     } catch (error) {
       console.error("Error fetching surveys:", error);
@@ -193,18 +393,100 @@ const IndividualAnalysis: React.FC = () => {
 
   const fetchStudents = async () => {
     try {
-      const { data, error } = await supabase
-        .from("students")
-        .select("*")
-        .eq("grade", "1")
-        .eq("class", "1")
-        .order("student_number", { ascending: true });
+      if (!teacherInfo) {
+        console.log("교사 정보가 없습니다.");
+        setStudents([]);
+        return;
+      }
+
+      console.log("👥 학생 조회 시작:", {
+        userRole: teacherInfo.role,
+        schoolId: teacherInfo.school_id,
+        gradeLevel: teacherInfo.grade_level,
+        classNumber: teacherInfo.class_number
+      });
+
+      let query = supabase.from("students").select("*");
+
+      // 학교 ID로 필터링
+      if (teacherInfo.school_id) {
+        query = query.eq("current_school_id", teacherInfo.school_id);
+        console.log("🏫 학교 ID로 필터링:", teacherInfo.school_id);
+      }
+
+      // 담임교사인 경우 학년/반으로 추가 필터링
+      if (teacherInfo.role === "homeroom_teacher" && teacherInfo.grade_level && teacherInfo.class_number) {
+        query = query
+          .eq("grade", teacherInfo.grade_level)
+          .eq("class", teacherInfo.class_number);
+        console.log("👨‍🏫 담임교사 - 담당 학년/반 학생 조회:", {
+          grade: teacherInfo.grade_level,
+          class: teacherInfo.class_number
+        });
+      }
+
+      const { data, error } = await query.order("student_number", { ascending: true });
 
       if (error) throw error;
 
       if (data && data.length > 0) {
-        setStudents(data);
-        setSelectedStudent(data[0].id);
+        // 네트워크 분석 결과 조회 (StudentManagement.tsx와 동일한 방식)
+        const { data: networkData, error: networkError } = await supabase
+          .from("network_analysis_results")
+          .select("*")
+          .eq("analysis_type", "complete_network_analysis")
+          .order("calculated_at", { ascending: false })
+          .limit(1);
+
+        if (networkError) {
+          console.error("네트워크 분석 결과 조회 오류:", networkError);
+        }
+
+        // 학생 데이터에 네트워크 메트릭 연결
+        const studentsWithMetrics = data.map((student) => {
+          let metrics = null;
+          if (networkData && networkData.length > 0) {
+            const completeAnalysis = networkData[0];
+            const recommendations = completeAnalysis.recommendations as any;
+            const completeData = recommendations?.complete_analysis_data;
+
+            if (completeData?.nodes) {
+              const node = completeData.nodes.find(
+                (n: any) =>
+                  n.id === student.id ||
+                  (n.name === student.name &&
+                    n.grade === student.grade &&
+                    n.class === student.class),
+              );
+
+              if (node) {
+                metrics = {
+                  centrality_scores: {
+                    centrality: node.centrality,
+                    degree: node.centrality, // 호환성을 위해 degree도 설정
+                    betweenness: node.betweenness || 0,
+                    closeness: node.closeness || 0,
+                  },
+                  community_membership: node.community || 0,
+                  recommendations: node.recommendations || {},
+                };
+              }
+            }
+          }
+
+          return {
+            ...student,
+            network_metrics: metrics,
+          };
+        });
+
+        setStudents(studentsWithMetrics);
+        setSelectedStudent(studentsWithMetrics[0].id);
+        console.log("✅ 학생 데이터 조회 성공:", studentsWithMetrics.length, "명");
+        console.log("📊 네트워크 메트릭 포함:", studentsWithMetrics.filter(s => s.network_metrics).length, "명");
+      } else {
+        setStudents([]);
+        console.log("⚠️ 해당 조건의 학생이 없습니다.");
       }
     } catch (error) {
       console.error("Error fetching students:", error);
@@ -221,6 +503,42 @@ const IndividualAnalysis: React.FC = () => {
       hour: "2-digit",
       minute: "2-digit",
     });
+  };
+
+  // StudentManagement.tsx에서 가져온 위험도 관련 함수들
+  const getRiskLevel = (student: Student) => {
+    if (!student.network_metrics) return "low";
+
+    // 지도 리포트와 동일한 방식으로 위험도 계산
+    const centrality =
+      student.network_metrics.centrality_scores?.centrality ||
+      student.network_metrics.centrality_scores?.degree ||
+      0;
+    if (centrality < 0.3) return "high";
+    if (centrality < 0.6) return "medium";
+    return "low";
+  };
+
+  const getRiskColor = (risk: string) => {
+    switch (risk) {
+      case "high":
+        return "bg-red-100 text-red-800";
+      case "medium":
+        return "bg-yellow-100 text-yellow-800";
+      default:
+        return "bg-green-100 text-green-800";
+    }
+  };
+
+  const getRiskLabel = (risk: string) => {
+    switch (risk) {
+      case "high":
+        return "주의 필요";
+      case "medium":
+        return "관찰 중";
+      default:
+        return "안정";
+    }
   };
 
   // 개별 학생의 네트워크 데이터 생성 (선택된 학생 중심)
@@ -257,9 +575,17 @@ const IndividualAnalysis: React.FC = () => {
         )
         .eq("survey_id", surveyId)
         .eq("student_id", studentId)
-        .single();
+        .maybeSingle();
 
-      if (responseError) throw responseError;
+      if (responseError) {
+        console.error("설문 응답 조회 오류:", responseError);
+        return [];
+      }
+
+      if (!studentResponse) {
+        console.log("해당 학생의 설문 응답이 없습니다:", { studentId, surveyId });
+        return [];
+      }
 
       // 3. 학생 데이터 조회
       const { data: studentsData, error: studentsError } = await supabase
@@ -341,6 +667,12 @@ const IndividualAnalysis: React.FC = () => {
             isCenter: false,
           });
         }
+      });
+
+      console.log("개별 네트워크 데이터 생성 완료:", {
+        studentName: selectedStudentData.name,
+        friendCount: selectedFriends.size,
+        totalNodes: individualNetworkData.length
       });
 
       return individualNetworkData;
@@ -515,27 +847,79 @@ const IndividualAnalysis: React.FC = () => {
         return;
       }
 
-      // 네트워크 분석 결과에서 데이터 추출
+      // 네트워크 분석 결과에서 데이터 추출 - 더 구체적인 메트릭 사용
       const centerStudent = individualNetworkData.find((s) => s.isCenter);
-      const centrality = centerStudent
-        ? centerStudent.friendCount /
-          Math.max(individualNetworkData.length - 1, 1)
+      const totalNodes = individualNetworkData.length;
+      const maxPossibleConnections = totalNodes - 1;
+      
+      // 기본 중앙성 계산
+      const basicCentrality = centerStudent
+        ? centerStudent.friendCount / Math.max(maxPossibleConnections, 1)
         : 0;
+      
+      // 네트워크 메트릭에서 더 정확한 데이터 추출
+      const networkMetrics = selectedStudentData.network_metrics;
+      let refinedCentrality = basicCentrality;
+      let communityId = 0;
+      let isolationRisk = "보통";
+      let friendshipDevelopment = "보통";
+      let communityIntegration = "보통";
+      
+      if (networkMetrics) {
+        // Python 분석 결과가 있으면 더 정확한 메트릭 사용
+        const centralityMetrics = networkMetrics.centrality_metrics;
+        if (centralityMetrics) {
+          // 정규화된 중앙성 점수 사용 (0-1 범위)
+          refinedCentrality = Math.min(centralityMetrics.degree / maxPossibleConnections, 1);
+        }
+        
+        // 커뮤니티 ID 사용
+        communityId = networkMetrics.community_id || 0;
+        
+        // 격리 위험도 분석 결과 사용
+        if (networkMetrics.isolation_risk) {
+          isolationRisk = networkMetrics.isolation_risk.level || "보통";
+        }
+        
+        // 사회적 영향력 분석 결과 사용
+        if (networkMetrics.social_influence) {
+          const influenceLevel = networkMetrics.social_influence.level;
+          friendshipDevelopment = influenceLevel === "높음" ? "양호" : 
+                                 influenceLevel === "보통" ? "보통" : "개선 필요";
+          communityIntegration = influenceLevel === "높음" ? "높음" : 
+                                influenceLevel === "보통" ? "보통" : "낮음";
+        }
+      } else {
+        // 네트워크 메트릭이 없으면 기본 계산 사용
+        isolationRisk = refinedCentrality < 0.3 ? "높음" : refinedCentrality < 0.6 ? "보통" : "낮음";
+        friendshipDevelopment = refinedCentrality < 0.3 ? "개선 필요" : refinedCentrality < 0.6 ? "보통" : "양호";
+        communityIntegration = refinedCentrality < 0.3 ? "낮음" : refinedCentrality < 0.6 ? "보통" : "높음";
+      }
 
       const analysisData: StudentAnalysisData = {
         studentName: selectedStudentData.name,
         grade: parseInt(selectedStudentData.grade),
         class: parseInt(selectedStudentData.class),
-        centrality: centrality,
-        community: 0, // 기본값
+        centrality: refinedCentrality,
+        community: communityId,
         totalRelationships: centerStudent?.friendCount || 0,
-        isolationRisk:
-          centrality < 0.3 ? "높음" : centrality < 0.6 ? "보통" : "낮음",
-        friendshipDevelopment:
-          centrality < 0.3 ? "개선 필요" : centrality < 0.6 ? "보통" : "양호",
-        communityIntegration:
-          centrality < 0.3 ? "낮음" : centrality < 0.6 ? "보통" : "높음",
+        isolationRisk: isolationRisk,
+        friendshipDevelopment: friendshipDevelopment,
+        communityIntegration: communityIntegration,
       };
+
+      // 디버깅을 위한 분석 데이터 출력
+      console.log("🔍 개별 리포트 분석 데이터:", {
+        studentName: analysisData.studentName,
+        centrality: analysisData.centrality,
+        community: analysisData.community,
+        totalRelationships: analysisData.totalRelationships,
+        isolationRisk: analysisData.isolationRisk,
+        friendshipDevelopment: analysisData.friendshipDevelopment,
+        communityIntegration: analysisData.communityIntegration,
+        hasNetworkMetrics: !!networkMetrics,
+        networkMetricsKeys: networkMetrics ? Object.keys(networkMetrics) : []
+      });
 
       // 추가 설문 데이터 수집 (다른 설문들의 내용도 참조)
       const additionalSurveyData = await prepareAdditionalSurveyData();
@@ -711,6 +1095,11 @@ const IndividualAnalysis: React.FC = () => {
           <div className="p-6">
             <h2 className="mb-4 text-lg font-semibold text-gray-900">
               분석 대상 리스트 총 {surveys.length}개
+              {teacherInfo?.role === "homeroom_teacher" && teacherInfo?.grade_level && teacherInfo?.class_number && (
+                <span className="ml-2 text-sm font-normal text-gray-600">
+                  ({teacherInfo.grade_level}학년 {teacherInfo.class_number}반 담임)
+                </span>
+              )}
             </h2>
 
             <div className="flex h-fit w-full gap-2 overflow-x-scroll">
@@ -728,8 +1117,11 @@ const IndividualAnalysis: React.FC = () => {
                     {survey.title}
                   </h3>
                   <div className="space-y-1 text-sm text-gray-600">
-                    <p>템플릿형: 교우관계</p>
-                    <p>평가인원: 20명</p>
+                    <p>템플릿형: {survey.survey_templates?.metadata?.category || '교우관계'}</p>
+                    <p>평가인원: {surveyResponseCounts[survey.id] || 0}명</p>
+                    <p>상태: <span className={`font-medium ${survey.status === 'completed' ? 'text-green-600' : survey.status === 'active' ? 'text-blue-600' : 'text-gray-600'}`}>
+                      {survey.status === 'completed' ? '완료' : survey.status === 'active' ? '진행중' : survey.status}
+                    </span></p>
                     <p>날짜: {formatDate(survey.created_at || "")}</p>
                   </div>
                 </div>
@@ -744,7 +1136,10 @@ const IndividualAnalysis: React.FC = () => {
           <div className="min-h-screen w-1/6 rounded-lg border border-gray-200 bg-white">
             <div className="p-4">
               <h2 className="mb-4 text-lg font-semibold text-gray-900">
-                1학년 1반 총 {students.length}개
+                {teacherInfo?.role === "homeroom_teacher" && teacherInfo?.grade_level && teacherInfo?.class_number 
+                  ? `${teacherInfo.grade_level}학년 ${teacherInfo.class_number}반 총 ${students.length}명`
+                  : `학생 총 ${students.length}명`
+                }
               </h2>
 
               <div className="space-y-1">
@@ -759,9 +1154,18 @@ const IndividualAnalysis: React.FC = () => {
                     onClick={() => setSelectedStudent(student.id)}
                   >
                     <div className="flex items-center justify-between">
-                      <span className="truncate text-sm font-medium">
-                        {index + 1}번) {student.name}
-                      </span>
+                      <div className="flex items-center space-x-2">
+                        <span className="truncate text-sm font-medium">
+                          {index + 1}번) {student.name}
+                        </span>
+                        <span
+                          className={`rounded-full px-2 py-1 text-xs font-medium ${getRiskColor(
+                            getRiskLevel(student)
+                          )}`}
+                        >
+                          {getRiskLabel(getRiskLevel(student))}
+                        </span>
+                      </div>
                       {selectedStudent === student.id && (
                         <ChevronRightIcon className="h-4 w-4 flex-shrink-0 text-blue-600" />
                       )}
@@ -1093,51 +1497,78 @@ const IndividualAnalysis: React.FC = () => {
                             );
                             const totalStudents = individualNetworkData.length;
                             const maxPossibleConnections = totalStudents - 1;
-                            const centrality = centerStudent
-                              ? centerStudent.friendCount /
-                                Math.max(maxPossibleConnections, 1)
+                            
+                            // 네트워크 메트릭에서 실제 분석 결과 사용
+                            const selectedStudentData = students.find(s => s.id === selectedStudent);
+                            const networkMetrics = selectedStudentData?.network_metrics;
+                            
+                            // 기본값 설정
+                            let centrality = centerStudent
+                              ? centerStudent.friendCount / Math.max(maxPossibleConnections, 1)
                               : 0;
-                            const friendCount = centerStudent?.friendCount || 0;
-                            const isolationRisk = centrality < 0.3;
-                            const isPopular = centrality >= 0.7;
-                            const isAverage =
-                              centrality >= 0.4 && centrality < 0.7;
-                            const needsImprovement =
-                              centrality >= 0.3 && centrality < 0.4;
-
-                            // 네트워크 밀도 계산
-                            const totalConnections =
-                              individualNetworkData.reduce(
-                                (sum, student) => sum + student.friendCount,
-                                0,
+                            let friendCount = centerStudent?.friendCount || 0;
+                            let networkDensity = 0;
+                            let isolationRiskLevel = "보통";
+                            let socialInfluenceLevel = "보통";
+                            let communityId = 0;
+                            let friendshipType = "일반형";
+                            let recommendations = null;
+                            
+                            // 네트워크 분석 결과가 있으면 실제 데이터 사용
+                            if (networkMetrics) {
+                              // 중앙성 메트릭 사용
+                              if (networkMetrics.centrality_metrics) {
+                                centrality = Math.min(networkMetrics.centrality_metrics.degree / maxPossibleConnections, 1);
+                              }
+                              
+                              // 네트워크 밀도 사용
+                              networkDensity = networkMetrics.network_density || 0;
+                              
+                              // 격리 위험도 사용
+                              if (networkMetrics.isolation_risk) {
+                                isolationRiskLevel = networkMetrics.isolation_risk.level || "보통";
+                              }
+                              
+                              // 사회적 영향력 사용
+                              if (networkMetrics.social_influence) {
+                                socialInfluenceLevel = networkMetrics.social_influence.level || "보통";
+                              }
+                              
+                              // 커뮤니티 ID 사용
+                              communityId = networkMetrics.community_id || 0;
+                              
+                              // 친구관계 유형 사용
+                              friendshipType = networkMetrics.friendship_type || "일반형";
+                              
+                              // Python 분석 결과에서 추천사항 가져오기
+                              if (pythonAnalysisResult && pythonAnalysisResult.recommendations) {
+                                recommendations = pythonAnalysisResult.recommendations;
+                              }
+                            } else {
+                              // 네트워크 메트릭이 없으면 기본 계산
+                              const totalConnections = individualNetworkData.reduce(
+                                (sum, student) => sum + student.friendCount, 0
                               ) / 2;
-                            const networkDensity =
-                              totalConnections /
-                              ((totalStudents * (totalStudents - 1)) / 2);
-
-                            // 그룹 분석 (연결된 학생들의 그룹 분포)
-                            const connectedStudents =
-                              individualNetworkData.filter(
-                                (s) => !s.isCenter && s.friendCount > 0,
-                              );
-                            const groupDistribution =
-                              connectedStudents.length > 0
-                                ? `연결된 ${connectedStudents.length}명 중 ${Math.round(connectedStudents.length * 0.6)}명이 같은 그룹`
-                                : "연결된 학생 없음";
+                              networkDensity = totalConnections / ((totalStudents * (totalStudents - 1)) / 2);
+                              
+                              isolationRiskLevel = centrality < 0.3 ? "높음" : centrality < 0.6 ? "보통" : "낮음";
+                              socialInfluenceLevel = centrality < 0.3 ? "낮음" : centrality < 0.6 ? "보통" : "높음";
+                            }
+                            
+                            // 그룹 분석 (실제 커뮤니티 정보 사용)
+                            const connectedStudents = individualNetworkData.filter(
+                              (s) => !s.isCenter && s.friendCount > 0,
+                            );
+                            const groupDistribution = connectedStudents.length > 0
+                              ? `연결된 ${connectedStudents.length}명 (커뮤니티 ${communityId})`
+                              : "연결된 학생 없음";
 
                             return (
                               <div>
                                 <h3 className="mb-4 text-lg font-medium text-gray-900">
                                   개인별 요약 :{" "}
                                   <span className="text-md mb-2 bg-gradient-to-t from-yellow-200 from-50% to-transparent to-50% font-medium text-gray-800">
-                                    {" "}
-                                    {isPopular &&
-                                      "안정적 관계 형성 그룹 (주도형)"}
-                                    {isAverage && "보통 관계 그룹 (일반형)"}
-                                    {needsImprovement &&
-                                      "관계 개선 필요 그룹 (주변형)"}
-                                    {isolationRisk &&
-                                      "고립 위험 그룹 (고립위험형)"}
+                                    {friendshipType} ({socialInfluenceLevel} 영향력)
                                   </span>
                                 </h3>
 
@@ -1149,23 +1580,19 @@ const IndividualAnalysis: React.FC = () => {
                                     <ul className="ml-4 space-y-1 text-sm text-gray-600">
                                       <li>
                                         • 학교생활 만족도:{" "}
-                                        {isPopular
+                                        {socialInfluenceLevel === "높음"
                                           ? "매우 높음"
-                                          : isAverage
+                                          : socialInfluenceLevel === "보통"
                                             ? "높음"
-                                            : needsImprovement
-                                              ? "보통"
-                                              : "낮음"}
+                                            : "보통"}
                                       </li>
                                       <li>
                                         • 교사와의 관계:{" "}
-                                        {isPopular
+                                        {socialInfluenceLevel === "높음"
                                           ? "매우 좋음"
-                                          : isAverage
+                                          : socialInfluenceLevel === "보통"
                                             ? "좋음"
-                                            : needsImprovement
-                                              ? "보통"
-                                              : "개선 필요"}
+                                            : "보통"}
                                       </li>
                                       <li>
                                         • 또래 관계:{" "}
@@ -1210,11 +1637,7 @@ const IndividualAnalysis: React.FC = () => {
                                       <li>• 그룹 분포: {groupDistribution}</li>
                                       <li>
                                         • 고립 위험도:{" "}
-                                        {isolationRisk
-                                          ? "높음"
-                                          : needsImprovement
-                                            ? "보통"
-                                            : "낮음"}
+                                        {isolationRiskLevel}
                                       </li>
                                     </ul>
                                   </div>
@@ -1224,52 +1647,65 @@ const IndividualAnalysis: React.FC = () => {
                                       3. 개선방안 (Improvement Plan)
                                     </h5>
                                     <ul className="ml-4 space-y-1 text-sm text-gray-600">
-                                      {isolationRisk && (
+                                      {/* 디버깅을 위한 로그 */}
+                                      {(() => {
+                                        console.log("🔍 개선방안 데이터 확인:", {
+                                          recommendations,
+                                          hasRecommendations: !!recommendations,
+                                          immediateActions: recommendations?.immediate_actions,
+                                          shortTermGoals: recommendations?.short_term_goals,
+                                          longTermGoals: recommendations?.long_term_goals
+                                        });
+                                        return null;
+                                      })()}
+                                      
+                                      {/* Python 분석 결과의 추천사항 사용 */}
+                                      {recommendations ? (
                                         <>
-                                          <li>
-                                            • 긴급한 관계 개선 필요 - 상담사
-                                            연계 권장
-                                          </li>
-                                          <li>• 소규모 그룹 활동 참여 유도</li>
-                                          <li>• 교사와의 일대일 상담 강화</li>
-                                          <li>• 또래 멘토링 프로그램 참여</li>
+                                          {/* 즉시 실행 가능한 조치 */}
+                                          {recommendations.immediate_actions && recommendations.immediate_actions.length > 0 && (
+                                            <>
+                                              <li className="font-medium text-blue-600">즉시 실행 가능한 조치:</li>
+                                              {recommendations.immediate_actions.map((action: string, index: number) => (
+                                                <li key={index}>• {action}</li>
+                                              ))}
+                                            </>
+                                          )}
+                                          
+                                          {/* 단기 목표 */}
+                                          {recommendations.short_term_goals && recommendations.short_term_goals.length > 0 && (
+                                            <>
+                                              <li className="font-medium text-green-600">단기 목표 (1-3개월):</li>
+                                              {recommendations.short_term_goals.map((goal: string, index: number) => (
+                                                <li key={index}>• {goal}</li>
+                                              ))}
+                                            </>
+                                          )}
+                                          
+                                          {/* 장기 목표 */}
+                                          {recommendations.long_term_goals && recommendations.long_term_goals.length > 0 && (
+                                            <>
+                                              <li className="font-medium text-purple-600">장기 목표 (3-6개월):</li>
+                                              {recommendations.long_term_goals.map((goal: string, index: number) => (
+                                                <li key={index}>• {goal}</li>
+                                              ))}
+                                            </>
+                                          )}
+                                          
+                                          {/* 개입 수준 */}
+                                          {recommendations.intervention_level && (
+                                            <li className="font-medium text-orange-600">
+                                              개입 수준: {recommendations.intervention_level}
+                                            </li>
+                                          )}
                                         </>
-                                      )}
-                                      {needsImprovement && (
+                                      ) : (
+                                        /* Python 분석 결과가 없을 때 기본 개선방안 */
                                         <>
-                                          <li>
-                                            • 친구 관계 확장을 위한 그룹 활동
-                                            참여
-                                          </li>
-                                          <li>• 교사와의 래포 형성 필요</li>
-                                          <li>
-                                            • 사회적 기술 향상 프로그램 참여
-                                          </li>
-                                          <li>
-                                            • 관심사 기반 동아리 활동 권장
-                                          </li>
-                                        </>
-                                      )}
-                                      {isAverage && (
-                                        <>
-                                          <li>
-                                            • 현재 관계 유지 및 점진적 확장
-                                          </li>
-                                          <li>• 리더십 기회 제공</li>
-                                          <li>
-                                            • 다양한 활동 참여로 경험 확장
-                                          </li>
-                                          <li>• 또래 상담자 역할 기회 제공</li>
-                                        </>
-                                      )}
-                                      {isPopular && (
-                                        <>
-                                          <li>• 리더십 역할 강화</li>
-                                          <li>• 또래 상담자 역할 수행</li>
-                                          <li>
-                                            • 새로운 학생들의 네트워크 연결 지원
-                                          </li>
-                                          <li>• 긍정적 영향력 확산</li>
+                                          <li>• 네트워크 분석 결과를 기다리는 중입니다</li>
+                                          <li>• 기본적인 관계 유지 및 개선</li>
+                                          <li>• 교사와의 소통 강화</li>
+                                          <li>• 또래와의 상호작용 증진</li>
                                         </>
                                       )}
                                     </ul>
@@ -1279,30 +1715,40 @@ const IndividualAnalysis: React.FC = () => {
                                       4. 모니터링 포인트 (Monitoring Points)
                                     </h5>
                                     <ul className="ml-4 space-y-1 text-sm text-gray-600">
-                                      <li>
-                                        •{" "}
-                                        {isolationRisk
-                                          ? "주간 상담 및 관계 개선 상황 점검"
-                                          : "월간 네트워크 변화 추이 모니터링"}
-                                      </li>
-                                      <li>
-                                        •{" "}
-                                        {friendCount < 3
-                                          ? "새로운 친구 관계 형성 여부 확인"
-                                          : "기존 관계의 질적 향상 여부 확인"}
-                                      </li>
-                                      <li>
-                                        •{" "}
-                                        {centrality < 0.4
-                                          ? "사회적 참여도 및 활동 참여 빈도 점검"
-                                          : "리더십 발휘 기회 및 역할 수행 평가"}
-                                      </li>
-                                      <li>
-                                        •{" "}
-                                        {isolationRisk
-                                          ? "정서적 안정성 및 학교 적응도 평가"
-                                          : "학업 성취도와 사회적 관계의 균형 평가"}
-                                      </li>
+                                      {/* Python 분석 결과의 모니터링 포인트 사용 */}
+                                      {recommendations && recommendations.monitoring_points && recommendations.monitoring_points.length > 0 ? (
+                                        recommendations.monitoring_points.map((point: string, index: number) => (
+                                          <li key={index}>• {point}</li>
+                                        ))
+                                      ) : (
+                                        /* 기본 모니터링 포인트 */
+                                        <>
+                                          <li>
+                                            •{" "}
+                                            {isolationRiskLevel === "높음"
+                                              ? "주간 상담 및 관계 개선 상황 점검"
+                                              : "월간 네트워크 변화 추이 모니터링"}
+                                          </li>
+                                          <li>
+                                            •{" "}
+                                            {friendCount < 3
+                                              ? "새로운 친구 관계 형성 여부 확인"
+                                              : "기존 관계의 질적 향상 여부 확인"}
+                                          </li>
+                                          <li>
+                                            •{" "}
+                                            {centrality < 0.4
+                                              ? "사회적 참여도 및 활동 참여 빈도 점검"
+                                              : "리더십 발휘 기회 및 역할 수행 평가"}
+                                          </li>
+                                          <li>
+                                            •{" "}
+                                            {isolationRiskLevel === "높음"
+                                              ? "정서적 안정성 및 학교 적응도 평가"
+                                              : "학업 성취도와 사회적 관계의 균형 평가"}
+                                          </li>
+                                        </>
+                                      )}
                                     </ul>
                                   </div>
                                 </div>

@@ -53,7 +53,7 @@
     "zod": "^3.22.4"
   },
   "scripts": {
-    "start": "react-scripts start",
+    "start": "PORT=3000 react-scripts start",
     "build": "react-scripts build",
     "build:analyze": "npm run build && npx webpack-bundle-analyzer build/static/js/*.js",
     "build:prod": "GENERATE_SOURCEMAP=false react-scripts build",

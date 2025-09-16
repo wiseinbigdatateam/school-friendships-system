@@ -60,6 +60,7 @@ export interface User {
   grade?: string;
   class?: string;
   grade_level?: string; // 담당 학년 (학년부장용)
+  class_number?: string; // 담당 반 (담임교사용)
   createdAt: Date;
   lastLogin?: Date;
   isActive: boolean;
