@@ -26,6 +26,7 @@ const StudentManagement = lazy(() => import("./pages/StudentManagement"));
 const NetworkAnalysis = lazy(() => import("./pages/NetworkAnalysis"));
 const NetworkAnalysisPage = lazy(() => import("./pages/NetworkAnalysisPage"));
 const IndividualAnalysis = lazy(() => import("./pages/IndividualAnalysis"));
+const IntegratedAnalysis = lazy(() => import("./pages/IntegratedAnalysis"));
 const GradeAnalysis = lazy(() => import("./pages/GradeAnalysis"));
 const SchoolWideAnalysis = lazy(() => import("./pages/SchoolWideAnalysis"));
 const ClassSurvey = lazy(() => import("./pages/ClassSurvey"));
@@ -74,6 +75,12 @@ const ProtectedLayout: React.FC<{ children: React.ReactNode }> = ({
       id: "network",
       label: "교우관계 분석",
       href: "/network",
+      icon: "network",
+    },
+    {
+      id: "integrated-analysis",
+      label: "통합 교우관계 분석",
+      href: "/integrated-analysis",
       icon: "network",
     },
     {
@@ -250,6 +257,17 @@ const App: React.FC = () => {
               <ProtectedRoute>
                 <ProtectedLayout>
                   <IndividualAnalysis />
+                </ProtectedLayout>
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/integrated-analysis"
+            element={
+              <ProtectedRoute>
+                <ProtectedLayout>
+                  <IntegratedAnalysis />
                 </ProtectedLayout>
               </ProtectedRoute>
             }
