@@ -7,6 +7,7 @@ module.exports = {
         noto: ["Noto Sans KR", "sans-serif"],
         pretendard: ["Pretendard", "sans-serif"],
         wiseon: ["Noto Sans KR", "Pretendard", "sans-serif"],
+        isamanru: ["Isamanru", "sans-serif"],
       },
     },
   },

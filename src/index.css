@@ -59,6 +59,34 @@
   }
 }
 
+/* 랜딩페이지 배너에 사용하는 Isamanru 웹폰트 적용 */
+@font-face {
+  font-family: "Isamanru";
+  src: url("https://cdn.jsdelivr.net/gh/projectnoonnu/noonfonts_20-10@1.0/GongGothicLight.woff")
+    format("woff");
+  font-weight: 300;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Isamanru";
+  src: url("https://cdn.jsdelivr.net/gh/projectnoonnu/noonfonts_20-10@1.0/GongGothicMedium.woff")
+    format("woff");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Isamanru";
+  src: url("https://cdn.jsdelivr.net/gh/projectnoonnu/noonfonts_20-10@1.0/GongGothicBold.woff")
+    format("woff");
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
 /* 폰트 로딩 최적화 */
 @font-face {
   font-family: "Noto Sans KR";
