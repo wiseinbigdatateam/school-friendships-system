@@ -39,27 +39,26 @@ const Banner = () => {
               </p>
             </div>
 
-            <div className="flex items-center">
-              <div className="mr-2 block h-4 w-4 rounded-[4px] bg-sky-300 xl:hidden">
-                <div className="perspective-midrange relative h-[120px] w-[120px]">
-                  <div></div>
-                  <div></div>
-                  <div></div>
-                  <div></div>
-                  <div></div>
-                  <div></div>
+            <div className="flex cursor-pointer items-center">
+              <div className="mr-2 block xl:hidden">
+                <div className="perspective-midrange relative h-4 w-4">
+                  <div className="crystal"></div>
+                  <div className="crystal"></div>
+                  <div className="crystal"></div>
+                  <div className="crystal"></div>
+                  <div className="crystal"></div>
                 </div>
               </div>
-              <p
-                className="flex cursor-pointer items-center gap-4 font-isamanru text-[28px] font-bold text-sky-400 lg:text-[36px] xl:text-[32px] xl:font-medium xl:text-sky-300"
+              <div
+                className="flex items-center gap-4 font-isamanru text-[28px] font-bold text-sky-400 lg:text-[36px] xl:text-[32px] xl:font-medium xl:text-sky-300"
                 onClick={handleContact}
               >
                 지금 바로 신청하기
-                <div className="hidden xl:flex">
+                <span className="hidden xl:flex">
                   <FontAwesomeIcon icon={faArrowRight} />
                   <FontAwesomeIcon icon={faArrowRight} />
-                </div>
-              </p>
+                </span>
+              </div>
             </div>
           </div>
         </div>
