@@ -189,8 +189,8 @@
   position: absolute;
   top: 50%;
   left: 50%;
-  width: 16px;
-  height: 16px;
+  width: 33px;
+  height: 33px;
   opacity: 0;
   transform-origin: bottom center;
   transform: translate(-50%, -50%) rotateX(45deg) rotateZ(0deg);
