@@ -21,7 +21,10 @@ function MobileUsagePlanContent() {
   return (
     <>
       {accordionData.usagePlan.map((item, idx) => (
-        <div className="relative flex flex-col border-b border-gray-200 pl-5">
+        <div
+          className="relative flex flex-col border-b border-gray-200 pl-5"
+          key={item.id}
+        >
           {/* 아코디언 텍스트 */}
           <div
             className={clsx(
@@ -29,7 +32,6 @@ function MobileUsagePlanContent() {
               openItem === item.id &&
                 "before:absolute before:left-0 before:top-0 before:h-full before:w-1 before:bg-gray-600 before:content-['']",
             )}
-            key={item.id}
             onClick={() => handleAccordion(item.id)}
           >
             <p className="text-base md:text-xl">{`${idx + 1}. ${item.id}`}</p>

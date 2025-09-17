@@ -284,11 +284,8 @@ function PeerRelationShipsAndDiagnosticAssessment() {
           <div className="flex w-full flex-col gap-5 lg:w-1/2">
             <ul className="flex list-inside list-disc flex-col gap-3 marker:text-sky-700">
               {teachersRights.skills.map((item) => (
-                <li className="md:flex">
-                  <span
-                    className="mr-1 text-base font-semibold text-sky-700"
-                    key={item.title}
-                  >
+                <li className="md:flex" key={item.title}>
+                  <span className="mr-1 text-base font-semibold text-sky-700">
                     {item.title}
                   </span>
                   <p className="text-base max-md:px-4 max-md:text-sm">
@@ -300,8 +297,11 @@ function PeerRelationShipsAndDiagnosticAssessment() {
             </ul>
 
             <div className="flex flex-col gap-3 rounded-xl border border-dashed border-gray-400 p-3">
-              {teachersRights.effects.map((item) => (
-                <div className="flex items-center gap-2 text-sm max-md:flex-col max-md:items-start max-md:gap-1">
+              {teachersRights.effects.map((item, index) => (
+                <div
+                  className="flex items-center gap-2 text-sm max-md:flex-col max-md:items-start max-md:gap-1"
+                  key={index}
+                >
                   <span className="min-w-[146px] rounded-[4px] border border-[#e7e7e7] px-3 py-1 text-center text-red-500">
                     {item.title}
                   </span>
