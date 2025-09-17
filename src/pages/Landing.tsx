@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import LandingHeader from "../components/landing/LandingHeader";
+import Banner from "../components/landing/Banner";
 import Footer from "../components/landing/Footer";
 import TabMenu from "../components/landing/TabMenu";
 import PeerRelationShipsAndDiagnosticAssessment from "../components/landing/TabContent/PeerRelationShipsAndDiagnosticAssessment";
@@ -9,6 +10,7 @@ import AiDiagnosisReport from "../components/landing/TabContent/AiDiagnosisRepor
 
 const Landing: React.FC = () => {
   const [tabMenu, setTabMenu] = useState(0);
+
   const navigate = useNavigate();
 
   const handleSolutionClick = () => {
@@ -19,6 +21,9 @@ const Landing: React.FC = () => {
     <div className="min-h-screen bg-white">
       {/* 헤더 */}
       <LandingHeader />
+
+      {/* 이벤트 배너 */}
+      <Banner />
 
       {/* 히어로 섹션 */}
       <section className="relative flex h-[700px] items-center justify-center overflow-hidden max-md:h-[480px]">
