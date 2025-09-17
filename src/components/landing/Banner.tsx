@@ -38,7 +38,10 @@ const Banner = () => {
               </p>
             </div>
 
-            <div className="flex cursor-pointer items-center">
+            <div
+              className="flex cursor-pointer items-center"
+              onClick={handleContact}
+            >
               <div className="mr-2">
                 <div className="perspective-midrange relative h-[33px] w-[33px]">
                   <div className="crystal"></div>
@@ -48,10 +51,7 @@ const Banner = () => {
                   <div className="crystal"></div>
                 </div>
               </div>
-              <p
-                className="flex items-center gap-4 font-isamanru text-[28px] font-bold text-sky-400 lg:text-[36px] xl:text-[32px] xl:font-medium xl:text-sky-300"
-                onClick={handleContact}
-              >
+              <p className="flex items-center gap-4 font-isamanru text-[28px] font-bold text-sky-400 lg:text-[36px] xl:text-[32px] xl:font-medium xl:text-sky-300">
                 지금 바로 신청하기
               </p>
             </div>
