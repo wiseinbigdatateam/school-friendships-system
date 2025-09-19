@@ -17,11 +17,13 @@ export type Database = {
       ai_reports: {
         Row: {
           created_at: string | null
+          created_by: string | null
           current_status: string
           expected_outcomes: Json
           guidance_plan: string
           id: string
           monitoring_points: Json
+          report_data: Json | null
           risk_assessment: string
           specific_actions: Json
           student_id: string
@@ -32,11 +34,13 @@ export type Database = {
         }
         Insert: {
           created_at?: string | null
+          created_by?: string | null
           current_status: string
           expected_outcomes: Json
           guidance_plan: string
           id?: string
           monitoring_points: Json
+          report_data?: Json | null
           risk_assessment: string
           specific_actions: Json
           student_id: string
@@ -47,11 +51,13 @@ export type Database = {
         }
         Update: {
           created_at?: string | null
+          created_by?: string | null
           current_status?: string
           expected_outcomes?: Json
           guidance_plan?: string
           id?: string
           monitoring_points?: Json
+          report_data?: Json | null
           risk_assessment?: string
           specific_actions?: Json
           student_id?: string
@@ -61,6 +67,13 @@ export type Database = {
           updated_at?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "ai_reports_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "ai_reports_student_id_fkey"
             columns: ["student_id"]
@@ -89,9 +102,11 @@ export type Database = {
           created_at: string | null
           email: string
           id: string
+          institution: string
           message: string
           name: string
           phone: string | null
+          role: string | null
           status: string | null
           updated_at: string | null
         }
@@ -99,9 +114,11 @@ export type Database = {
           created_at?: string | null
           email: string
           id?: string
+          institution: string
           message: string
           name: string
           phone?: string | null
+          role?: string | null
           status?: string | null
           updated_at?: string | null
         }
@@ -109,9 +126,11 @@ export type Database = {
           created_at?: string | null
           email?: string
           id?: string
+          institution?: string
           message?: string
           name?: string
           phone?: string | null
+          role?: string | null
           status?: string | null
           updated_at?: string | null
         }
@@ -658,6 +677,7 @@ export type Database = {
           class: string
           created_at: string | null
           current_school_id: string | null
+          district_id: string | null
           enrolled_at: string
           gender: string
           grade: string
@@ -674,6 +694,7 @@ export type Database = {
           class: string
           created_at?: string | null
           current_school_id?: string | null
+          district_id?: string | null
           enrolled_at: string
           gender: string
           grade: string
@@ -690,6 +711,7 @@ export type Database = {
           class?: string
           created_at?: string | null
           current_school_id?: string | null
+          district_id?: string | null
           enrolled_at?: string
           gender?: string
           grade?: string
@@ -707,6 +729,13 @@ export type Database = {
             columns: ["current_school_id"]
             isOneToOne: false
             referencedRelation: "schools"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "students_district_id_fkey"
+            columns: ["district_id"]
+            isOneToOne: false
+            referencedRelation: "districts"
             referencedColumns: ["id"]
           },
         ]
@@ -808,6 +837,7 @@ export type Database = {
           created_at: string | null
           created_by: string | null
           description: string | null
+          district_id: string | null
           end_date: string
           id: string
           questions: Json | null
@@ -825,6 +855,7 @@ export type Database = {
           created_at?: string | null
           created_by?: string | null
           description?: string | null
+          district_id?: string | null
           end_date: string
           id?: string
           questions?: Json | null
@@ -842,6 +873,7 @@ export type Database = {
           created_at?: string | null
           created_by?: string | null
           description?: string | null
+          district_id?: string | null
           end_date?: string
           id?: string
           questions?: Json | null
@@ -861,6 +893,13 @@ export type Database = {
             columns: ["created_by"]
             isOneToOne: false
             referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "surveys_district_id_fkey"
+            columns: ["district_id"]
+            isOneToOne: false
+            referencedRelation: "districts"
             referencedColumns: ["id"]
           },
           {

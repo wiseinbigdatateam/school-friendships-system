@@ -1,17 +1,11 @@
 import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { contactService, ContactFormData } from "../services/contactService";
 
-interface ContactForm {
-  name: string;
-  email: string;
-  institution: string;
-  role: string;
-  message: string;
-  phone?: string;
-}
+// ContactFormData 타입을 contactService에서 가져오므로 중복 제거
 
 const Contact: React.FC = () => {
-  const [formData, setFormData] = useState<ContactForm>({
+  const [formData, setFormData] = useState<ContactFormData>({
     name: "",
     email: "",
     institution: "",
@@ -101,13 +95,10 @@ const Contact: React.FC = () => {
     setError(null);
 
     try {
-      // TODO: 실제 문의 API 호출
-      // const response = await contactService.submitInquiry(formData);
-
-      // 임시 성공 처리
-      await new Promise((resolve) => setTimeout(resolve, 2000)); // 로딩 시뮬레이션
-
-      console.log("Contact form submitted:", formData);
+      // 실제 문의 API 호출
+      const response = await contactService.submitInquiry(formData);
+      
+      console.log("Contact form submitted successfully:", response);
       setSubmitted(true);
     } catch (error) {
       console.error("Contact form submission failed:", error);
@@ -117,18 +108,7 @@ const Contact: React.FC = () => {
     }
   };
 
-  const resetForm = () => {
-    setFormData({
-      name: "",
-      email: "",
-      institution: "",
-      role: "",
-      message: "",
-      phone: "",
-    });
-    setSubmitted(false);
-    setError(null);
-  };
+  // resetForm 함수는 현재 사용되지 않으므로 제거
 
   if (submitted) {
     return (

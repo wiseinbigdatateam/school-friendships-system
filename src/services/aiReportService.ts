@@ -55,7 +55,7 @@ export class AIReportService {
         const { data, error } = await supabase
           .from('ai_reports')
           .update({
-            report_data: reportData,
+            report_data: reportData as any,
             updated_at: new Date().toISOString(),
             created_by: userId
           })
@@ -73,7 +73,7 @@ export class AIReportService {
             student_id: studentId,
             survey_id: surveyId,
             teacher_id: userId, // 기존 필드 호환성
-            report_data: reportData,
+            report_data: reportData as any,
             created_by: userId,
             // 기존 필드들 (호환성을 위해 유지)
             summary: reportData.summary || '',
@@ -123,7 +123,7 @@ export class AIReportService {
         throw error;
       }
 
-      return data as AIReportRecord;
+      return data as unknown as AIReportRecord;
     } catch (error) {
       console.error('AI 리포트 조회 오류:', error);
       throw error;

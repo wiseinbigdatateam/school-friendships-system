@@ -10,6 +10,8 @@ const ContactModal: React.FC<ContactModalProps> = ({ isOpen, onClose }) => {
   const [formData, setFormData] = useState({
     name: "",
     email: "",
+    institution: "",
+    role: "",
     phone: "",
     message: "",
   });
@@ -38,6 +40,8 @@ const ContactModal: React.FC<ContactModalProps> = ({ isOpen, onClose }) => {
         {
           name: formData.name,
           email: formData.email,
+          institution: formData.institution || "문의",
+          role: formData.role || null,
           phone: formData.phone || null,
           message: formData.message,
         },
@@ -51,6 +55,8 @@ const ContactModal: React.FC<ContactModalProps> = ({ isOpen, onClose }) => {
         setFormData({
           name: "",
           email: "",
+          institution: "",
+          role: "",
           phone: "",
           message: "",
         });
