@@ -11,6 +11,8 @@ import {
 import { AIReportService } from "../services/aiReportService";
 import AIReportDisplay from "../components/AIReportDisplay";
 import { useAuth } from "../contexts/AuthContext";
+import { unifiedNetworkAnalysisService } from "../services/unifiedNetworkAnalysisService";
+import { IndividualAnalysisResult } from "../types/unifiedNetworkTypes";
 
 interface Survey {
   id: string;
@@ -146,6 +148,30 @@ const IndividualAnalysis: React.FC = () => {
   const [surveyResponseCounts, setSurveyResponseCounts] = useState<{[key: string]: number}>({});
   const [pythonAnalysisError, setPythonAnalysisError] = useState<string | null>(null);
   const [forceUpdate, setForceUpdate] = useState(0);
+  const [unifiedAnalysisResult, setUnifiedAnalysisResult] = useState<IndividualAnalysisResult | null>(null);
+  const [unifiedAnalysisLoading, setUnifiedAnalysisLoading] = useState(false);
+
+  // 통합 서비스를 사용한 개별 학생 분석
+  const performUnifiedIndividualAnalysis = async (surveyId: string, studentId: string) => {
+    try {
+      setUnifiedAnalysisLoading(true);
+      console.log(`🔍 통합 개별 분석 시작: ${surveyId} - ${studentId}`);
+      
+      const individualAnalysis = await unifiedNetworkAnalysisService.getIndividualAnalysis(
+        surveyId,
+        studentId
+      );
+      
+      setUnifiedAnalysisResult(individualAnalysis);
+      console.log(`✅ 통합 개별 분석 완료: ${studentId}`);
+      
+    } catch (error) {
+      console.error("❌ 통합 개별 분석 오류:", error);
+      setUnifiedAnalysisResult(null);
+    } finally {
+      setUnifiedAnalysisLoading(false);
+    }
+  };
 
   // 설문별 응답자 수 계산 함수 - 더 간단하고 확실한 방법
   const calculateResponseCounts = async (surveys: Survey[]) => {
@@ -212,6 +238,13 @@ const IndividualAnalysis: React.FC = () => {
     console.log("🔄 강제 리렌더링 발생:", forceUpdate);
     console.log("📊 현재 surveyResponseCounts:", surveyResponseCounts);
   }, [forceUpdate, surveyResponseCounts]);
+
+  // 학생 선택 시 통합 분석 수행
+  useEffect(() => {
+    if (selectedStudent && selectedSurvey) {
+      performUnifiedIndividualAnalysis(selectedSurvey.id, selectedStudent);
+    }
+  }, [selectedStudent, selectedSurvey]);
 
   const fetchCurrentUser = async () => {
     try {
@@ -1478,6 +1511,153 @@ const IndividualAnalysis: React.FC = () => {
                       </div>
                     )}
                   </div>
+
+                  {/* 통합 분석 결과 */}
+                  {unifiedAnalysisResult && (
+                    <div className="rounded-lg border border-gray-200 bg-white p-6">
+                      <h3 className="mb-4 text-lg font-semibold text-gray-900">
+                        통합 네트워크 분석 결과
+                      </h3>
+                      
+                      <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
+                        <div className="text-center">
+                          <div className="text-2xl font-bold text-blue-600">
+                            {unifiedAnalysisResult.centralityMetrics.degree.toFixed(3)}
+                          </div>
+                          <div className="text-sm text-gray-600">연결 중심성</div>
+                        </div>
+                        <div className="text-center">
+                          <div className="text-2xl font-bold text-green-600">
+                            {unifiedAnalysisResult.centralityMetrics.betweenness.toFixed(3)}
+                          </div>
+                          <div className="text-sm text-gray-600">중개 중심성</div>
+                        </div>
+                        <div className="text-center">
+                          <div className="text-2xl font-bold text-purple-600">
+                            {unifiedAnalysisResult.centralityMetrics.closeness.toFixed(3)}
+                          </div>
+                          <div className="text-sm text-gray-600">근접 중심성</div>
+                        </div>
+                        <div className="text-center">
+                          <div className="text-2xl font-bold text-orange-600">
+                            {unifiedAnalysisResult.communityMembership}
+                          </div>
+                          <div className="text-sm text-gray-600">커뮤니티</div>
+                        </div>
+                      </div>
+
+                      {/* 위험도 및 영향력 */}
+                      <div className="mt-6 grid grid-cols-1 gap-4 md:grid-cols-2">
+                        <div className="rounded-lg bg-gray-50 p-4">
+                          <h4 className="mb-2 font-medium text-gray-900">고립 위험도</h4>
+                          <div className={`inline-flex rounded-full px-3 py-1 text-sm font-medium ${
+                            unifiedAnalysisResult.isolationRisk.level === 'high' ? 'bg-red-100 text-red-800' :
+                            unifiedAnalysisResult.isolationRisk.level === 'medium' ? 'bg-yellow-100 text-yellow-800' :
+                            'bg-green-100 text-green-800'
+                          }`}>
+                            {unifiedAnalysisResult.isolationRisk.level === 'high' ? '높음' :
+                             unifiedAnalysisResult.isolationRisk.level === 'medium' ? '보통' : '낮음'}
+                          </div>
+                          <p className="mt-2 text-sm text-gray-600">
+                            {unifiedAnalysisResult.isolationRisk.description}
+                          </p>
+                        </div>
+                        
+                        <div className="rounded-lg bg-gray-50 p-4">
+                          <h4 className="mb-2 font-medium text-gray-900">사회적 영향력</h4>
+                          <div className={`inline-flex rounded-full px-3 py-1 text-sm font-medium ${
+                            unifiedAnalysisResult.socialInfluence.level === 'high' ? 'bg-blue-100 text-blue-800' :
+                            unifiedAnalysisResult.socialInfluence.level === 'medium' ? 'bg-yellow-100 text-yellow-800' :
+                            'bg-gray-100 text-gray-800'
+                          }`}>
+                            {unifiedAnalysisResult.socialInfluence.level === 'high' ? '높음' :
+                             unifiedAnalysisResult.socialInfluence.level === 'medium' ? '보통' : '낮음'}
+                          </div>
+                          <p className="mt-2 text-sm text-gray-600">
+                            {unifiedAnalysisResult.socialInfluence.description}
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* 네트워크 위치 */}
+                      <div className="mt-6">
+                        <h4 className="mb-3 font-medium text-gray-900">네트워크 위치</h4>
+                        <div className="flex flex-wrap gap-2">
+                          {unifiedAnalysisResult.networkPosition.isCenter && (
+                            <span className="rounded-full bg-blue-100 px-3 py-1 text-sm font-medium text-blue-800">
+                              중심 인물
+                            </span>
+                          )}
+                          {unifiedAnalysisResult.networkPosition.isBridge && (
+                            <span className="rounded-full bg-green-100 px-3 py-1 text-sm font-medium text-green-800">
+                              연결자
+                            </span>
+                          )}
+                          {unifiedAnalysisResult.networkPosition.isIsolated && (
+                            <span className="rounded-full bg-red-100 px-3 py-1 text-sm font-medium text-red-800">
+                              고립 위험
+                            </span>
+                          )}
+                          {unifiedAnalysisResult.networkPosition.isPeripheral && (
+                            <span className="rounded-full bg-gray-100 px-3 py-1 text-sm font-medium text-gray-800">
+                              주변 인물
+                            </span>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* 권장사항 */}
+                      {unifiedAnalysisResult.recommendations && (
+                        <div className="mt-6">
+                          <h4 className="mb-3 font-medium text-gray-900">개선 권장사항</h4>
+                          <div className="space-y-4">
+                            {unifiedAnalysisResult.recommendations.immediate_actions.length > 0 && (
+                              <div>
+                                <h5 className="mb-2 font-medium text-blue-600">즉시 실행 가능한 조치</h5>
+                                <ul className="space-y-1">
+                                  {unifiedAnalysisResult.recommendations.immediate_actions.map((action, index) => (
+                                    <li key={index} className="text-sm text-gray-700">• {action}</li>
+                                  ))}
+                                </ul>
+                              </div>
+                            )}
+                            
+                            {unifiedAnalysisResult.recommendations.short_term_goals.length > 0 && (
+                              <div>
+                                <h5 className="mb-2 font-medium text-green-600">단기 목표</h5>
+                                <ul className="space-y-1">
+                                  {unifiedAnalysisResult.recommendations.short_term_goals.map((goal, index) => (
+                                    <li key={index} className="text-sm text-gray-700">• {goal}</li>
+                                  ))}
+                                </ul>
+                              </div>
+                            )}
+                            
+                            {unifiedAnalysisResult.recommendations.long_term_goals.length > 0 && (
+                              <div>
+                                <h5 className="mb-2 font-medium text-purple-600">장기 목표</h5>
+                                <ul className="space-y-1">
+                                  {unifiedAnalysisResult.recommendations.long_term_goals.map((goal, index) => (
+                                    <li key={index} className="text-sm text-gray-700">• {goal}</li>
+                                  ))}
+                                </ul>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* 통합 분석 로딩 상태 */}
+                  {unifiedAnalysisLoading && (
+                    <div className="rounded-lg border border-gray-200 bg-white p-6">
+                      <div className="flex items-center justify-center py-8">
+                        <div className="mr-4 h-8 w-8 animate-spin rounded-full border-b-2 border-blue-600"></div>
+                        <p className="text-gray-600">통합 네트워크 분석을 수행하는 중...</p>
+                      </div>
+                    </div>
+                  )}
 
                   {/* 개인별 요약 - 핵심결과 탭에서만 표시 */}
                   {activeTab === "core" && (

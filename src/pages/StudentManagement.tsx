@@ -10,6 +10,8 @@ import {
   ChevronUpIcon,
   ChevronDownIcon,
 } from "@heroicons/react/24/outline/index.js";
+import { unifiedNetworkAnalysisService } from "../services/unifiedNetworkAnalysisService";
+import { IndividualAnalysisResult } from "../types/unifiedNetworkTypes";
 
 interface Student {
   id: string;
@@ -60,6 +62,58 @@ const StudentManagement: React.FC = () => {
   const [schoolName, setSchoolName] = useState<string | null>(null);
   const [sortField, setSortField] = useState<string>("name");
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
+  const [unifiedAnalysisData, setUnifiedAnalysisData] = useState<Map<string, IndividualAnalysisResult>>(new Map());
+  const [analysisLoading, setAnalysisLoading] = useState(false);
+
+  // 통합 서비스를 사용한 학생 네트워크 분석 데이터 로드
+  const loadUnifiedAnalysisData = async () => {
+    if (!teacherInfo || students.length === 0) return;
+    
+    try {
+      setAnalysisLoading(true);
+      console.log("🔍 통합 분석 데이터 로드 시작");
+      
+      // 최신 설문 ID 찾기
+      const { data: surveys, error: surveyError } = await supabase
+        .from("surveys")
+        .select("id, title, status")
+        .eq("school_id", teacherInfo.school_id)
+        .eq("status", "completed")
+        .order("created_at", { ascending: false })
+        .limit(1);
+      
+      if (surveyError || !surveys || surveys.length === 0) {
+        console.log("완료된 설문이 없습니다.");
+        return;
+      }
+      
+      const latestSurvey = surveys[0];
+      console.log(`📊 최신 설문 사용: ${latestSurvey.title}`);
+      
+      // 각 학생에 대한 개별 분석 수행
+      const analysisMap = new Map<string, IndividualAnalysisResult>();
+      
+      for (const student of students) {
+        try {
+          const analysis = await unifiedNetworkAnalysisService.getIndividualAnalysis(
+            latestSurvey.id,
+            student.id
+          );
+          analysisMap.set(student.id, analysis);
+        } catch (error) {
+          console.error(`학생 ${student.name} 분석 오류:`, error);
+        }
+      }
+      
+      setUnifiedAnalysisData(analysisMap);
+      console.log(`✅ 통합 분석 데이터 로드 완료: ${analysisMap.size}명`);
+      
+    } catch (error) {
+      console.error("❌ 통합 분석 데이터 로드 오류:", error);
+    } finally {
+      setAnalysisLoading(false);
+    }
+  };
 
   useEffect(() => {
     fetchCurrentUser();
@@ -69,6 +123,12 @@ const StudentManagement: React.FC = () => {
     if (!teacherInfo) return;
     fetchStudents();
   }, [teacherInfo]);
+
+  useEffect(() => {
+    if (students.length > 0) {
+      loadUnifiedAnalysisData();
+    }
+  }, [students]);
 
   // 권한별 접근 제어
   const canAccessPage = () => {
@@ -499,9 +559,15 @@ const StudentManagement: React.FC = () => {
   };
 
   const getRiskLevel = (student: Student) => {
+    // 통합 분석 결과 우선 사용
+    const unifiedAnalysis = unifiedAnalysisData.get(student.id);
+    if (unifiedAnalysis) {
+      return unifiedAnalysis.isolationRisk.level;
+    }
+    
+    // 기존 방식 폴백
     if (!student.network_metrics) return "low";
 
-    // 지도 리포트와 동일한 방식으로 위험도 계산
     const centrality =
       student.network_metrics.centrality_scores?.centrality ||
       student.network_metrics.centrality_scores?.degree ||
@@ -1777,6 +1843,59 @@ const StudentManagement: React.FC = () => {
                   {getRiskLabel(getRiskLevel(student))}
                 </span>
               </div>
+
+              {/* 통합 분석 결과 표시 */}
+              {unifiedAnalysisData.has(student.id) && (
+                <div className="mb-4 rounded-lg bg-gray-50 p-3">
+                  <h4 className="mb-2 text-sm font-medium text-gray-900">네트워크 분석</h4>
+                  <div className="grid grid-cols-2 gap-2 text-xs">
+                    <div>
+                      <span className="text-gray-600">중심성:</span>
+                      <span className="ml-1 font-medium">
+                        {unifiedAnalysisData.get(student.id)?.centralityMetrics.degree.toFixed(3)}
+                      </span>
+                    </div>
+                    <div>
+                      <span className="text-gray-600">커뮤니티:</span>
+                      <span className="ml-1 font-medium">
+                        {unifiedAnalysisData.get(student.id)?.communityMembership}
+                      </span>
+                    </div>
+                    <div>
+                      <span className="text-gray-600">고립위험:</span>
+                      <span className={`ml-1 font-medium ${
+                        unifiedAnalysisData.get(student.id)?.isolationRisk.level === 'high' ? 'text-red-600' :
+                        unifiedAnalysisData.get(student.id)?.isolationRisk.level === 'medium' ? 'text-yellow-600' :
+                        'text-green-600'
+                      }`}>
+                        {unifiedAnalysisData.get(student.id)?.isolationRisk.level === 'high' ? '높음' :
+                         unifiedAnalysisData.get(student.id)?.isolationRisk.level === 'medium' ? '보통' : '낮음'}
+                      </span>
+                    </div>
+                    <div>
+                      <span className="text-gray-600">영향력:</span>
+                      <span className={`ml-1 font-medium ${
+                        unifiedAnalysisData.get(student.id)?.socialInfluence.level === 'high' ? 'text-blue-600' :
+                        unifiedAnalysisData.get(student.id)?.socialInfluence.level === 'medium' ? 'text-yellow-600' :
+                        'text-gray-600'
+                      }`}>
+                        {unifiedAnalysisData.get(student.id)?.socialInfluence.level === 'high' ? '높음' :
+                         unifiedAnalysisData.get(student.id)?.socialInfluence.level === 'medium' ? '보통' : '낮음'}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* 분석 로딩 상태 */}
+              {analysisLoading && !unifiedAnalysisData.has(student.id) && (
+                <div className="mb-4 rounded-lg bg-gray-50 p-3">
+                  <div className="flex items-center justify-center">
+                    <div className="mr-2 h-4 w-4 animate-spin rounded-full border-b-2 border-blue-600"></div>
+                    <span className="text-xs text-gray-600">분석 중...</span>
+                  </div>
+                </div>
+              )}
 
               {/* 메모 수 */}
               {/* <div className="mb-4 text-sm">
