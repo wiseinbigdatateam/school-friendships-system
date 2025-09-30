@@ -96,7 +96,7 @@ const Contact: React.FC = () => {
 
     try {
       // 실제 문의 API 호출
-      const response = await contactService.submitInquiry(formData);
+      const response = await contactService.submitContactForm(formData);
       
       console.log("Contact form submitted successfully:", response);
       setSubmitted(true);
