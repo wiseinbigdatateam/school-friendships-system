@@ -298,7 +298,7 @@ const Header: React.FC<HeaderProps> = ({ logo, navigationItems }) => {
                         >
                           학급별 분석결과
                         </button>
-                        <button
+                        {/* <button
                           onClick={() =>
                             handleNavigationClick("/individual-analysis")
                           }
@@ -309,6 +309,18 @@ const Header: React.FC<HeaderProps> = ({ logo, navigationItems }) => {
                           }`}
                         >
                           학생별 결과분석
+                        </button> */}
+                        <button
+                          onClick={() =>
+                            handleNavigationClick("/class-survey")
+                          }
+                          className={`block w-full px-4 py-2 text-left text-sm transition-colors ${
+                            isCurrentPath("/class-survey")
+                              ? "bg-blue-50 text-blue-600"
+                              : "text-gray-700 hover:bg-gray-50 hover:text-gray-900"
+                          }`}
+                        >
+                          학급별 조사분석
                         </button>
                       </div>
                     </div>
@@ -318,14 +330,14 @@ const Header: React.FC<HeaderProps> = ({ logo, navigationItems }) => {
                 {/* 학급별 분석결과 */}
                 <div className="relative">
                   <button
-                    onClick={() => handleNavigationClick("/class-survey")}
+                    onClick={() => handleNavigationClick("/individual-analysis")}
                     className={`rounded-md px-3 py-2 text-sm font-medium transition-colors ${
-                      isCurrentPath("/class-survey")
+                      isCurrentPath("/individual-analysis")
                         ? "bg-blue-50 text-blue-600"
                         : "text-gray-700 hover:bg-gray-50 hover:text-blue-600"
                     }`}
                   >
-                    학급조사
+                    학생별 AI분석
                   </button>
                 </div>
 

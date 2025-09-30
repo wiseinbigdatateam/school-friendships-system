@@ -7,7 +7,7 @@ interface SurveyTemplate {
   id: string;
   title: string;
   description: string;
-  purpose: "friendship" | "group" | "adaptation" | "conflict" | "custom";
+  purpose: "friendship" | "group" | "adaptation" | "conflict" | "custom" | "comprehensive";
   category: string;
   questions: string[];
   maxSelections: number[]; // 각 질문별 최대 선택 가능한 친구 수
@@ -16,6 +16,10 @@ interface SurveyTemplate {
   useCount: number;
   createdAt: string;
   isDefault: boolean;
+  // 추가 메타데이터 필드들
+  questionCategories?: string[];
+  questionTypes?: string[];
+  questionOptions?: string[][];
 }
 
 const SurveyTemplates: React.FC = () => {
@@ -75,6 +79,8 @@ const SurveyTemplates: React.FC = () => {
     const fetchTemplates = async () => {
       try {
         setIsLoadingTemplates(true);
+        
+        // 데이터베이스에서 템플릿 조회
         const { data: templatesData, error } = await supabase
           .from("survey_templates")
           .select("*")
@@ -89,42 +95,50 @@ const SurveyTemplates: React.FC = () => {
         // 데이터베이스 데이터를 SurveyTemplate 인터페이스에 맞게 변환
         const convertedTemplates: SurveyTemplate[] =
           templatesData?.map((template) => {
-            const maxSelections = (template.metadata as any)?.maxSelections || [
-              1,
-            ];
-            console.log(
-              `템플릿 "${template.name}" maxSelections:`,
-              maxSelections,
-            );
+            const metadata = template.metadata as any;
+            const maxSelections = metadata?.maxSelections || [1];
+            
+            console.log(`템플릿 "${template.name}" 로드:`, {
+              id: template.id,
+              category: metadata?.category,
+              questionCount: Array.isArray(template.questions) ? template.questions.length : 0,
+              hasCategories: !!metadata?.questionCategories
+            });
+            
             return {
               id: template.id,
               title: template.name,
               description: template.description || "",
-              purpose: (template.metadata as any)?.purpose || "custom",
-              category: (template.metadata as any)?.category || "기타",
+              purpose: metadata?.purpose || "custom",
+              category: metadata?.category || "기타",
               questions: Array.isArray(template.questions)
                 ? (template.questions as string[])
                 : [],
               maxSelections: maxSelections,
-              estimatedTime: (template.metadata as any)?.estimatedTime || 5,
-              targetGrades: (template.metadata as any)?.targetGrades || [
-                "1",
-                "2",
-                "3",
-                "4",
-                "5",
-                "6",
+              estimatedTime: metadata?.estimatedTime || 5,
+              targetGrades: metadata?.targetGrades || [
+                "1", "2", "3", "4", "5", "6"
               ],
-              useCount: (template.metadata as any)?.useCount || 0,
+              useCount: metadata?.useCount || 0,
               createdAt: template.created_at || new Date().toISOString(),
-              isDefault: (template.metadata as any)?.isDefault || false,
+              isDefault: metadata?.isDefault || false,
+              // 추가 메타데이터 정보
+              questionCategories: metadata?.questionCategories || [],
+              questionTypes: metadata?.questionTypes || [],
+              questionOptions: metadata?.questionOptions || []
             };
           }) || [];
 
-        // 교우관계 조사를 먼저 오도록 정렬
-        const sortedTemplates = convertedTemplates.sort((a, b) => {
-          if (a.category === "교우관계") return -1;
-          if (b.category === "교우관계") return 1;
+        // 교우관계조사, 학교생활 만족도 조사, 학교 폭력 조사 템플릿 제외
+        const filteredTemplates = convertedTemplates.filter((template) => {
+          const excludeCategories = ["교우관계", "만족도", "학교폭력"];
+          return !excludeCategories.includes(template.category);
+        });
+
+        // 종합조사를 먼저 오도록 정렬
+        const sortedTemplates = filteredTemplates.sort((a, b) => {
+          if (a.category === "종합조사") return -1;
+          if (b.category === "종합조사") return 1;
           return 0;
         });
 
@@ -225,7 +239,7 @@ const SurveyTemplates: React.FC = () => {
         title: surveyConfig.title,
         description: surveyConfig.description,
         school_id: schoolId,
-        template_id: selectedTemplate.id, // 템플릿 ID
+        template_id: selectedTemplate.id, // 실제 데이터베이스의 템플릿 ID 사용
         target_grades: [teacherInfo.grade_level], // 대상 학년
         target_classes: [teacherInfo.class_number], // 대상 반
         start_date: surveyConfig.startDate,
@@ -233,15 +247,40 @@ const SurveyTemplates: React.FC = () => {
         status: getSurveyStatus(surveyConfig.startDate, surveyConfig.endDate), // 기간에 따른 상태 설정
         questions: selectedTemplate.questions.map((question, index) => {
           const maxSelections = selectedTemplate.maxSelections[index] || 1;
-          console.log(`질문 ${index + 1} maxSelections:`, maxSelections);
+          const category = (selectedTemplate as any).questionCategories?.[index] || "기타";
+          const questionType = (selectedTemplate as any).questionTypes?.[index] || "multiple_choice";
+          const options = (selectedTemplate as any).questionOptions?.[index] || [];
+          
+          console.log(`질문 ${index + 1} 정보:`, {
+            text: question,
+            category,
+            type: questionType,
+            maxSelections,
+            options
+          });
+          
           return {
             id: `q${index + 1}`,
             text: question,
-            type: "multiple_choice",
+            type: questionType,
+            category: category, // 카테고리 추가
             required: true,
             max_selections: maxSelections,
+            options: options, // 선택지 추가
           };
         }),
+        // 설문 설정에 카테고리 정보 추가
+        settings: {
+          surveyType: "comprehensive",
+          categories: {
+            friendship: "교우관계",
+            satisfaction: "만족도", 
+            violence: "학교폭력",
+            subjective: "주관식"
+          },
+          questionCount: selectedTemplate.questions.length,
+          estimatedTime: selectedTemplate.estimatedTime
+        }
       };
 
       console.log("생성할 설문 데이터:", newSurvey);
@@ -315,7 +354,7 @@ const SurveyTemplates: React.FC = () => {
       setShowSurveyConfigModal(false);
       setSelectedTemplate(null);
 
-      // 템플릿 목록 새로고침
+      // 템플릿 목록 새로고침 (데이터베이스에서 다시 조회)
       const fetchTemplates = async () => {
         try {
           const { data: templatesData, error } = await supabase
@@ -331,34 +370,44 @@ const SurveyTemplates: React.FC = () => {
 
           // 데이터베이스 데이터를 SurveyTemplate 인터페이스에 맞게 변환
           const convertedTemplates: SurveyTemplate[] =
-            templatesData?.map((template) => ({
-              id: template.id,
-              title: template.name,
-              description: template.description || "",
-              purpose: (template.metadata as any)?.purpose || "custom",
-              category: (template.metadata as any)?.category || "기타",
-              questions: Array.isArray(template.questions)
-                ? (template.questions as string[])
-                : [],
-              maxSelections: (template.metadata as any)?.maxSelections || [1],
-              estimatedTime: (template.metadata as any)?.estimatedTime || 5,
-              targetGrades: (template.metadata as any)?.targetGrades || [
-                "1",
-                "2",
-                "3",
-                "4",
-                "5",
-                "6",
-              ],
-              useCount: (template.metadata as any)?.useCount || 0,
-              createdAt: template.created_at || new Date().toISOString(),
-              isDefault: (template.metadata as any)?.isDefault || false,
-            })) || [];
+            templatesData?.map((template) => {
+              const metadata = template.metadata as any;
+              const maxSelections = metadata?.maxSelections || [1];
+              
+              return {
+                id: template.id,
+                title: template.name,
+                description: template.description || "",
+                purpose: metadata?.purpose || "custom",
+                category: metadata?.category || "기타",
+                questions: Array.isArray(template.questions)
+                  ? (template.questions as string[])
+                  : [],
+                maxSelections: maxSelections,
+                estimatedTime: metadata?.estimatedTime || 5,
+                targetGrades: metadata?.targetGrades || [
+                  "1", "2", "3", "4", "5", "6"
+                ],
+                useCount: metadata?.useCount || 0,
+                createdAt: template.created_at || new Date().toISOString(),
+                isDefault: metadata?.isDefault || false,
+                // 추가 메타데이터 정보
+                questionCategories: metadata?.questionCategories || [],
+                questionTypes: metadata?.questionTypes || [],
+                questionOptions: metadata?.questionOptions || []
+              };
+            }) || [];
 
-          // 교우관계 조사를 먼저 오도록 정렬
-          const sortedTemplates = convertedTemplates.sort((a, b) => {
-            if (a.category === "교우관계") return -1;
-            if (b.category === "교우관계") return 1;
+          // 교우관계조사, 학교생활 만족도 조사, 학교 폭력 조사 템플릿 제외
+          const filteredTemplates = convertedTemplates.filter((template) => {
+            const excludeCategories = ["교우관계", "만족도", "학교폭력"];
+            return !excludeCategories.includes(template.category);
+          });
+
+          // 종합조사를 먼저 오도록 정렬
+          const sortedTemplates = filteredTemplates.sort((a, b) => {
+            if (a.category === "종합조사") return -1;
+            if (b.category === "종합조사") return 1;
             return 0;
           });
 
@@ -411,24 +460,30 @@ const SurveyTemplates: React.FC = () => {
               <span>📈 {template.useCount}회 사용</span>
             </div>
 
-            {/* 교우관계 설문인 경우 maxSelections 정보 표시 */}
-            {template.category === "교우관계" && template.maxSelections && (
-              <div className="mt-2 rounded-lg bg-blue-50 p-2">
-                <p className="mb-1 text-xs font-medium text-blue-800">
-                  📝 질문별 최대 선택 가능 인원:
+            {/* 종합조사 설문인 경우 카테고리별 정보 표시 */}
+            {/*template.category === "종합조사" && (template as any).questionCategories && (
+              <div className="mt-2 rounded-lg bg-green-50 p-2">
+                <p className="mb-1 text-xs font-medium text-green-800">
+                  📊 문항별 카테고리 분류:
                 </p>
                 <div className="flex flex-wrap gap-1">
-                  {template.maxSelections.map((max, index) => (
+                  {(template as any).questionCategories.map((category: string, index: number) => (
                     <span
                       key={index}
-                      className="inline-block rounded bg-blue-100 px-2 py-1 text-xs text-blue-700"
+                      className={`inline-block rounded px-2 py-1 text-xs ${
+                        category === "교우관계" ? "bg-blue-100 text-blue-700" :
+                        category === "만족도" ? "bg-green-100 text-green-700" :
+                        category === "학교폭력" ? "bg-red-100 text-red-700" :
+                        category === "주관식" ? "bg-purple-100 text-purple-700" :
+                        "bg-gray-100 text-gray-700"
+                      }`}
                     >
-                      {index + 1}번: {max}명
+                      Q{index + 1}: {category}
                     </span>
                   ))}
                 </div>
               </div>
-            )}
+            )*/}
 
             {/* 질문 목록 */}
             <div className="mt-2 rounded-lg bg-gray-50 p-4">
@@ -436,14 +491,44 @@ const SurveyTemplates: React.FC = () => {
                 포함된 질문 ({template.questions.length}개)
               </h4>
               <div className="space-y-2">
-                {template.questions.map((question, index) => (
-                  <div key={index} className="flex items-start space-x-3">
-                    <span className="text-xs font-medium text-gray-600">
-                      Q{index + 1}.
-                    </span>
-                    <p className="flex-1 text-xs text-gray-700">{question}</p>
-                  </div>
-                ))}
+                {template.questions.map((question, index) => {
+                  const category = (template as any).questionCategories?.[index];
+                  const questionType = (template as any).questionTypes?.[index];
+                  const options = (template as any).questionOptions?.[index];
+                  
+                  return (
+                    <div key={index} className="flex items-start space-x-3">
+                      <span className="text-xs font-medium text-gray-600">
+                        Q{index + 1}.
+                      </span>
+                      <div className="flex-1">
+                        <p className="text-xs text-gray-700">{question}</p>
+                        <div className="mt-1 flex items-center space-x-2">
+                          <span className={`inline-block rounded px-2 py-1 text-xs ${
+                            category === "교우관계" ? "bg-blue-100 text-blue-700" :
+                            category === "만족도" ? "bg-green-100 text-green-700" :
+                            category === "학교폭력" ? "bg-red-100 text-red-700" :
+                            category === "주관식" ? "bg-purple-100 text-purple-700" :
+                            "bg-gray-100 text-gray-700"
+                          }`}>
+                            {category}
+                          </span>
+                          <span className="text-xs text-gray-500">
+                            ({questionType === "multiple_choice" ? "다중선택" :
+                              questionType === "yes_no" ? "예/아니오" :
+                              questionType === "scale" ? "척도" :
+                              questionType === "text" ? "주관식" : questionType})
+                          </span>
+                          {options && options.length > 0 && (
+                            <span className="text-xs text-gray-500">
+                              선택지: {options.join(", ")}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             </div>
           </div>
@@ -491,7 +576,7 @@ const SurveyTemplates: React.FC = () => {
 
       {/* 템플릿 목록 */}
       {!isLoadingTemplates && (
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+        <div className="grid grid-cols-1 gap-4">
           {templates.length > 0 ? (
             templates.map((template) => (
               <TemplateCard key={template.id} template={template} />
@@ -698,21 +783,53 @@ const SurveyConfigModal: React.FC<{
             </div>
 
             {/* 질문 목록 */}
-            <div className="mb-6 rounded-lg bg-gray-50 p-4">
+            {/* <div className="mb-6 rounded-lg bg-gray-50 p-4">
               <h4 className="mb-3 font-medium text-gray-900">
                 질문 ({template.questions.length}개)
               </h4>
-              <div className="space-y-2">
-                {template.questions.map((question, index) => (
-                  <div key={index} className="flex items-start space-x-3">
-                    <span className="min-w-[40px] text-sm font-medium text-gray-600">
-                      Q{index + 1}.
-                    </span>
-                    <p className="flex-1 text-sm text-gray-700">{question}</p>
-                  </div>
-                ))}
+              <div className="space-y-3">
+                {template.questions.map((question, index) => {
+                  const category = (template as any).questionCategories?.[index];
+                  const questionType = (template as any).questionTypes?.[index];
+                  const options = (template as any).questionOptions?.[index];
+                  
+                  return (
+                    <div key={index} className="rounded-lg bg-white p-3">
+                      <div className="flex items-start space-x-3">
+                        <span className="min-w-[40px] text-sm font-medium text-gray-600">
+                          Q{index + 1}.
+                        </span>
+                        <div className="flex-1">
+                          <p className="text-sm text-gray-700">{question}</p>
+                          <div className="mt-2 flex items-center space-x-2">
+                            <span className={`inline-block rounded px-2 py-1 text-xs ${
+                              category === "교우관계" ? "bg-blue-100 text-blue-700" :
+                              category === "만족도" ? "bg-green-100 text-green-700" :
+                              category === "학교폭력" ? "bg-red-100 text-red-700" :
+                              category === "주관식" ? "bg-purple-100 text-purple-700" :
+                              "bg-gray-100 text-gray-700"
+                            }`}>
+                              {category}
+                            </span>
+                            <span className="text-xs text-gray-500">
+                              ({questionType === "multiple_choice" ? "다중선택" :
+                                questionType === "yes_no" ? "예/아니오" :
+                                questionType === "scale" ? "척도" :
+                                questionType === "text" ? "주관식" : questionType})
+                            </span>
+                            {options && options.length > 0 && (
+                              <span className="text-xs text-gray-500">
+                                선택지: {options.join(", ")}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
-            </div>
+            </div> */}
 
             <div className="space-y-4">
               {/* 설문 제목 */}

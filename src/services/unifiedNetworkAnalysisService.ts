@@ -197,6 +197,8 @@ class UnifiedNetworkAnalysisService {
     student_info: Array<{id: string, name: string, grade: string, class: string}>;
   }> {
     try {
+      console.log(`🔍 Python용 데이터 준비 시작: ${surveyId}`);
+      
       // 설문 정보와 질문 구조 가져오기
       const { data: surveyData, error: surveyError } = await supabase
         .from('surveys')
@@ -208,8 +210,11 @@ class UnifiedNetworkAnalysisService {
         .single();
 
       if (surveyError) {
+        console.error('❌ 설문 데이터 조회 오류:', surveyError);
         throw surveyError;
       }
+
+      console.log(`✅ 설문 데이터 조회 성공: ${surveyData?.title}`);
 
       // 설문 응답 데이터 가져오기
       const { data: responses, error: responseError } = await supabase
@@ -218,25 +223,36 @@ class UnifiedNetworkAnalysisService {
         .eq('survey_id', surveyId);
 
       if (responseError) {
+        console.error('❌ 응답 데이터 조회 오류:', responseError);
         throw responseError;
       }
 
-      // 학생 정보 가져오기
-      const studentIds = Array.from(new Set(responses?.map(r => r.student_id).filter((id): id is string => id !== null) || []));
+      console.log(`✅ 응답 데이터 조회 성공: ${responses?.length || 0}개 응답`);
+
+      // 설문 대상 학급 정보 가져오기
+      const targetGrades = surveyData?.target_grades || [];
+      const targetClasses = surveyData?.target_classes || [];
       
-      if (studentIds.length === 0) {
+      console.log(`📋 설문 대상: ${targetGrades.join(', ')}학년 ${targetClasses.join(', ')}반`);
+      
+      if (targetGrades.length === 0 || targetClasses.length === 0) {
+        console.log('⚠️ 설문 대상 학급이 지정되지 않았습니다.');
         return { survey_data: [], student_info: [] };
       }
 
+      // 해당 학급의 모든 학생 정보 가져오기
       const { data: students, error: studentError } = await supabase
         .from('students')
         .select('id, name, grade, class')
-        .in('id', studentIds)
+        .in('grade', targetGrades)
+        .in('class', targetClasses)
         .eq('is_active', true);
 
       if (studentError) {
         throw studentError;
       }
+
+      console.log(`✅ 학생 정보 조회 성공: ${students?.length || 0}명`);
 
       // 질문 구조 분석 및 관계 유형 매핑
       const templateQuestions = surveyData?.survey_templates?.questions as any;
@@ -324,16 +340,21 @@ class UnifiedNetworkAnalysisService {
    * Python 결과를 통합 형식으로 변환
    */
   private convertPythonResultToUnifiedFormat(pythonResult: any, surveyId: string): CompleteAnalysisResult {
+    console.log(`🔄 Python 결과 변환 시작:`, pythonResult);
+    
     const studentDetails = pythonResult.student_details || {};
     const centralityMetrics = pythonResult.centrality_metrics || {};
     const communities = pythonResult.communities || [];
+    
+    console.log(`📊 학생 상세 정보:`, Object.keys(studentDetails));
+    console.log(`📊 중심성 메트릭:`, Object.keys(centralityMetrics));
     
     // 노드 데이터 변환
     const nodes: NetworkNode[] = Object.keys(studentDetails).map(studentId => {
       const details = studentDetails[studentId];
       const centrality = centralityMetrics[studentId] || {};
       
-      return {
+      const node = {
         id: studentId,
         name: details.name,
         grade: parseInt(details.grade.replace('학년', '')) || 1,
@@ -348,7 +369,12 @@ class UnifiedNetworkAnalysisService {
         betweenness_centrality: centrality.betweenness || 0,
         eigenvector_centrality: centrality.eigenvector || 0
       };
+      
+      console.log(`📝 노드 생성: ${studentId} -> ${node.name}`);
+      return node;
     });
+    
+    console.log(`✅ 생성된 노드 수: ${nodes.length}`);
     
     // 엣지 데이터 변환
     const edges: NetworkEdge[] = [];
@@ -492,9 +518,20 @@ class UnifiedNetworkAnalysisService {
    * 개별 학생 분석 추출
    */
   private extractIndividualAnalysis(unifiedData: UnifiedNetworkData, studentId: string): IndividualAnalysisResult {
+    console.log(`🔍 개별 분석 추출: studentId=${studentId}, type=${typeof studentId}`);
+    console.log(`📋 사용 가능한 노드 IDs:`, unifiedData.completeAnalysis.nodes.map(n => n.id));
+    
+    // 타입 안전성 검사
+    if (typeof studentId !== 'string') {
+      console.error(`❌ 잘못된 studentId 타입: ${typeof studentId}, 값: ${JSON.stringify(studentId)}`);
+      throw new Error(`학생 ID가 올바르지 않습니다: ${JSON.stringify(studentId)}`);
+    }
+    
     const student = unifiedData.completeAnalysis.nodes.find(n => n.id === studentId);
     
     if (!student) {
+      console.error(`❌ 학생을 찾을 수 없음: ${studentId}`);
+      console.error(`📋 전체 노드:`, unifiedData.completeAnalysis.nodes);
       throw new Error(`학생을 찾을 수 없습니다: ${studentId}`);
     }
 

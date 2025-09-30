@@ -152,10 +152,11 @@ const IndividualAnalysis: React.FC = () => {
   const [unifiedAnalysisLoading, setUnifiedAnalysisLoading] = useState(false);
 
   // 통합 서비스를 사용한 개별 학생 분석
-  const performUnifiedIndividualAnalysis = async (surveyId: string, studentId: string) => {
+  const performUnifiedIndividualAnalysis = useCallback(async (surveyId: string, studentId: string) => {
     try {
       setUnifiedAnalysisLoading(true);
       console.log(`🔍 통합 개별 분석 시작: ${surveyId} - ${studentId}`);
+      console.log(`📋 studentId 타입: ${typeof studentId}, 값: ${JSON.stringify(studentId)}`);
       
       const individualAnalysis = await unifiedNetworkAnalysisService.getIndividualAnalysis(
         surveyId,
@@ -171,7 +172,7 @@ const IndividualAnalysis: React.FC = () => {
     } finally {
       setUnifiedAnalysisLoading(false);
     }
-  };
+  }, []);
 
   // 설문별 응답자 수 계산 함수 - 더 간단하고 확실한 방법
   const calculateResponseCounts = async (surveys: Survey[]) => {
@@ -241,10 +242,12 @@ const IndividualAnalysis: React.FC = () => {
 
   // 학생 선택 시 통합 분석 수행
   useEffect(() => {
+    console.log(`🔄 useEffect 트리거: selectedStudent=${selectedStudent}, selectedSurvey=${selectedSurvey?.id}`);
     if (selectedStudent && selectedSurvey) {
+      console.log(`📋 호출할 매개변수: surveyId=${selectedSurvey.id}, studentId=${selectedStudent}`);
       performUnifiedIndividualAnalysis(selectedSurvey.id, selectedStudent);
     }
-  }, [selectedStudent, selectedSurvey]);
+  }, [selectedStudent, selectedSurvey, performUnifiedIndividualAnalysis]);
 
   const fetchCurrentUser = async () => {
     try {
@@ -298,7 +301,7 @@ const IndividualAnalysis: React.FC = () => {
         classNumber: teacherInfo.class_number
       });
 
-      // 먼저 설문 템플릿에서 카테고리가 "교우관계"인 것만 찾기
+      // 먼저 설문 템플릿에서 카테고리가 "교우관계" 또는 "종합조사"인 것 찾기
       const { data: templates, error: templateError } = await supabase
         .from("survey_templates")
         .select("id, name, metadata")
@@ -309,16 +312,16 @@ const IndividualAnalysis: React.FC = () => {
         throw templateError;
       }
 
-      // 카테고리가 "교우관계"인 템플릿 ID들 찾기
-      const friendshipTemplateIds = templates
+      // 카테고리가 "교우관계" 또는 "종합조사"인 템플릿 ID들 찾기
+      const analysisTemplateIds = templates
         .filter((template: any) => {
           const metadata = template.metadata;
-          return metadata && metadata.category === "교우관계";
+          return metadata && (metadata.category === "교우관계" || metadata.category === "종합조사");
         })
         .map((template: any) => template.id);
 
-      if (friendshipTemplateIds.length === 0) {
-        console.log("No friendship surveys found");
+      if (analysisTemplateIds.length === 0) {
+        console.log("No analysis surveys found");
         setSurveys([]);
         return;
       }
@@ -335,7 +338,7 @@ const IndividualAnalysis: React.FC = () => {
             metadata
           )
         `)
-        .in("template_id", friendshipTemplateIds)
+        .in("template_id", analysisTemplateIds)
         .eq("status", "completed");
 
       // 학교 ID로 필터링
@@ -380,7 +383,7 @@ const IndividualAnalysis: React.FC = () => {
           return gradeMatch && classMatch;
         }) || [];
 
-        console.log("🎯 필터링 후 교우관계 설문 개수:", filteredSurveys.length);
+        console.log("🎯 필터링 후 분석 가능한 설문 개수:", filteredSurveys.length);
         
         if (filteredSurveys.length > 0) {
           console.log("📋 필터링된 설문들:", filteredSurveys.map(s => ({ id: s.id, title: s.title })));
@@ -1150,7 +1153,7 @@ const IndividualAnalysis: React.FC = () => {
                     {survey.title}
                   </h3>
                   <div className="space-y-1 text-sm text-gray-600">
-                    <p>템플릿형: {survey.survey_templates?.metadata?.category || '교우관계'}</p>
+                    <p>템플릿형: {survey.survey_templates?.metadata?.category || '분석가능'}</p>
                     <p>평가인원: {surveyResponseCounts[survey.id] || 0}명</p>
                     <p>상태: <span className={`font-medium ${survey.status === 'completed' ? 'text-green-600' : survey.status === 'active' ? 'text-blue-600' : 'text-gray-600'}`}>
                       {survey.status === 'completed' ? '완료' : survey.status === 'active' ? '진행중' : survey.status}

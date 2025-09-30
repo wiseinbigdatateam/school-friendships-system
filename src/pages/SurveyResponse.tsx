@@ -130,10 +130,33 @@ const SurveyResponse: React.FC = () => {
 
               if (!templateError && templateDataResult) {
                 templateData = templateDataResult;
+                
+                // 종합조사 설문의 경우 settings에서 카테고리 정보 가져오기
+                let metadata = templateData.metadata as any;
+                if (surveyData.settings && (surveyData.settings as any).surveyType === "comprehensive") {
+                  metadata = {
+                    ...metadata,
+                    category: "종합조사",
+                    questionCategories: ["교우관계", "만족도", "만족도", "만족도", "만족도", "학교폭력", "학교폭력", "학교폭력", "주관식"],
+                    questionTypes: ["multiple_choice", "yes_no", "yes_no", "yes_no", "yes_no", "scale", "scale", "scale", "text"],
+                    questionOptions: [
+                      ["아무도 없다"],
+                      ["예", "아니오"], ["예", "아니오"], ["예", "아니오"], ["예", "아니오"],
+                      ["전혀 없다", "한 두번 당한 적 있다", "자주 있다"],
+                      ["전혀 없다", "한 두번 당한 적 있다", "자주 있다"],
+                      ["전혀 없다", "한 두번 당한 적 있다", "자주 있다"],
+                      []
+                    ]
+                  };
+                }
+                
+                console.log("🔍 템플릿 메타데이터:", metadata);
+                console.log("🔍 설문 설정:", surveyData.settings);
+                
                 setSurveyTemplate({
                   id: templateData.id,
                   name: templateData.name,
-                  metadata: templateData.metadata as any,
+                  metadata: metadata,
                 });
               } else {
                 console.error("템플릿 데이터 로드 실패:", templateError);
@@ -146,12 +169,13 @@ const SurveyResponse: React.FC = () => {
           // 응답 폼 초기화 (카테고리에 따라 다르게)
           const initialResponses: Record<string, any> = {};
           if (surveyData.questions && Array.isArray(surveyData.questions)) {
-            // 템플릿의 max_selections 값을 각 질문에 복사 (교우관계 카테고리만)
+            // 템플릿의 max_selections 값을 각 질문에 복사 (교우관계 및 종합조사 카테고리)
             const questionsWithMaxSelections = surveyData.questions.map(
               (question: any, index: number) => {
-                // 교우관계 카테고리일 때만 템플릿의 max_selections 배열에서 해당 질문의 값 가져오기
+                // 교우관계 또는 종합조사 카테고리일 때 템플릿의 max_selections 배열에서 해당 질문의 값 가져오기
                 if (
-                  templateData?.metadata?.category === "교우관계" &&
+                  (templateData?.metadata?.category === "교우관계" || 
+                   templateData?.metadata?.category === "종합조사") &&
                   (templateData?.metadata as any)?.max_selections &&
                   Array.isArray(
                     (templateData?.metadata as any)?.max_selections,
@@ -167,7 +191,7 @@ const SurveyResponse: React.FC = () => {
                     maxSelections: maxSelections,
                   };
                 } else {
-                  // 교우관계가 아니면 원본 질문 그대로 사용
+                  // 교우관계나 종합조사가 아니면 원본 질문 그대로 사용
                   return question;
                 }
               },
@@ -209,6 +233,25 @@ const SurveyResponse: React.FC = () => {
                   return question;
                 },
               );
+            }
+
+            // 종합조사 설문의 경우 question.options를 answer_options로 변환
+            if (templateData?.metadata?.category === "종합조사") {
+              surveyData.questions = surveyData.questions.map((question: any, index: number) => {
+                if (question.options && Array.isArray(question.options) && question.options.length > 0) {
+                  // options 배열을 answer_options 객체로 변환
+                  const answerOptions: any = {};
+                  question.options.forEach((option: string, optionIndex: number) => {
+                    answerOptions[`option_${optionIndex + 1}`] = option;
+                  });
+                  
+                  return {
+                    ...question,
+                    answer_options: answerOptions
+                  };
+                }
+                return question;
+              });
             }
 
             surveyData.questions.forEach((question: any) => {
@@ -812,66 +855,23 @@ const SurveyResponse: React.FC = () => {
 
                   {question.type === "multiple_choice" && (
                     <div className="space-y-4">
-                      {/* 카테고리에 따른 답변 방식 결정 */}
-                      {surveyTemplate?.metadata?.category === "교우관계" ? (
-                        // 교우관계: 학생 선택 방식
+                      {/* 첫 번째 질문: 학생 선택 */}
+                      {index === 0 ? (
                         <>
                           <p className="mb-3 text-sm text-gray-600">
-                            질문에 해당하는 친구들을 선택해주세요
+                            최근 한달 동안 가장 많이 함께 한 친구들을 선택해주세요
                             {(() => {
-                              // surveys 테이블의 questions에서 max_selections 값을 우선적으로 가져오기
                               let maxSelections = 1; // 기본값
-
-                              // 먼저 surveyTemplate의 max_selections 배열에서 해당 질문의 값 가져오기 (우선순위 1)
-                              if (
-                                (surveyTemplate?.metadata as any)
-                                  ?.max_selections &&
-                                Array.isArray(
-                                  (surveyTemplate?.metadata as any)
-                                    ?.max_selections,
-                                ) &&
-                                (surveyTemplate?.metadata as any)
-                                  ?.max_selections[index] !== undefined
-                              ) {
-                                maxSelections = (
-                                  surveyTemplate?.metadata as any
-                                )?.max_selections[index];
-                              } else if (
-                                surveyTemplate?.metadata?.maxSelections &&
-                                Array.isArray(
-                                  surveyTemplate.metadata.maxSelections,
-                                ) &&
-                                surveyTemplate.metadata.maxSelections[index] !==
-                                  undefined
-                              ) {
-                                maxSelections =
-                                  surveyTemplate.metadata.maxSelections[index];
-                              } else if (
-                                question.max_selections !== undefined &&
-                                question.max_selections !== null
-                              ) {
-                                // 문자열인 경우 숫자로 변환
-                                if (
-                                  typeof question.max_selections === "string"
-                                ) {
-                                  maxSelections =
-                                    parseInt(question.max_selections) || 1;
-                                } else {
-                                  maxSelections = question.max_selections;
-                                }
-                              } else if (
-                                question.maxSelections !== undefined &&
-                                question.maxSelections !== null
-                              ) {
+                              
+                              // 종합조사 설문의 첫 번째 질문인 경우 3명 선택 가능
+                              if (surveyTemplate?.metadata?.category === "종합조사" && index === 0) {
+                                maxSelections = 3;
+                              } else if (question.maxSelections) {
                                 maxSelections = question.maxSelections;
-                              }
-
-                              // 숫자가 아닌 경우 기본값 사용
-                              if (
-                                typeof maxSelections !== "number" ||
-                                isNaN(maxSelections)
-                              ) {
-                                maxSelections = 1;
+                              } else if (question.max_selections) {
+                                maxSelections = typeof question.max_selections === 'string' 
+                                  ? parseInt(question.max_selections) || 1 
+                                  : question.max_selections;
                               }
 
                               return maxSelections > 1 ? (
@@ -909,11 +909,24 @@ const SurveyResponse: React.FC = () => {
                             responses[question.id].length > 0 && (
                               <div className="mb-3 rounded-lg border border-blue-200 bg-blue-50 p-2">
                                 <p className="mb-1 text-xs font-medium text-blue-800">
-                                  선택된 친구들:
+                                  {responses[question.id].includes("none") 
+                                    ? "선택된 답변:"
+                                    : "선택된 친구들:"
+                                  }
                                 </p>
                                 <div className="flex flex-wrap gap-1">
                                   {responses[question.id].map(
                                     (studentId: string) => {
+                                      if (studentId === "none") {
+                                        return (
+                                          <span
+                                            key="none"
+                                            className="inline-block rounded bg-red-100 px-2 py-1 text-xs text-red-700"
+                                          >
+                                            아무도 없다
+                                          </span>
+                                        );
+                                      }
                                       const student = students.find(
                                         (s) => s.id === studentId,
                                       );
@@ -933,6 +946,35 @@ const SurveyResponse: React.FC = () => {
 
                           {/* 학생 선택 목록 */}
                           <div className="grid max-h-80 grid-cols-2 gap-2 overflow-y-auto rounded-lg border border-gray-200 p-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
+                            {/* 아무도 없다 옵션 */}
+                            <label
+                              className={`flex cursor-pointer items-center rounded-lg border p-2 transition-colors ${
+                                responses[question.id] && responses[question.id].includes("none")
+                                  ? "border-red-300 bg-red-50"
+                                  : "border-gray-200 hover:bg-gray-50"
+                              }`}
+                            >
+                              <input
+                                type="checkbox"
+                                checked={responses[question.id] && responses[question.id].includes("none")}
+                                onChange={(e) => {
+                                  if (e.target.checked) {
+                                    // "아무도 없다" 선택 시 다른 선택 모두 해제
+                                    handleResponseChange(question.id, ["none"]);
+                                  } else {
+                                    // "아무도 없다" 해제
+                                    handleResponseChange(question.id, []);
+                                  }
+                                }}
+                                className="mr-2 h-4 w-4 rounded border-gray-300 text-red-600 focus:ring-red-500"
+                              />
+                              <div className="min-w-0 flex-1">
+                                <p className="overflow-hidden truncate whitespace-nowrap text-sm font-medium text-gray-900">
+                                  아무도 없다
+                                </p>
+                              </div>
+                            </label>
+                            
                             {students
                               .filter(
                                 (student) => student.id !== selectedStudent.id,
@@ -954,9 +996,24 @@ const SurveyResponse: React.FC = () => {
                                   student.id,
                                 );
 
-                                // 질문의 maxSelections 값 사용 (이미 템플릿 값으로 수정됨)
-                                const maxSelections =
-                                  question.maxSelections || 1;
+                                // 질문의 maxSelections 값 사용
+                                let maxSelections = 1; // 기본값
+                                
+                                // 종합조사 설문의 첫 번째 질문인 경우 3명 선택 가능
+                                if (surveyTemplate?.metadata?.category === "종합조사" && index === 0) {
+                                  maxSelections = 3;
+                                  console.log("🔍 종합조사 첫 번째 질문 - maxSelections: 3");
+                                } else if (question.maxSelections) {
+                                  maxSelections = question.maxSelections;
+                                  console.log("🔍 question.maxSelections 사용:", maxSelections);
+                                } else if (question.max_selections) {
+                                  maxSelections = typeof question.max_selections === 'string' 
+                                    ? parseInt(question.max_selections) || 1 
+                                    : question.max_selections;
+                                  console.log("🔍 question.max_selections 사용:", maxSelections);
+                                }
+                                
+                                console.log("🔍 최종 maxSelections:", maxSelections, "현재 선택된 수:", currentValues.length);
 
                                 const isDisabled =
                                   !isSelected &&
@@ -983,8 +1040,12 @@ const SurveyResponse: React.FC = () => {
                                           if (
                                             currentValues.length < maxSelections
                                           ) {
+                                            // "아무도 없다" 옵션이 선택되어 있다면 제거
+                                            const filteredValues = currentValues.filter(
+                                              (id: string) => id !== "none"
+                                            );
                                             handleResponseChange(question.id, [
-                                              ...currentValues,
+                                              ...filteredValues,
                                               student.id,
                                             ]);
                                           }
@@ -1010,17 +1071,24 @@ const SurveyResponse: React.FC = () => {
                           </div>
                         </>
                       ) : (
-                        // 학교폭력, 만족도: answer_options 표시
+                        // 나머지 모든 질문: 답변 옵션
                         <>
                           <p className="mb-3 text-sm text-gray-600">
                             아래 옵션 중 하나를 선택해주세요
                           </p>
-
-                          {/* 답변 옵션 */}
+                          
                           <div className="space-y-1">
-                            {question.answer_options &&
-                              Object.entries(question.answer_options).map(
-                                ([key, value]) => (
+                            {(() => {
+                              console.log(`🔍 질문 ${index + 1} 답변 옵션 렌더링:`, {
+                                questionId: question.id,
+                                answerOptions: question.answer_options,
+                                options: question.options
+                              });
+                              
+                              // answer_options가 있는 경우 사용
+                              if (question.answer_options && typeof question.answer_options === 'object') {
+                                console.log(`🔍 질문 ${index + 1} answer_options 사용:`, question.answer_options);
+                                return Object.entries(question.answer_options).map(([key, value]) => (
                                   <label
                                     key={key}
                                     className="flex cursor-pointer items-center rounded-lg p-3 transition-colors hover:bg-gray-50"
@@ -1028,8 +1096,8 @@ const SurveyResponse: React.FC = () => {
                                     <input
                                       type="radio"
                                       name={question.id}
-                                      value={key}
-                                      checked={responses[question.id] === key}
+                                      value={String(value)}
+                                      checked={responses[question.id] === String(value)}
                                       onChange={(e) =>
                                         handleResponseChange(
                                           question.id,
@@ -1043,11 +1111,134 @@ const SurveyResponse: React.FC = () => {
                                       {String(value)}
                                     </span>
                                   </label>
-                                ),
-                              )}
+                                ));
+                              }
+                              
+                              // answer_options가 없는 경우 하드코딩된 옵션 사용
+                              let options: string[] = [];
+                              if (index >= 1 && index <= 4) {
+                                // 2~5번 질문 (만족도)
+                                options = ["예", "아니오"];
+                              } else if (index >= 5 && index <= 7) {
+                                // 6~8번 질문 (학교폭력)
+                                options = ["전혀 없다", "한 두번 당한 적 있다", "자주 있다"];
+                              } else {
+                                // 기본 선택지
+                                options = ["예", "아니오"];
+                              }
+                              
+                              console.log(`🔍 질문 ${index + 1} 하드코딩된 선택지 사용:`, options);
+                              
+                              return options.map((option: string) => (
+                                <label
+                                  key={option}
+                                  className="flex cursor-pointer items-center rounded-lg p-3 transition-colors hover:bg-gray-50"
+                                >
+                                  <input
+                                    type="radio"
+                                    name={question.id}
+                                    value={option}
+                                    checked={responses[question.id] === option}
+                                    onChange={(e) =>
+                                      handleResponseChange(
+                                        question.id,
+                                        e.target.value,
+                                      )
+                                    }
+                                    className="mr-3 h-4 w-4 border-gray-300 text-[#3F80EA] focus:ring-blue-500"
+                                    required={question.required}
+                                  />
+                                  <span className="text-gray-900">
+                                    {option}
+                                  </span>
+                                </label>
+                              ));
+                            })()}
                           </div>
                         </>
                       )}
+                    </div>
+                  )}
+
+                  {(question.type === "yes_no" || question.type === "scale") && (
+                    <div className="space-y-4">
+                      <p className="mb-3 text-sm text-gray-600">
+                        아래 옵션 중 하나를 선택해주세요
+                      </p>
+                      
+                      <div className="space-y-1">
+                        {(() => {
+                          console.log(`🔍 질문 ${index + 1} (${question.type}) 답변 옵션 렌더링:`, {
+                            questionId: question.id,
+                            answerOptions: question.answer_options,
+                            options: question.options
+                          });
+                          
+                          // answer_options가 있는 경우 사용
+                          if (question.answer_options && typeof question.answer_options === 'object') {
+                            console.log(`🔍 질문 ${index + 1} answer_options 사용:`, question.answer_options);
+                            return Object.entries(question.answer_options).map(([key, value]) => (
+                              <label
+                                key={key}
+                                className="flex cursor-pointer items-center rounded-lg p-3 transition-colors hover:bg-gray-50"
+                              >
+                                <input
+                                  type="radio"
+                                  name={question.id}
+                                  value={String(value)}
+                                  checked={responses[question.id] === String(value)}
+                                  onChange={(e) =>
+                                    handleResponseChange(
+                                      question.id,
+                                      e.target.value,
+                                    )
+                                  }
+                                  className="mr-3 h-4 w-4 border-gray-300 text-[#3F80EA] focus:ring-blue-500"
+                                  required={question.required}
+                                />
+                                <span className="text-gray-900">
+                                  {String(value)}
+                                </span>
+                              </label>
+                            ));
+                          }
+                          
+                          // answer_options가 없는 경우 하드코딩된 옵션 사용
+                          let options: string[] = [];
+                          if (question.type === "yes_no") {
+                            options = ["예", "아니오"];
+                          } else if (question.type === "scale") {
+                            options = ["전혀 없다", "한 두번 당한 적 있다", "자주 있다"];
+                          }
+                          
+                          console.log(`🔍 질문 ${index + 1} 하드코딩된 선택지 사용:`, options);
+                          
+                          return options.map((option: string) => (
+                            <label
+                              key={option}
+                              className="flex cursor-pointer items-center rounded-lg p-3 transition-colors hover:bg-gray-50"
+                            >
+                              <input
+                                type="radio"
+                                name={question.id}
+                                value={option}
+                                checked={responses[question.id] === option}
+                                onChange={(e) =>
+                                  handleResponseChange(
+                                    question.id,
+                                    e.target.value,
+                                  )
+                                }
+                                className="mr-3 h-4 w-4 border-gray-300 text-[#3F80EA] focus:ring-blue-500"
+                                required={question.required}
+                              />
+                              <span className="text-gray-900">
+                                {option}
+                              </span>
+                            </label>
+                          ));
+                        })()}
+                      </div>
                     </div>
                   )}
 

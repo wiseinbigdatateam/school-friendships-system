@@ -32,7 +32,8 @@ AI 기반 네트워크 분석을 통해 학생들의 교우관계를 시각화�
 ## 🛠️ 기술 스택
 
 - **Frontend**: React 19, TypeScript, TailwindCSS
-- **Backend**: Supabase (PostgreSQL, Auth, Realtime)
+- **Backend**: Supabase (PostgreSQL, Auth, Realtime) + Python FastAPI
+- **네트워크 분석**: Python (NetworkX, NumPy, Matplotlib)
 - **상태 관리**: React Context API
 - **폼 관리**: React Hook Form + Zod
 - **UI 컴포넌트**: Heroicons, React Hot Toast
@@ -42,6 +43,7 @@ AI 기반 네트워크 분석을 통해 학생들의 교우관계를 시각화�
 
 - Node.js 18.0.0 이상
 - npm 9.0.0 이상
+- Python 3.8 이상
 - Supabase 계정
 
 ## 🚀 설치 및 실행
@@ -57,7 +59,21 @@ cd school_friendships
 npm install
 ```
 
-### 3. 환경 변수 설정
+### 3. Python 환경 설정
+```bash
+# Python 가상환경 생성 (macOS/Linux)
+python3 -m venv venv
+source venv/bin/activate
+
+# Python 가상환경 생성 (Windows)
+python -m venv venv
+venv\Scripts\activate
+
+# 필요한 Python 패키지 설치
+pip install fastapi uvicorn flask flask-cors networkx numpy matplotlib
+```
+
+### 4. 환경 변수 설정
 `.env` 파일을 생성하고 Supabase 프로젝트 정보를 입력하세요:
 
 ```bash
@@ -65,15 +81,41 @@ REACT_APP_SUPABASE_URL=your_supabase_project_url
 REACT_APP_SUPABASE_ANON_KEY=your_supabase_anon_key
 ```
 
-### 4. 데이터베이스 스키마 설정
+### 5. 데이터베이스 스키마 설정
 Supabase 대시보드에서 `supabase_schema.sql` 파일의 내용을 실행하여 데이터베이스 스키마를 생성하세요.
 
-### 5. 애플리케이션 실행
+### 6. 애플리케이션 실행
+
+#### 전체 시스템 실행 (권장)
 ```bash
+# 프론트엔드와 백엔드를 동시에 실행
+npm run start:full
+```
+
+#### 개별 실행
+```bash
+# 프론트엔드만 실행
+npm start
+
+# 백엔드만 실행 (macOS/Linux)
+npm run start:backend
+
+# 백엔드만 실행 (Windows)
+npm run start:backend:win
+```
+
+#### 수동 실행
+```bash
+# 백엔드 서버 (터미널 1)
+./start-backend.sh  # macOS/Linux
+start-backend.bat   # Windows
+
+# 프론트엔드 서버 (터미널 2)
 npm start
 ```
 
 브라우저에서 [http://localhost:3000](http://localhost:3000)을 열어 애플리케이션을 확인하세요.
+백엔드 API는 [http://localhost:3001](http://localhost:3001)에서 실행됩니다.
 
 ## 📊 데이터베이스 구조
 
