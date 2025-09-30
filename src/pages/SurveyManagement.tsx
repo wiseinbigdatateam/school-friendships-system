@@ -85,7 +85,10 @@ const SurveyItem: React.FC<{
                 : "cursor-pointer"
             } ${statusConfig?.color || "bg-gray-100 text-gray-800"}`}
           >
-            <option value="waiting">대기중</option>
+            {/* 조사기간이 지난 경우 대기중 옵션 제거 */}
+            {new Date() <= new Date(survey.end_date) && (
+              <option value="waiting">대기중</option>
+            )}
             <option value="active">진행중</option>
             <option value="completed">완료</option>
           </select>
@@ -1570,14 +1573,22 @@ const SurveyManagement: React.FC = () => {
                   문자 메시지 템플릿
                 </label>
                 <textarea
-                  value={`안녕하세요! ${selectedSurveyForLink.title} 설문에 참여해주세요.\n\n설문 링크: ${window.location.origin}/survey/${selectedSurveyForLink.id}\n\n설문 기간: ${selectedSurveyForLink.start_date} ~ ${selectedSurveyForLink.end_date}\n\n많은 참여 부탁드립니다.`}
+                  value={`안녕하세요 😊
+학교생활에 대한 여러분의 소중한 의견을 듣고자 설문을 준비했어요.
+📌 설문 링크: ${window.location.origin}/survey/${selectedSurveyForLink.id} 
+🗓 참여 기간: ${selectedSurveyForLink.start_date} ~ ${selectedSurveyForLink.end_date}
+여러분의 솔직한 참여가 더 나은 학교생활을 만드는 데 큰 도움이 됩니다!`}
                   rows={7}
                   className="w-full resize-none rounded-lg border border-gray-300 bg-gray-50 px-3 py-2 text-sm text-gray-900"
                 />
                 <button
                   onClick={() => {
                     navigator.clipboard.writeText(
-                      `안녕하세요! ${selectedSurveyForLink.title} 설문에 참여해주세요.\n\n설문 링크: ${window.location.origin}/survey/${selectedSurveyForLink.id}\n\n설문 기간: ${selectedSurveyForLink.start_date} ~ ${selectedSurveyForLink.end_date}\n\n많은 참여 부탁드립니다.`,
+                      `안녕하세요 😊
+학교생활에 대한 여러분의 소중한 의견을 듣고자 설문을 준비했어요.
+📌 설문 링크: ${window.location.origin}/survey/${selectedSurveyForLink.id} 
+🗓 참여 기간: ${selectedSurveyForLink.start_date} ~ ${selectedSurveyForLink.end_date}
+여러분의 솔직한 참여가 더 나은 학교생활을 만드는 데 큰 도움이 됩니다!`,
                     );
                     toast.success("메시지가 클립보드에 복사되었습니다!");
                   }}
