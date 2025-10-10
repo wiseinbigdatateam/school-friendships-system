@@ -161,7 +161,7 @@ const NetworkVisualization: React.FC<NetworkVisualizationProps> = ({
         const nodeId = params.nodes[0];
         const node = data.nodes.find((n) => n.id === nodeId);
         if (node) {
-          setSelectedNode(node);
+          // setSelectedNode(node); // 상태 변경으로 인한 재로드 방지
           onNodeClick?.(node);
         }
       }

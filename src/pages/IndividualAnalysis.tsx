@@ -13,6 +13,9 @@ import AIReportDisplay from "../components/AIReportDisplay";
 import { useAuth } from "../contexts/AuthContext";
 import { unifiedNetworkAnalysisService } from "../services/unifiedNetworkAnalysisService";
 import { IndividualAnalysisResult } from "../types/unifiedNetworkTypes";
+import { networkAnalysisService } from "../services/networkAnalysisService";
+import { NetworkAnalysisData } from "../types";
+import TrendComparisonChart from "../components/TrendComparisonChart";
 
 interface Survey {
   id: string;
@@ -150,6 +153,8 @@ const IndividualAnalysis: React.FC = () => {
   const [forceUpdate, setForceUpdate] = useState(0);
   const [unifiedAnalysisResult, setUnifiedAnalysisResult] = useState<IndividualAnalysisResult | null>(null);
   const [unifiedAnalysisLoading, setUnifiedAnalysisLoading] = useState(false);
+  const [networkAnalysisData, setNetworkAnalysisData] = useState<NetworkAnalysisData | null>(null);
+  const [networkAnalysisLoading, setNetworkAnalysisLoading] = useState(false);
 
   // 통합 서비스를 사용한 개별 학생 분석
   const performUnifiedIndividualAnalysis = useCallback(async (surveyId: string, studentId: string) => {
@@ -171,6 +176,66 @@ const IndividualAnalysis: React.FC = () => {
       setUnifiedAnalysisResult(null);
     } finally {
       setUnifiedAnalysisLoading(false);
+    }
+  }, []);
+
+  // 전체 네트워크 분석 수행
+  const performNetworkAnalysis = useCallback(async (surveyId: string) => {
+    try {
+      setNetworkAnalysisLoading(true);
+      console.log(`🔍 전체 네트워크 분석 시작: ${surveyId}`);
+      
+      const result = await networkAnalysisService.analyzeNetwork(surveyId);
+      
+      const networkData: NetworkAnalysisData = {
+        nodes: result.nodes.map((node) => ({
+          ...node,
+          grade: node.grade.toString(),
+          class: node.class.toString(),
+        })),
+        edges: result.edges,
+        metrics: {
+          // 기본 속성들
+          totalConnections: result.metrics?.total_relationships || 0,
+          averageCentrality: result.metrics?.average_degree_centrality || 0,
+          isolatedIndividuals: 0,
+          highCentralityIndividuals: 0,
+          clusterCount: result.metrics?.connected_components || 0,
+
+          // 추가 속성들
+          total_students: result.metrics?.total_students || result.nodes.length,
+          total_relationships: result.metrics?.total_relationships || result.edges.length,
+          total_nodes: result.nodes.length,
+          total_edges: result.edges.length,
+          density: result.metrics?.density || 0,
+          network_density: result.metrics?.density || 0,
+          average_degree: result.metrics?.average_degree || 0,
+          average_path_length: result.metrics?.average_path_length || 0,
+          clustering_coefficient: result.metrics?.clustering_coefficient || 0,
+          modularity: result.metrics?.modularity || 0,
+          connected_components: result.metrics?.connected_components || 0,
+          average_degree_centrality: result.metrics?.average_degree_centrality || 0,
+          average_closeness_centrality: result.metrics?.average_closeness_centrality || 0,
+          average_betweenness_centrality: result.metrics?.average_betweenness_centrality || 0,
+          average_eigenvector_centrality: result.metrics?.average_eigenvector_centrality || 0,
+        },
+        friendship_types: result.friendship_type_distribution || {
+          외톨이형: 0,
+          "소수 친구 학생": 0,
+          "평균적인 학생": 0,
+          "친구 많은 학생": 0,
+          "사교 스타": 0,
+        },
+      };
+      
+      setNetworkAnalysisData(networkData);
+      console.log(`✅ 전체 네트워크 분석 완료: ${surveyId}`);
+      
+    } catch (error) {
+      console.error("❌ 전체 네트워크 분석 오류:", error);
+      setNetworkAnalysisData(null);
+    } finally {
+      setNetworkAnalysisLoading(false);
     }
   }, []);
 
@@ -240,6 +305,22 @@ const IndividualAnalysis: React.FC = () => {
     console.log("📊 현재 surveyResponseCounts:", surveyResponseCounts);
   }, [forceUpdate, surveyResponseCounts]);
 
+  // 선택된 학생이 변경될 때 개별 네트워크 데이터 생성
+  useEffect(() => {
+    if (selectedStudent && selectedSurvey) {
+      console.log("선택된 학생 변경됨, 개별 네트워크 데이터 생성:", selectedStudent);
+      generateIndividualNetworkData(selectedStudent, selectedSurvey.id);
+    }
+  }, [selectedStudent, selectedSurvey]);
+
+  // 네트워크 분석 데이터가 로드되면 학생 상태 업데이트를 위한 강제 리렌더링
+  useEffect(() => {
+    if (networkAnalysisData) {
+      console.log("네트워크 분석 데이터 로드됨, 학생 상태 업데이트:", networkAnalysisData);
+      setForceUpdate(prev => prev + 1);
+    }
+  }, [networkAnalysisData]);
+
   // 학생 선택 시 통합 분석 수행
   useEffect(() => {
     console.log(`🔄 useEffect 트리거: selectedStudent=${selectedStudent}, selectedSurvey=${selectedSurvey?.id}`);
@@ -248,6 +329,14 @@ const IndividualAnalysis: React.FC = () => {
       performUnifiedIndividualAnalysis(selectedSurvey.id, selectedStudent);
     }
   }, [selectedStudent, selectedSurvey, performUnifiedIndividualAnalysis]);
+
+  // 설문 선택 시 전체 네트워크 분석 수행
+  useEffect(() => {
+    if (selectedSurvey) {
+      console.log(`🔄 전체 네트워크 분석 트리거: selectedSurvey=${selectedSurvey.id}`);
+      performNetworkAnalysis(selectedSurvey.id);
+    }
+  }, [selectedSurvey, performNetworkAnalysis]);
 
   const fetchCurrentUser = async () => {
     try {
@@ -541,39 +630,108 @@ const IndividualAnalysis: React.FC = () => {
     });
   };
 
-  // StudentManagement.tsx에서 가져온 위험도 관련 함수들
-  const getRiskLevel = (student: Student) => {
-    if (!student.network_metrics) return "low";
+  // 학생 유형별 분류 함수들
+  const getStudentType = (student: Student) => {
+    // 전체 네트워크 분석 데이터에서 해당 학생의 유형 찾기 (우선순위 1)
+    if (networkAnalysisData) {
+      const networkNode = networkAnalysisData.nodes.find(n => n.id === student.id);
+      if (networkNode && networkNode.friendship_type) {
+        switch (networkNode.friendship_type) {
+          case "외톨이형": return "isolated";
+          case "소수 친구 학생": return "few_friends";
+          case "평균적인 학생": return "average";
+          case "친구 많은 학생": return "many_friends";
+          case "사교 스타": return "social_star";
+        }
+      }
+    }
 
-    // 지도 리포트와 동일한 방식으로 위험도 계산
-    const centrality =
-      student.network_metrics.centrality_scores?.centrality ||
-      student.network_metrics.centrality_scores?.degree ||
-      0;
-    if (centrality < 0.3) return "high";
-    if (centrality < 0.6) return "medium";
-    return "low";
+    // 네트워크 메트릭이 있으면 사용 (우선순위 2)
+    if (student.network_metrics) {
+      const centrality =
+        student.network_metrics.centrality_scores?.centrality ||
+        student.network_metrics.centrality_scores?.degree ||
+        0;
+      
+      const totalStudents = students.length;
+      const maxPossibleConnections = totalStudents - 1;
+      const normalizedCentrality = centrality / Math.max(maxPossibleConnections, 1);
+      
+      if (normalizedCentrality < 0.1) return "isolated";      // 외톨이형
+      if (normalizedCentrality < 0.3) return "few_friends";   // 소수 친구 학생
+      if (normalizedCentrality < 0.6) return "average";       // 평균적인 학생
+      if (normalizedCentrality < 0.8) return "many_friends";  // 친구 많은 학생
+      return "social_star";                                    // 사교 스타
+    }
+
+    // 개별 네트워크 데이터에서 계산 (우선순위 3)
+    if (individualNetworkData.length > 0) {
+      const studentData = individualNetworkData.find(s => s.id === student.id);
+      if (studentData) {
+        const totalStudents = individualNetworkData.length;
+        const maxPossibleConnections = totalStudents - 1;
+        const normalizedCentrality = studentData.friendCount / Math.max(maxPossibleConnections, 1);
+        
+        if (normalizedCentrality < 0.1) return "isolated";
+        if (normalizedCentrality < 0.3) return "few_friends";
+        if (normalizedCentrality < 0.6) return "average";
+        if (normalizedCentrality < 0.8) return "many_friends";
+        return "social_star";
+      }
+    }
+
+    // 기본값: 평균적인 학생
+    return "average";
   };
 
-  const getRiskColor = (risk: string) => {
-    switch (risk) {
-      case "high":
-        return "bg-red-100 text-red-800";
-      case "medium":
-        return "bg-yellow-100 text-yellow-800";
+  const getStudentTypeColor = (type: string) => {
+    switch (type) {
+      case "isolated":
+        return "text-white"; // #FF6B6B 외톨이형
+      case "few_friends":
+        return "text-white"; // #4ECDC4 소수 친구 학생
+      case "average":
+        return "text-white"; // #45B7D1 평균적인 학생
+      case "many_friends":
+        return "text-white"; // #96CEB4 친구 많은 학생
+      case "social_star":
+        return "text-gray-800"; // #FFEAA7 사교 스타
       default:
-        return "bg-green-100 text-green-800";
+        return "bg-gray-100 text-gray-800";
     }
   };
 
-  const getRiskLabel = (risk: string) => {
-    switch (risk) {
-      case "high":
-        return "주의 필요";
-      case "medium":
-        return "관찰 중";
+  const getStudentTypeBgColor = (type: string) => {
+    switch (type) {
+      case "isolated":
+        return "#FF6B6B"; // 외톨이형 - 빨간색
+      case "few_friends":
+        return "#4ECDC4"; // 소수 친구 학생 - 청록색
+      case "average":
+        return "#45B7D1"; // 평균적인 학생 - 파란색
+      case "many_friends":
+        return "#96CEB4"; // 친구 많은 학생 - 민트색
+      case "social_star":
+        return "#FFEAA7"; // 사교 스타 - 노란색
       default:
-        return "안정";
+        return "#94a3b8";
+    }
+  };
+
+  const getStudentTypeLabel = (type: string) => {
+    switch (type) {
+      case "isolated":
+        return "외톨이형";
+      case "few_friends":
+        return "소수 친구 학생";
+      case "average":
+        return "평균적인 학생";
+      case "many_friends":
+        return "친구 많은 학생";
+      case "social_star":
+        return "사교 스타";
+      default:
+        return "평균적인 학생";
     }
   };
 
@@ -635,17 +793,24 @@ const IndividualAnalysis: React.FC = () => {
       const maxSelections = metadata?.max_selections || [];
       setMaxSelections(maxSelections);
 
-      // 5. 개별 학생의 친구 관계 추출
+      // 5. 모든 학생들의 응답을 조회하여 양방향 관계 고려
+      const { data: allResponses, error: allResponsesError } = await supabase
+        .from("survey_responses")
+        .select("*")
+        .eq("survey_id", surveyId);
+
+      if (allResponsesError) throw allResponsesError;
+
       const studentMap = new Map(studentsData.map((s) => [s.id, s]));
       const selectedFriends = new Set<string>();
 
+      // 선택된 학생의 응답에서 친구 추출 (선택된 학생이 선택한 친구)
       if (studentResponse && studentResponse.responses) {
         const answers =
           typeof studentResponse.responses === "string"
             ? JSON.parse(studentResponse.responses)
             : studentResponse.responses;
 
-        // 질문별로 선택한 친구들 수집
         Object.entries(answers).forEach(
           ([questionKey, answer]: [string, any]) => {
             const questionIndex = parseInt(questionKey.replace("q", "")) - 1;
@@ -675,8 +840,45 @@ const IndividualAnalysis: React.FC = () => {
         );
       }
 
+      // 다른 학생들의 응답에서 선택된 학생을 선택한 경우도 추가 (양방향 관계)
+      allResponses?.forEach((response) => {
+        if (response.student_id !== studentId && response.responses) {
+          const answers =
+            typeof response.responses === "string"
+              ? JSON.parse(response.responses)
+              : response.responses;
+
+          Object.entries(answers).forEach(
+            ([questionKey, answer]: [string, any]) => {
+              const questionIndex = parseInt(questionKey.replace("q", "")) - 1;
+              const maxSelection = maxSelections[questionIndex] || 10;
+
+              if (Array.isArray(answer)) {
+                const limitedAnswers = answer.slice(0, maxSelection);
+                if (limitedAnswers.includes(studentId) && response.student_id) {
+                  selectedFriends.add(response.student_id);
+                }
+              } else if (answer === studentId && maxSelection >= 1 && response.student_id) {
+                selectedFriends.add(response.student_id);
+              }
+            },
+          );
+        }
+      });
+
       // 6. 개별 네트워크 데이터 생성 (선택된 학생 + 선택한 친구들만)
       const individualNetworkData = [];
+
+      // 전체 네트워크 분석 데이터에서 friendship_type 가져오기
+      const getFriendshipTypeFromNetwork = (studentId: string) => {
+        if (networkAnalysisData) {
+          const networkNode = networkAnalysisData.nodes.find(n => n.id === studentId);
+          if (networkNode && networkNode.friendship_type) {
+            return networkNode.friendship_type;
+          }
+        }
+        return "평균적인 학생"; // 기본값
+      };
 
       // 선택된 학생 추가
       individualNetworkData.push({
@@ -687,6 +889,7 @@ const IndividualAnalysis: React.FC = () => {
         friends: Array.from(selectedFriends),
         friendCount: selectedFriends.size,
         isCenter: true, // 중심 학생 표시
+        friendship_type: getFriendshipTypeFromNetwork(selectedStudentData.id), // 전체 네트워크 데이터에서 가져오기
       });
 
       // 선택한 친구들 추가
@@ -701,6 +904,7 @@ const IndividualAnalysis: React.FC = () => {
             friends: [selectedStudentData.id], // 선택된 학생과의 관계만
             friendCount: 1,
             isCenter: false,
+            friendship_type: getFriendshipTypeFromNetwork(friendId), // 전체 네트워크 데이터에서 가져오기
           });
         }
       });
@@ -716,7 +920,7 @@ const IndividualAnalysis: React.FC = () => {
       console.error("Error in generateIndividualNetworkData:", error);
       return [];
     }
-  }, [students]);
+  }, [students, networkAnalysisData]);
 
   // 학생 또는 설문 선택 시 네트워크 데이터 생성
   useEffect(() => {
@@ -1195,11 +1399,12 @@ const IndividualAnalysis: React.FC = () => {
                           {index + 1}번) {student.name}
                         </span>
                         <span
-                          className={`rounded-full px-2 py-1 text-xs font-medium ${getRiskColor(
-                            getRiskLevel(student)
+                          className={`rounded-full px-2 py-1 text-xs font-medium ${getStudentTypeColor(
+                            getStudentType(student)
                           )}`}
+                          style={{ backgroundColor: getStudentTypeBgColor(getStudentType(student)) }}
                         >
-                          {getRiskLabel(getRiskLevel(student))}
+                          {getStudentTypeLabel(getStudentType(student))}
                         </span>
                       </div>
                       {selectedStudent === student.id && (
@@ -1662,6 +1867,103 @@ const IndividualAnalysis: React.FC = () => {
                     </div>
                   )}
 
+                  {/* 전체 네트워크 분석 결과 */}
+                  {networkAnalysisData && (
+                    <div className="rounded-lg border border-gray-200 bg-white p-6">
+                      <h3 className="mb-4 text-lg font-semibold text-gray-900">
+                        학급 전체 교우관계 분석
+                      </h3>
+                      
+                      {/* 교우관계 유형 분포 */}
+                      <div className="mb-6">
+                        <h4 className="mb-3 font-medium text-gray-900">교우관계 유형 분포</h4>
+                        <div className="grid grid-cols-2 gap-4 md:grid-cols-5">
+                          <div className="text-center">
+                            <div className="text-2xl font-bold" style={{ color: "#FF6B6B" }}>
+                              {networkAnalysisData.friendship_types.외톨이형 || 0}
+                            </div>
+                            <div className="text-sm text-gray-600">외톨이형</div>
+                          </div>
+                          <div className="text-center">
+                            <div className="text-2xl font-bold" style={{ color: "#4ECDC4" }}>
+                              {networkAnalysisData.friendship_types["소수 친구 학생"] || 0}
+                            </div>
+                            <div className="text-sm text-gray-600">소수 친구 학생</div>
+                          </div>
+                          <div className="text-center">
+                            <div className="text-2xl font-bold" style={{ color: "#45B7D1" }}>
+                              {networkAnalysisData.friendship_types["평균적인 학생"] || 0}
+                            </div>
+                            <div className="text-sm text-gray-600">평균적인 학생</div>
+                          </div>
+                          <div className="text-center">
+                            <div className="text-2xl font-bold" style={{ color: "#96CEB4" }}>
+                              {networkAnalysisData.friendship_types["친구 많은 학생"] || 0}
+                            </div>
+                            <div className="text-sm text-gray-600">친구 많은 학생</div>
+                          </div>
+                          <div className="text-center">
+                            <div className="text-2xl font-bold" style={{ color: "#FFEAA7" }}>
+                              {networkAnalysisData.friendship_types["사교 스타"] || 0}
+                            </div>
+                            <div className="text-sm text-gray-600">사교 스타</div>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* 네트워크 메트릭 */}
+                      <div className="mb-6">
+                        <h4 className="mb-3 font-medium text-gray-900">네트워크 구조 지표</h4>
+                        <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
+                          <div className="text-center">
+                            <div className="text-xl font-bold text-blue-600">
+                              {(networkAnalysisData.metrics.network_density * 100).toFixed(1)}%
+                            </div>
+                            <div className="text-sm text-gray-600">네트워크 밀도</div>
+                          </div>
+                          <div className="text-center">
+                            <div className="text-xl font-bold text-green-600">
+                              {networkAnalysisData.metrics.average_degree.toFixed(1)}
+                            </div>
+                            <div className="text-sm text-gray-600">평균 연결 수</div>
+                          </div>
+                          <div className="text-center">
+                            <div className="text-xl font-bold text-purple-600">
+                              {networkAnalysisData.metrics.connected_components}
+                            </div>
+                            <div className="text-sm text-gray-600">연결 그룹 수</div>
+                          </div>
+                          <div className="text-center">
+                            <div className="text-xl font-bold text-orange-600">
+                              {networkAnalysisData.metrics.clustering_coefficient.toFixed(3)}
+                            </div>
+                            <div className="text-sm text-gray-600">클러스터링 계수</div>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* 전체 통계 요약 */}
+                      <div className="rounded-lg bg-gray-50 p-4">
+                        <h4 className="mb-2 font-medium text-gray-900">학급 전체 요약</h4>
+                        <div className="grid grid-cols-1 gap-2 text-sm text-gray-600 md:grid-cols-3">
+                          <div>• 총 학생 수: {networkAnalysisData.metrics.total_students}명</div>
+                          <div>• 총 관계 수: {networkAnalysisData.metrics.total_relationships}개</div>
+                          <div>• 평균 중심성: {(networkAnalysisData.metrics.average_degree_centrality * 100).toFixed(1)}%</div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* 전체 네트워크 분석 로딩 상태 */}
+                  {networkAnalysisLoading && (
+                    <div className="rounded-lg border border-gray-200 bg-white p-6">
+                      <div className="flex items-center justify-center py-8">
+                        <div className="mr-4 h-8 w-8 animate-spin rounded-full border-b-2 border-blue-600"></div>
+                        <p className="text-gray-600">전체 네트워크 분석을 수행하는 중...</p>
+                      </div>
+                    </div>
+                  )}
+
                   {/* 개인별 요약 - 핵심결과 탭에서만 표시 */}
                   {activeTab === "core" && (
                     <div className="rounded-lg border border-gray-200 bg-white p-6">
@@ -1694,7 +1996,7 @@ const IndividualAnalysis: React.FC = () => {
                             let isolationRiskLevel = "보통";
                             let socialInfluenceLevel = "보통";
                             let communityId = 0;
-                            let friendshipType = "일반형";
+                            let friendshipType = "평균적인 학생";
                             let recommendations = null;
                             
                             // 네트워크 분석 결과가 있으면 실제 데이터 사용
@@ -1721,7 +2023,7 @@ const IndividualAnalysis: React.FC = () => {
                               communityId = networkMetrics.community_id || 0;
                               
                               // 친구관계 유형 사용
-                              friendshipType = networkMetrics.friendship_type || "일반형";
+                              friendshipType = networkMetrics.friendship_type || "평균적인 학생";
                               
                               // Python 분석 결과에서 추천사항 가져오기
                               if (pythonAnalysisResult && pythonAnalysisResult.recommendations) {

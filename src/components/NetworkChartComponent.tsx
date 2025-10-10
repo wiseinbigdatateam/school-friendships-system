@@ -9,11 +9,24 @@ import {
 interface NetworkChartComponentProps {
   chartData: NetworkAnalysisData[];
   activeTab: number;
+  onNodeClick?: (node: any) => void;
+  selectedStudentData?: {
+    id: string;
+    name: string;
+    grade: string;
+    class: string;
+    friendship_type: string;
+    centrality: number;
+    degree: number;
+    connection_count: number;
+  } | null;
 }
 
 const NetworkChartComponent: React.FC<NetworkChartComponentProps> = ({
   chartData,
   activeTab,
+  onNodeClick,
+  selectedStudentData,
 }) => {
   const [firstGraphData, setFirstGraphData] =
     useState<NetworkAnalysisData | null>(null);
@@ -64,7 +77,7 @@ const NetworkChartComponent: React.FC<NetworkChartComponentProps> = ({
           </p>
 
           <div className="relative">
-            <NetworkVisualization data={getNetworkData(firstGraphData)} />
+            <NetworkVisualization data={getNetworkData(firstGraphData)} onNodeClick={onNodeClick} />
           </div>
 
           {/* 기본 통계 정보 */}
@@ -96,6 +109,49 @@ const NetworkChartComponent: React.FC<NetworkChartComponentProps> = ({
           {/* 단일 설문일 때만 안정성 지표와 학생 유형별 수 표시 */}
           {!secondGraphData && (
             <>
+              {/* 선택된 학생 정보 섹션 */}
+              {selectedStudentData && (
+                <div className="mt-8 rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
+                  <h3 className="mb-4 text-xl font-semibold text-gray-900">
+                    선택된 학생 정보
+                  </h3>
+                  <p className="mb-6 text-sm text-gray-600">
+                    네트워크 그래프에서 클릭한 학생의 상세 정보를 확인할 수 있습니다.
+                  </p>
+                  
+                  <div className="rounded-lg bg-blue-50 p-6">
+                    <div className="flex flex-wrap items-center justify-center gap-6">
+                      <div className="flex items-center space-x-2">
+                        <span className="text-sm font-medium text-gray-600">이름:</span>
+                        <span className="text-lg font-semibold text-gray-900">{selectedStudentData.name}</span>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <div 
+                          className="h-4 w-4 rounded-full"
+                          style={{
+                            backgroundColor: selectedStudentData.friendship_type === "외톨이형" ? "#FF6B6B" :
+                                            selectedStudentData.friendship_type === "소수 친구 학생" ? "#4ECDC4" :
+                                            selectedStudentData.friendship_type === "평균적인 학생" ? "#45B7D1" :
+                                            selectedStudentData.friendship_type === "친구 많은 학생" ? "#96CEB4" :
+                                            selectedStudentData.friendship_type === "사교 스타" ? "#FFEAA7" : "#45B7D1"
+                          }}
+                        ></div>
+                        <span className="text-sm font-medium text-gray-600">유형:</span>
+                        <span className="text-lg font-semibold text-gray-900">{selectedStudentData.friendship_type || "평균적인 학생"}</span>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <span className="text-sm font-medium text-gray-600">연결 수:</span>
+                        <span className="text-lg font-semibold text-gray-900">{selectedStudentData.connection_count || 0}명</span>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <span className="text-sm font-medium text-gray-600">연결 정도:</span>
+                        <span className="text-lg font-semibold text-gray-900">{((selectedStudentData.centrality || 0) * 100).toFixed(1)}%</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               {/* 학급 친구 관계 안정성 지표 */}
               <div className="mt-8 rounded-lg bg-white p-6">
                 <h4 className="mb-4 text-lg font-medium text-gray-900">
@@ -283,7 +339,7 @@ const NetworkChartComponent: React.FC<NetworkChartComponentProps> = ({
           </p>
 
           <div className="relative">
-            <NetworkVisualization data={getNetworkData(secondGraphData)} />
+            <NetworkVisualization data={getNetworkData(secondGraphData)} onNodeClick={onNodeClick} />
           </div>
 
           {/* 기본 통계 정보 */}

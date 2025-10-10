@@ -1,13 +1,11 @@
 // 분석 - 교우현황 페이지 (ResultMonitoring 구조 참고)
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
+import { supabase } from "../lib/supabase";
 import NetworkChartComponent from "../components/NetworkChartComponent";
 import {
-  NetworkNode,
-  NetworkEdge,
   NetworkAnalysisData,
   NetworkMetrics,
 } from "../types";
-import { SurveyService, SurveyWithStats } from "../services/surveyService";
 import { useAuth } from "../contexts/AuthContext";
 import { networkAnalysisService } from "../services/networkAnalysisService";
 
@@ -17,112 +15,289 @@ interface SurveyProject {
   created_at: string;
   status: "ready" | "progress" | "completed";
   response_count?: number;
+  template_category?: string;
 }
 
 const NetworkAnalysisPage: React.FC = () => {
   const { user } = useAuth();
   const [loading, setLoading] = useState(true);
+  const [teacherInfo, setTeacherInfo] = useState<any>(null);
 
-  // 프로젝트 리스트 데이터 (실제로는 API에서 가져올 데이터)
+  // 프로젝트 리스트 데이터
   const [projectsData, setProjectsData] = useState<SurveyProject[]>([]);
 
-  // Drag & Drop 관련 (클릭 기반으로 변경)
+  // 클릭 기반 선택
   const [draggableItems, setDraggableItems] = useState<SurveyProject[]>([]);
   const [selectedItems, setSelectedItems] = useState<SurveyProject[]>([]);
 
   // ChartComponent 컴포넌트에 props전달할 데이터
   const [chartData, setChartData] = useState<NetworkAnalysisData[]>([]);
-  const [selectedData, setSelectedData] = useState<SurveyProject[]>([]);
 
   // 탭 컴포넌트에 전달할 데이터
   const [activeTab, setActiveTab] = useState(1);
+  
+  // 설문별 응답자 수
+  const [surveyResponseCounts, setSurveyResponseCounts] = useState<{[key: string]: number}>({});
+  const [forceUpdate, setForceUpdate] = useState(0);
+  
+  // 선택된 학생 상태
+  const [selectedStudentData, setSelectedStudentData] = useState<any>(null);
 
-  // 초기 데이터 설정
+  // 날짜 포맷팅 함수
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString("ko-KR", {
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    });
+  };
+
+
+  // 노드 클릭 핸들러 - 학생 정보만 표시
+  const handleNodeClick = useCallback((node: any) => {
+    console.log("노드 클릭됨:", node);
+    const studentId = node.id;
+    
+    // 해당 학생의 데이터 찾기
+    const studentData = chartData[activeTab - 1]?.nodes.find((n: any) => n.id === studentId);
+    if (studentData) {
+      console.log("선택된 학생 데이터:", studentData);
+      
+      // 학생 정보만 설정 (네트워크 데이터 생성하지 않음)
+      setSelectedStudentData({
+        id: studentData.id,
+        name: studentData.name,
+        grade: studentData.grade,
+        class: studentData.class,
+        friendship_type: studentData.friendship_type,
+        centrality: studentData.centrality || 0,
+        degree: (studentData as any).degree || 0,
+        connection_count: studentData.connection_count || 0
+      });
+    }
+  }, [chartData, activeTab]);
+
+  // 설문별 응답자 수 계산 함수
+  const calculateResponseCounts = async (surveys: any[]) => {
+    console.log("📊 응답자 수 계산 시작:", surveys.length, "개 설문");
+    
+    const counts: {[key: string]: number} = {};
+    
+    try {
+      const surveyIds = surveys.map(survey => survey.id);
+      console.log("🔍 조회할 설문 ID들:", surveyIds);
+      
+      const { data, error } = await supabase
+        .from("survey_responses")
+        .select("survey_id")
+        .in("survey_id", surveyIds);
+      
+      if (error) {
+        console.error("❌ 응답자 수 조회 오류:", error);
+        return;
+      }
+      
+      console.log("📋 조회된 응답 데이터 개수:", data?.length || 0);
+      
+      surveyIds.forEach(surveyId => {
+        const responseCount = data?.filter(response => response.survey_id === surveyId).length || 0;
+        counts[surveyId] = responseCount;
+        console.log(`✅ 설문 ${surveyId} 응답 수: ${responseCount}명`);
+      });
+      
+      setSurveyResponseCounts(counts);
+      setForceUpdate(prev => prev + 1);
+      console.log("✅ 응답자 수 계산 완료");
+      
+    } catch (error) {
+      console.error("❌ 응답자 수 계산 중 오류:", error);
+    }
+  };
+
+  // 사용자 정보 조회
+  useEffect(() => {
+    const fetchCurrentUser = async () => {
+      try {
+        if (!user) return;
+        
+        const { data: teacherData, error: teacherError } = await supabase
+          .from("users")
+          .select("*")
+          .eq("id", user.id)
+          .single();
+
+        if (teacherError) throw teacherError;
+        setTeacherInfo(teacherData);
+
+        console.log("🔍 NetworkAnalysisPage 사용자 정보 설정 완료:", teacherData);
+      } catch (error) {
+        console.error("사용자 정보 조회 오류:", error);
+      }
+    };
+
+    fetchCurrentUser();
+  }, [user]);
+
+  // 설문 조회
   useEffect(() => {
     const fetchSurveys = async () => {
-      if (!user?.school_id) {
-        console.error("사용자 학교 ID가 없습니다.");
+      if (!teacherInfo) {
+        console.log("교사 정보가 없습니다.");
         setLoading(false);
         return;
       }
 
       try {
         setLoading(true);
-        console.log("🔍 설문 데이터 조회 시작:", {
-          schoolId: user.school_id,
-          userRole: user.role,
-          gradeLevel: user.grade,
-          classNumber: user.class,
+        console.log("🔍 NetworkAnalysisPage 설문 조회 시작:", {
+          userId: teacherInfo.id,
+          userRole: teacherInfo.role,
+          schoolId: teacherInfo.school_id,
+          gradeLevel: teacherInfo.grade_level,
+          classNumber: teacherInfo.class_number
         });
 
-        let surveys;
+        // 설문 템플릿에서 교우관계 또는 종합조사 템플릿 찾기
+        const { data: templates, error: templateError } = await supabase
+          .from("survey_templates")
+          .select("id, name, metadata")
+          .eq("is_active", true);
 
-        // 사용자 역할에 따라 다른 방식으로 설문 조회
-        if (user.role === "homeroom_teacher" && user.grade && user.class) {
-          // 담임선생님인 경우: 담당 학년/반의 설문만 조회
-          console.log("🔍 담임선생님 - 담당 학년/반 설문 조회:", {
-            grade: user.grade,
-            class: user.class,
-          });
-
-          surveys = await SurveyService.getSurveysBySchoolGradeClass(
-            user.school_id,
-            user.grade,
-            user.class,
-          );
-
-          // 완료된 설문만 필터링
-          surveys = surveys.filter((survey) => survey.status === "completed");
-        } else {
-          // 관리자나 다른 역할인 경우: 학교의 모든 완료된 설문 조회
-          console.log("🔍 관리자/기타 역할 - 전체 설문 조회");
-          surveys = await SurveyService.getSurveysByStatus(
-            user.school_id,
-            "completed",
-          );
+        if (templateError) {
+          console.error("Template error:", templateError);
+          throw templateError;
         }
 
-        // 교우관계 카테고리만 필터링 (키워드 기반)
-        surveys = surveys.filter((survey) => {
-          const title = survey.title?.toLowerCase() || "";
-          const description = survey.description?.toLowerCase() || "";
-          return (
-            title.includes("교우관계") ||
-            title.includes("친구") ||
-            title.includes("관계") ||
-            description.includes("교우관계") ||
-            description.includes("친구") ||
-            description.includes("관계")
-          );
-        });
+        // 교우관계 또는 종합조사 템플릿 ID들
+        const analysisTemplateIds = templates
+          .filter((template: any) => {
+            const metadata = template.metadata;
+            return metadata && (metadata.category === "교우관계" || metadata.category === "종합조사");
+          })
+          .map((template: any) => template.id);
 
-        console.log("🔍 교우관계 필터링 후 설문:", surveys.length, "개");
+        if (analysisTemplateIds.length === 0) {
+          console.log("분석 가능한 설문 템플릿이 없습니다");
+          setProjectsData([]);
+          setDraggableItems([]);
+          setLoading(false);
+          return;
+        }
 
-        console.log("🔍 조회된 설문 데이터:", surveys);
+        // 템플릿을 사용하는 완료된 설문들 조회
+        let query = supabase
+          .from("surveys")
+          .select(`
+            *,
+            survey_templates!surveys_template_id_fkey(
+              id,
+              name,
+              metadata
+            )
+          `)
+          .in("template_id", analysisTemplateIds)
+          .eq("status", "completed");
 
-        // SurveyWithStats를 SurveyProject 형태로 변환
-        const projectData: SurveyProject[] = surveys.map((survey) => ({
-          pid: survey.id,
-          name: survey.title,
-          created_at: survey.created_at || new Date().toISOString(),
-          status: "completed" as const,
-          response_count: survey.response_count || 0,
-        }));
+        // 학교 ID로 필터링
+        if (teacherInfo.school_id) {
+          query = query.eq("school_id", teacherInfo.school_id);
+          console.log("🏫 학교 ID로 필터링:", teacherInfo.school_id);
+        }
 
-        setProjectsData(projectData);
-        setDraggableItems([...projectData]);
+        // 담임교사인 경우 학년/반으로 필터링
+        if (teacherInfo.role === "homeroom_teacher" && teacherInfo.grade_level && teacherInfo.class_number) {
+          console.log("👨‍🏫 담임교사 - 학년/반 필터링:", {
+            gradeLevel: teacherInfo.grade_level,
+            classNumber: teacherInfo.class_number
+          });
+          
+          const { data: allSurveys, error } = await query.order("created_at", { ascending: false });
+          
+          if (error) {
+            console.error("Survey error:", error);
+            throw error;
+          }
 
-        console.log("✅ 설문 데이터 로드 완료:", projectData);
+          // 학년/반 매칭 필터링
+          const filteredSurveys = allSurveys?.filter((survey: any) => {
+            const targetGrades = survey.target_grades || [];
+            const targetClasses = survey.target_classes || [];
+            
+            const gradeMatch = targetGrades.length === 0 || targetGrades.includes(teacherInfo.grade_level);
+            const classMatch = targetClasses.length === 0 || targetClasses.includes(teacherInfo.class_number);
+            
+            return gradeMatch && classMatch;
+          }) || [];
+
+          console.log("🎯 필터링 후 분석 가능한 설문 개수:", filteredSurveys.length);
+          
+          if (filteredSurveys.length > 0) {
+            // SurveyProject 형태로 변환
+            const projectData: SurveyProject[] = filteredSurveys.map((survey: any) => ({
+              pid: survey.id,
+              name: survey.title,
+              created_at: survey.created_at || new Date().toISOString(),
+              status: "completed" as const,
+              response_count: 0,
+              template_category: survey.survey_templates?.metadata?.category || "분석가능"
+            }));
+
+            setProjectsData(projectData);
+            setDraggableItems([...projectData]);
+            
+            // 응답자 수 계산
+            await calculateResponseCounts(filteredSurveys);
+          } else {
+            setProjectsData([]);
+            setDraggableItems([]);
+          }
+        } else {
+          // 다른 역할의 경우 학교 전체 설문
+          const { data, error } = await query.order("created_at", { ascending: false });
+
+          if (error) {
+            console.error("Survey error:", error);
+            throw error;
+          }
+
+          if (data && data.length > 0) {
+            // SurveyProject 형태로 변환
+            const projectData: SurveyProject[] = data.map((survey: any) => ({
+              pid: survey.id,
+              name: survey.title,
+              created_at: survey.created_at || new Date().toISOString(),
+              status: "completed" as const,
+              response_count: 0,
+              template_category: survey.survey_templates?.metadata?.category || "분석가능"
+            }));
+
+            setProjectsData(projectData);
+            setDraggableItems([...projectData]);
+            
+            // 응답자 수 계산
+            await calculateResponseCounts(data);
+          } else {
+            setProjectsData([]);
+            setDraggableItems([]);
+          }
+        }
       } catch (error) {
-        console.error("❌ 설문 데이터 조회 실패:", error);
-        alert("설문 데이터를 불러오는데 실패했습니다.");
+        console.error("Error fetching surveys:", error);
       } finally {
         setLoading(false);
       }
     };
 
-    fetchSurveys();
-  }, [user?.school_id, user?.role, user?.grade, user?.class]);
+    if (teacherInfo) {
+      fetchSurveys();
+    }
+  }, [teacherInfo]);
+
+  // 강제 리렌더링을 위한 useEffect
+  useEffect(() => {
+    console.log("🔄 강제 리렌더링 발생:", forceUpdate);
+    console.log("📊 현재 surveyResponseCounts:", surveyResponseCounts);
+  }, [forceUpdate, surveyResponseCounts]);
 
   // 프로젝트 선택 (클릭 기반)
   const handleProjectSelect = (project: SurveyProject) => {
@@ -212,10 +387,10 @@ const NetworkAnalysisPage: React.FC = () => {
             } as NetworkMetrics,
             friendship_types: result.friendship_type_distribution || {
               외톨이형: 0,
-              소수친구학생: 0,
-              평균적인학생: 0,
-              친구많은학생: 0,
-              사교스타: 0,
+              "소수 친구 학생": 0,
+              "평균적인 학생": 0,
+              "친구 많은 학생": 0,
+              "사교 스타": 0,
             },
           });
         } catch (error) {
@@ -252,17 +427,16 @@ const NetworkAnalysisPage: React.FC = () => {
             } as NetworkMetrics,
             friendship_types: {
               외톨이형: 0,
-              소수친구학생: 0,
-              평균적인학생: 0,
-              친구많은학생: 0,
-              사교스타: 0,
+              "소수 친구 학생": 0,
+              "평균적인 학생": 0,
+              "친구 많은 학생": 0,
+              "사교 스타": 0,
             },
           });
         }
       }
 
       setChartData(analysisResults);
-      setSelectedData([...selectedItems]);
 
       console.log("✅ 모든 분석 완료:", analysisResults);
     } catch (error) {
@@ -299,11 +473,19 @@ const NetworkAnalysisPage: React.FC = () => {
               학급내{" "}
               <span className="text-[#3F80EA]">교우관계 유형 변화 추이</span>{" "}
               결과 분석
+              {teacherInfo?.role === "homeroom_teacher" && teacherInfo?.grade_level && teacherInfo?.class_number && (
+                <span className="ml-2 text-sm font-normal text-gray-600">
+                  ({teacherInfo.grade_level}학년 {teacherInfo.class_number}반 담임)
+                </span>
+              )}
             </h2>
             <div className="flex items-center space-x-4 text-sm text-gray-600">
               <span>설문프로젝트를 클릭하여 선택해주세요.</span>
               <span className="font-medium text-[#3F80EA]">
                 *최대 2개까지 가능
+              </span>
+              <span className="ml-auto text-xs text-gray-500">
+                총 {projectsData.length}개 설문
               </span>
             </div>
           </div>
@@ -317,24 +499,26 @@ const NetworkAnalysisPage: React.FC = () => {
                 </p>
               ) : draggableItems.length === 0 ? (
                 <p className="text-sm text-gray-500">
-                  {user?.role === "homeroom_teacher"
+                  {teacherInfo?.role === "homeroom_teacher"
                     ? "담당 반의 완료된 교우현황 설문이 없습니다."
                     : "선택할 교우현황 설문이 없습니다."}
                 </p>
               ) : (
                 draggableItems.map((item) => (
-                  <button
+                  <div
                     key={item.pid}
                     onClick={() => handleProjectSelect(item)}
-                    className="cursor-pointer rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium transition-colors duration-200 hover:border-blue-500 hover:text-blue-600"
+                    className="cursor-pointer rounded-lg border border-gray-300 bg-white p-3 transition-colors duration-200 hover:border-blue-500 hover:bg-blue-50"
                   >
-                    {item.name}
-                    {item.response_count && (
-                      <span className="ml-2 text-xs text-gray-500">
-                        ({item.response_count}명 응답)
-                      </span>
-                    )}
-                  </button>
+                    <div className="text-sm font-medium text-gray-900">{item.name}</div>
+                    <div className="mt-1 flex items-center space-x-2 text-xs text-gray-600">
+                      <span>템플릿: {item.template_category || "분석가능"}</span>
+                      <span>•</span>
+                      <span>응답: {surveyResponseCounts[item.pid] || 0}명</span>
+                      <span>•</span>
+                      <span>{formatDate(item.created_at)}</span>
+                    </div>
+                  </div>
                 ))
               )}
             </div>
@@ -408,9 +592,12 @@ const NetworkAnalysisPage: React.FC = () => {
             <NetworkChartComponent
               chartData={chartData}
               activeTab={activeTab}
+              onNodeClick={handleNodeClick}
+              selectedStudentData={selectedStudentData}
             />
           </div>
         )}
+
       </div>
     </div>
   );
