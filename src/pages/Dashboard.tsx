@@ -63,6 +63,8 @@ const Dashboard: React.FC = () => {
   >([]);
   const [students, setStudents] = useState<any[]>([]);
   const [responses, setResponses] = useState<any[]>([]);
+  const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [showGuideModal, setShowGuideModal] = useState(true);
 
   // 상태를 한글로 변환하는 함수
   const getStatusLabel = (status: string): string => {
@@ -88,6 +90,42 @@ const Dashboard: React.FC = () => {
     }
   };
 
+  // 상태 필터에 따른 설문 프로젝트 필터링
+  const filteredSurveyProjects = surveyProjects.filter((project) => {
+    if (statusFilter === "all") return true;
+    return project.status === statusFilter;
+  });
+
+  // 상태 필터 변경 핸들러
+  const handleStatusFilterChange = (newStatusFilter: string) => {
+    setStatusFilter(newStatusFilter);
+    
+    // 필터링된 프로젝트가 있으면 첫 번째 프로젝트를 자동 선택
+    const filteredProjects = surveyProjects.filter((project) => {
+      if (newStatusFilter === "all") return true;
+      return project.status === newStatusFilter;
+    });
+    
+    if (filteredProjects.length > 0) {
+      handleProjectSelect(filteredProjects[0].id);
+    } else {
+      // 필터링된 프로젝트가 없으면 선택 해제 및 데이터 초기화
+      setSelectedProject("");
+      setSurveyProjects(surveyProjects.map(project => ({ ...project, isSelected: false })));
+      
+      // 참여 데이터 초기화
+      setParticipationData({
+        totalStudents: students.length,
+        participatedStudents: 0,
+        nonParticipatedStudents: students.length,
+        completionRate: 0,
+      });
+      setStudentParticipationList([]);
+      setDailyParticipationData([]);
+      setResponses([]);
+    }
+  };
+
   // 설문 프로젝트 선택 핸들러
   const handleProjectSelect = async (projectId: string) => {
     // 모든 프로젝트의 선택 상태 초기화
@@ -98,6 +136,20 @@ const Dashboard: React.FC = () => {
 
     setSurveyProjects(updatedProjects);
     setSelectedProject(projectId);
+
+    // projectId가 없거나 빈 문자열이면 데이터 초기화
+    if (!projectId) {
+      setParticipationData({
+        totalStudents: students.length,
+        participatedStudents: 0,
+        nonParticipatedStudents: students.length,
+        completionRate: 0,
+      });
+      setStudentParticipationList([]);
+      setDailyParticipationData([]);
+      setResponses([]);
+      return;
+    }
 
     // 선택된 설문의 응답 데이터 조회
     if (projectId && students.length > 0) {
@@ -717,6 +769,158 @@ const Dashboard: React.FC = () => {
 
   return (
     <div className="mx-auto min-h-screen max-w-7xl bg-gray-50 px-4 pb-16 sm:px-6 lg:px-8">
+      {/* 사용 가이드 모달 */}
+      {showGuideModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+          <div className="mx-4 w-full max-w-4xl rounded-lg bg-white p-8 shadow-xl">
+            {/* 모달 헤더 */}
+            <div className="mb-6 flex items-center justify-between">
+              <div className="text-center">
+                <h2 className="text-2xl font-bold text-gray-900">
+                  언제든지 교우관계를 파악할 수 있는 와즈온스쿨을 만나보세요
+                </h2>
+                <p className="mt-2 text-gray-600">
+                  번거로움 없이 처음부터 끝까지 클릭만 하세요
+                </p>
+              </div>
+              <button
+                onClick={() => setShowGuideModal(false)}
+                className="rounded-full p-2 text-gray-400 hover:bg-gray-100 hover:text-gray-600"
+              >
+                <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            {/* 모달 내용 */}
+            <div className="grid grid-cols-1 gap-8 lg:grid-cols-2">
+              {/* 왼쪽: 기능 설명 */}
+              <div className="space-y-6">
+                {/* 기능 1 */}
+                <div className="flex items-start space-x-4">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-100">
+                    <svg className="h-5 w-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-gray-900">오늘 설문(교우관계) 시작</h3>
+                    <p className="mt-1 text-sm text-gray-600">
+                      설문 문항 만들지 않음 → 설문템플릿 사용
+                    </p>
+                    <p className="text-sm text-gray-600">
+                      단 1개의 설문으로 교우 만족 폭력 조사
+                    </p>
+                  </div>
+                </div>
+
+                {/* 기능 2 */}
+                <div className="flex items-start space-x-4">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-green-100">
+                    <svg className="h-5 w-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                    </svg>
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-gray-900">설문 진행 응답 현황</h3>
+                    <p className="mt-1 text-sm text-gray-600">
+                      데쉬보드 화면으로 학생들의 참여 관리
+                    </p>
+                  </div>
+                </div>
+
+                {/* 기능 3 */}
+                <div className="flex items-start space-x-4">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-purple-100">
+                    <svg className="h-5 w-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                    </svg>
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-gray-900">분석과 AI로 LLM 가이드 제공</h3>
+                    <p className="mt-1 text-sm text-gray-600">
+                      교우관계 전 후 관계 분석
+                    </p>
+                    <p className="text-sm text-gray-600">
+                      학급 전체와 학생 개인별 분석
+                    </p>
+                  </div>
+                </div>
+
+                {/* 기능 4 */}
+                <div className="flex items-start space-x-4">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-red-100">
+                    <svg className="h-5 w-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                    </svg>
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-gray-900">교권방어에 도움</h3>
+                    <p className="mt-1 text-sm text-gray-600">
+                      데이터 기반 지도 근거 확보
+                    </p>
+                    <p className="text-sm text-gray-600">
+                      허위 신고 차별 주장에 대응 가능
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* 오른쪽: 이미지 미리보기 */}
+              <div className="space-y-4">
+                {/* 상단 이미지 미리보기 */}
+                <div className="rounded-lg border border-gray-200 bg-gray-50 p-4">
+                  <div className="mb-2 text-sm font-medium text-gray-700">학생 관계 학교생활 종합조사</div>
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between text-xs text-gray-600">
+                      <span>번호</span>
+                      <span>이름</span>
+                      <span>참여</span>
+                      <span>최근</span>
+                    </div>
+                    <div className="space-y-1">
+                      <div className="flex items-center justify-between text-xs">
+                        <span>1</span>
+                        <span>김철수</span>
+                        <div className="h-2 w-2 rounded-full bg-green-500"></div>
+                        <span>오늘</span>
+                      </div>
+                      <div className="flex items-center justify-between text-xs">
+                        <span>2</span>
+                        <span>이영희</span>
+                        <div className="h-2 w-2 rounded-full bg-gray-300"></div>
+                        <span>-</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* 하단 이미지 미리보기 */}
+                <div className="rounded-lg border border-gray-200 bg-gray-50 p-4">
+                  <div className="mb-2 text-sm font-medium text-gray-700">1) 종합진단</div>
+                  <div className="text-xs text-gray-600">
+                    <p>• 교우관계 만족도 조사</p>
+                    <p>• 학교생활 적응도 평가</p>
+                    <p>• 사회적 관계 분석</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* 모달 푸터 */}
+            <div className="mt-8 text-center">
+              <button
+                onClick={() => setShowGuideModal(false)}
+                className="rounded-lg bg-blue-600 px-8 py-3 text-white font-medium hover:bg-blue-700 transition-colors"
+              >
+                시작하기
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* 페이지 제목 */}
       <div className="rounded-lg border border-gray-200 bg-white">
         <div className="py-6">
@@ -758,58 +962,91 @@ const Dashboard: React.FC = () => {
           {/* 상단 사이드바 - 설문 프로젝트 목록 */}
           <div className="mb-6 w-full">
             <div className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
-              <h3 className="mb-4 text-lg font-semibold text-gray-900">
-                {currentUser?.role === "school_admin" 
-                  ? `학교 전체 설문 프로젝트 총 ${surveyProjects.length}개`
-                  : currentUser?.role === "grade_teacher" 
-                  ? `${currentUser?.grade_level || gradeLevel}학년 설문 프로젝트 총 ${surveyProjects.length}개`
-                  : currentUser?.role === "homeroom_teacher"
-                  ? `${gradeLevel}학년 ${classNumber}반 설문 프로젝트 총 ${surveyProjects.length}개`
-                  : `설문 프로젝트 총 ${surveyProjects.length}개`}
-              </h3>
-              <div className="flex h-fit w-full gap-2 overflow-x-auto">
-                {surveyProjects.map((project) => (
-                  <div
-                    key={project.id}
-                    className={`h-36 min-w-72 cursor-pointer rounded-lg border p-4 transition-all duration-200 ${
-                      project.isSelected
-                        ? "border-blue-500 bg-blue-50 shadow-md"
-                        : "border-gray-200 hover:border-gray-300 hover:shadow-sm"
-                    }`}
-                    onClick={() => handleProjectSelect(project.id)}
+              <div className="mb-4 flex items-center justify-between">
+                <h3 className="text-lg font-semibold text-gray-900">
+                  {currentUser?.role === "school_admin" 
+                    ? `학교 전체 설문 프로젝트 총 ${surveyProjects.length}개`
+                    : currentUser?.role === "grade_teacher" 
+                    ? `${currentUser?.grade_level || gradeLevel}학년 설문 프로젝트 총 ${surveyProjects.length}개`
+                    : currentUser?.role === "homeroom_teacher"
+                    ? `${gradeLevel}학년 ${classNumber}반 설문 프로젝트 총 ${surveyProjects.length}개`
+                    : `설문 프로젝트 총 ${surveyProjects.length}개`}
+                </h3>
+                
+                {/* 상태 필터 드롭다운 */}
+                <div className="flex items-center space-x-2">
+                  <label className="text-sm font-medium text-gray-700">
+                    상태:
+                  </label>
+                  <select
+                    value={statusFilter}
+                    onChange={(e) => handleStatusFilterChange(e.target.value)}
+                    className="rounded-lg border border-gray-300 px-3 py-1 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
                   >
-                    <div className="mb-2 flex items-start justify-between">
-                      <h3
-                        className={`w-3/4 truncate text-sm font-medium ${
-                          project.isSelected ? "text-blue-900" : "text-gray-900"
-                        }`}
-                      >
-                        {project.title}
-                      </h3>
-                      <span
-                        className={`rounded-full px-2 py-1 text-xs ${getStatusStyle(
-                          project.status,
-                        )}`}
-                      >
-                        {getStatusLabel(project.status)}
-                      </span>
-                    </div>
-
-                    <div className="space-y-1 text-xs text-gray-600">
-                      <p>{project.templateType}</p>
-                      <p>생성일: {project.date}</p>
-                    </div>
-
-                    {project.isSelected && (
-                      <div className="mt-3 border-t border-blue-200 pt-2">
-                        <div className="flex items-center text-xs text-blue-600">
-                          <div className="mr-2 h-2 w-2 rounded-full bg-blue-500"></div>
-                          선택됨
-                        </div>
+                    <option value="all">전체</option>
+                    <option value="active">진행중</option>
+                    <option value="completed">완료</option>
+                  </select>
+                </div>
+              </div>
+              <div className="flex h-fit w-full gap-2 overflow-x-auto">
+                {filteredSurveyProjects.length > 0 ? (
+                  filteredSurveyProjects.map((project) => (
+                    <div
+                      key={project.id}
+                      className={`h-36 min-w-72 cursor-pointer rounded-lg border p-4 transition-all duration-200 ${
+                        project.isSelected
+                          ? "border-blue-500 bg-blue-50 shadow-md"
+                          : "border-gray-200 hover:border-gray-300 hover:shadow-sm"
+                      }`}
+                      onClick={() => handleProjectSelect(project.id)}
+                    >
+                      <div className="mb-2 flex items-start justify-between">
+                        <h3
+                          className={`w-3/4 truncate text-sm font-medium ${
+                            project.isSelected ? "text-blue-900" : "text-gray-900"
+                          }`}
+                        >
+                          {project.title}
+                        </h3>
+                        <span
+                          className={`rounded-full px-2 py-1 text-xs ${getStatusStyle(
+                            project.status,
+                          )}`}
+                        >
+                          {getStatusLabel(project.status)}
+                        </span>
                       </div>
-                    )}
+
+                      <div className="space-y-1 text-xs text-gray-600">
+                        <p>{project.templateType}</p>
+                        <p>생성일: {project.date}</p>
+                      </div>
+
+                      {project.isSelected && (
+                        <div className="mt-3 border-t border-blue-200 pt-2">
+                          <div className="flex items-center text-xs text-blue-600">
+                            <div className="mr-2 h-2 w-2 rounded-full bg-blue-500"></div>
+                            선택됨
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  ))
+                ) : (
+                  <div className="flex h-36 w-full items-center justify-center text-gray-500">
+                    <div className="text-center">
+                      <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                      </svg>
+                      <p className="mt-2 text-sm">
+                        {statusFilter === "all" 
+                          ? "설문 프로젝트가 없습니다" 
+                          : `${getStatusLabel(statusFilter)} 상태의 설문이 없습니다`}
+                      </p>
+                    </div>
                   </div>
-                ))}
+                )}
               </div>
             </div>
           </div>

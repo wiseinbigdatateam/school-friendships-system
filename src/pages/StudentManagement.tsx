@@ -1237,7 +1237,7 @@ const StudentManagement: React.FC = () => {
 
   const handleSaveMemo = async () => {
     if (!selectedStudent || !newMemoContent.trim()) {
-      toast.error("메모 내용을 입력해주세요.");
+      toast.error("상담 내용을 입력해주세요.");
       return;
     }
 
@@ -1287,13 +1287,13 @@ const StudentManagement: React.FC = () => {
         setSelectedStudent(updatedStudent);
       }
 
-      toast.success("메모가 성공적으로 저장되었습니다.");
+      toast.success("상담 기록이 성공적으로 저장되었습니다.");
       setMemoModalOpen(false);
       setNewMemoContent("");
       setSelectedStudent(null);
     } catch (error) {
       console.error("메모 저장 오류:", error);
-      toast.error("메모 저장 중 오류가 발생했습니다.");
+      toast.error("상담 기록 저장 중 오류가 발생했습니다.");
     }
   };
 
@@ -1305,7 +1305,7 @@ const StudentManagement: React.FC = () => {
 
   const handleUpdateMemo = async () => {
     if (!selectedMemo || !editMemoContent.trim()) {
-      toast.error("메모 내용을 입력해주세요.");
+      toast.error("상담 내용을 입력해주세요.");
       return;
     }
 
@@ -1346,18 +1346,18 @@ const StudentManagement: React.FC = () => {
         setSelectedStudent(updatedStudent);
       }
 
-      toast.success("메모가 성공적으로 수정되었습니다.");
+      toast.success("상담 기록이 성공적으로 수정되었습니다.");
       setEditMemoModalOpen(false);
       setEditMemoContent("");
       setSelectedMemo(null);
     } catch (error) {
       console.error("메모 수정 오류:", error);
-      toast.error("메모 수정 중 오류가 발생했습니다.");
+      toast.error("상담 기록 수정 중 오류가 발생했습니다.");
     }
   };
 
   const handleDeleteMemo = async (memo: TeacherMemo) => {
-    if (!window.confirm("정말로 이 메모를 삭제하시겠습니까?")) {
+    if (!window.confirm("정말로 이 상담 기록을 삭제하시겠습니까?")) {
       return;
     }
 
@@ -1391,12 +1391,12 @@ const StudentManagement: React.FC = () => {
         setSelectedStudent(updatedStudent);
       }
 
-      toast.success("메모가 성공적으로 삭제되었습니다.");
+      toast.success("상담 기록이 성공적으로 삭제되었습니다.");
       setEditMemoModalOpen(false);
       setSelectedMemo(null);
     } catch (error) {
       console.error("메모 삭제 오류:", error);
-      toast.error("메모 삭제 중 오류가 발생했습니다.");
+      toast.error("상담 기록 삭제 중 오류가 발생했습니다.");
     }
   };
 
@@ -1611,39 +1611,6 @@ const StudentManagement: React.FC = () => {
             )}
         </div>
 
-        {/* 위험도 통계 */}
-        <div className="mb-6 rounded-lg p-4">
-          <h3 className="mb-3 text-lg font-semibold text-gray-900">
-            유형별 학생 현황
-          </h3>
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-            <div className="rounded-lg p-2 text-center">
-              <div className="text-2xl font-bold text-red-800">
-                {getHighRiskStudentCount()}
-              </div>
-              <div className="text-sm font-medium text-red-700">주의 필요</div>
-              <div className="text-xs text-red-600">중심성 &lt; 0.3</div>
-            </div>
-            <div className="rounded-lg p-2 text-center">
-              <div className="text-2xl font-bold text-yellow-800">
-                {getRiskLevelCounts().medium}
-              </div>
-              <div className="text-sm font-medium text-yellow-700">관찰 중</div>
-              <div className="text-xs text-yellow-600">중심성 0.3~0.6</div>
-            </div>
-            <div className="rounded-lg p-2 text-center">
-              <div className="text-2xl font-bold text-green-800">
-                {getRiskLevelCounts().low}
-              </div>
-              <div className="text-sm font-medium text-green-700">안정</div>
-              <div className="text-xs text-green-600">중심성 &ge; 0.6</div>
-            </div>
-          </div>
-          {/* <div className="mt-3 text-center text-sm text-red-700">
-            🚨 <strong>주의 학생 수: {getHighRiskStudentCount()}명</strong> -
-            즉시 관찰 및 개입이 필요한 학생들
-          </div> */}
-        </div>
 
         <div className="grid grid-cols-1 gap-3 md:grid-cols-4">
           {/* 검색 */}
@@ -1835,67 +1802,8 @@ const StudentManagement: React.FC = () => {
                   </div>
                 </div>
 
-                <span
-                  className={`rounded-full px-2 py-1 text-xs font-medium ${getRiskColor(
-                    getRiskLevel(student),
-                  )}`}
-                >
-                  {getRiskLabel(getRiskLevel(student))}
-                </span>
               </div>
 
-              {/* 통합 분석 결과 표시 */}
-              {unifiedAnalysisData.has(student.id) && (
-                <div className="mb-4 rounded-lg bg-gray-50 p-3">
-                  <h4 className="mb-2 text-sm font-medium text-gray-900">네트워크 분석</h4>
-                  <div className="grid grid-cols-2 gap-2 text-xs">
-                    <div>
-                      <span className="text-gray-600">중심성:</span>
-                      <span className="ml-1 font-medium">
-                        {unifiedAnalysisData.get(student.id)?.centralityMetrics.degree.toFixed(3)}
-                      </span>
-                    </div>
-                    <div>
-                      <span className="text-gray-600">커뮤니티:</span>
-                      <span className="ml-1 font-medium">
-                        {unifiedAnalysisData.get(student.id)?.communityMembership}
-                      </span>
-                    </div>
-                    <div>
-                      <span className="text-gray-600">고립위험:</span>
-                      <span className={`ml-1 font-medium ${
-                        unifiedAnalysisData.get(student.id)?.isolationRisk.level === 'high' ? 'text-red-600' :
-                        unifiedAnalysisData.get(student.id)?.isolationRisk.level === 'medium' ? 'text-yellow-600' :
-                        'text-green-600'
-                      }`}>
-                        {unifiedAnalysisData.get(student.id)?.isolationRisk.level === 'high' ? '높음' :
-                         unifiedAnalysisData.get(student.id)?.isolationRisk.level === 'medium' ? '보통' : '낮음'}
-                      </span>
-                    </div>
-                    <div>
-                      <span className="text-gray-600">영향력:</span>
-                      <span className={`ml-1 font-medium ${
-                        unifiedAnalysisData.get(student.id)?.socialInfluence.level === 'high' ? 'text-blue-600' :
-                        unifiedAnalysisData.get(student.id)?.socialInfluence.level === 'medium' ? 'text-yellow-600' :
-                        'text-gray-600'
-                      }`}>
-                        {unifiedAnalysisData.get(student.id)?.socialInfluence.level === 'high' ? '높음' :
-                         unifiedAnalysisData.get(student.id)?.socialInfluence.level === 'medium' ? '보통' : '낮음'}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* 분석 로딩 상태 */}
-              {analysisLoading && !unifiedAnalysisData.has(student.id) && (
-                <div className="mb-4 rounded-lg bg-gray-50 p-3">
-                  <div className="flex items-center justify-center">
-                    <div className="mr-2 h-4 w-4 animate-spin rounded-full border-b-2 border-blue-600"></div>
-                    <span className="text-xs text-gray-600">분석 중...</span>
-                  </div>
-                </div>
-              )}
 
               {/* 메모 수 */}
               {/* <div className="mb-4 text-sm">
@@ -1911,7 +1819,7 @@ const StudentManagement: React.FC = () => {
 
               <div className="flex items-center justify-between space-x-2">
                 <div className="flex gap-2 text-sm">
-                  <span className="text-gray-600">교사 메모:</span>
+                  <span className="text-gray-600">상담 기록:</span>
                   <span className="text-gray-900">
                     {student.teacher_memos?.length || 0}개
                   </span>
@@ -1927,7 +1835,7 @@ const StudentManagement: React.FC = () => {
                     onClick={() => handleAddMemo(student)}
                     className="rounded-md bg-gray-100 px-4 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-200"
                   >
-                    메모 추가
+                    상담 기록
                   </button>
                 </div>
               </div>
@@ -1955,103 +1863,10 @@ const StudentManagement: React.FC = () => {
 
             {/* 모달 내용 */}
             <div className="space-y-6 p-6">
-              {/* 교우관계 분석 */}
-              {selectedStudent.network_metrics &&
-                typeof selectedStudent.network_metrics === "object" &&
-                selectedStudent.network_metrics !== null && (
-                  <div>
-                    <h3 className="mb-4 text-base font-semibold text-gray-900">
-                      • 교우관계 분석
-                    </h3>
-                    <div className="ml-4 space-y-4">
-                      <div>
-                        <h4 className="text-md mb-2 font-medium text-gray-700">
-                          중심성 지수
-                        </h4>
-                        <div className="grid grid-cols-3 gap-4 text-sm">
-                          <div>
-                            <span className="text-gray-600">연결 중심성:</span>
-                            <span className="ml-2 text-gray-900">
-                              {safeStringify(
-                                (selectedStudent.network_metrics as any)
-                                  ?.centrality_scores?.centrality || "N/A",
-                              )}
-                            </span>
-                          </div>
-                          <div>
-                            <span className="text-gray-600">매개 중심성:</span>
-                            <span className="ml-2 text-gray-900">
-                              {safeStringify(
-                                (selectedStudent.network_metrics as any)
-                                  ?.centrality_scores?.betweenness || "N/A",
-                              )}
-                            </span>
-                          </div>
-                          <div>
-                            <span className="text-gray-600">근접 중심성:</span>
-                            <span className="ml-2 text-gray-900">
-                              {safeStringify(
-                                (selectedStudent.network_metrics as any)
-                                  ?.centrality_scores?.closeness || "N/A",
-                              )}
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-                      <div className="grid grid-cols-2 gap-4 text-sm">
-                        <div>
-                          <span className="text-gray-600">소속 그룹:</span>
-                          <span className="ml-2 text-gray-900">
-                            {safeStringify(
-                              (selectedStudent.network_metrics as any)
-                                ?.community_membership || "N/A",
-                            )}
-                          </span>
-                        </div>
-                        <div>
-                          <span className="text-gray-600">
-                            네트워크 위험도:
-                          </span>
-                          <span
-                            className={`ml-2 rounded-full px-2 py-1 text-xs font-medium ${getRiskColor(
-                              getRiskLevel(selectedStudent),
-                            )}`}
-                          >
-                            {getRiskLabel(getRiskLevel(selectedStudent))}
-                          </span>
-                        </div>
-                      </div>
-                      <div className="text-sm">
-                        <span className="text-gray-600">중심성 점수:</span>
-                        <span className="ml-2 text-gray-900">
-                          {selectedStudent.network_metrics?.centrality_scores
-                            ?.centrality
-                            ? (
-                                selectedStudent.network_metrics
-                                  .centrality_scores.centrality * 100
-                              ).toFixed(1) + "%"
-                            : "N/A"}
-                        </span>
-                      </div>
-                      <div>
-                        <span className="text-base text-gray-600">
-                          권장사항:
-                        </span>
-                        <span className="ml-2 text-gray-900">
-                          {safeStringify(
-                            (selectedStudent.network_metrics as any)
-                              ?.recommendations || "N/A",
-                          )}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-              {/* 교사 메모 */}
+              {/* 학생 상담 기록 */}
               <div>
                 <h3 className="mb-4 text-base font-semibold text-gray-900">
-                  • 교사 메모
+                  • 학생 상담 기록
                 </h3>
                 {selectedStudent.teacher_memos &&
                 Array.isArray(selectedStudent.teacher_memos) &&
@@ -2077,7 +1892,7 @@ const StudentManagement: React.FC = () => {
                                   ? content
                                   : "내용 없음";
                               } catch (error) {
-                                console.error("메모 내용 파싱 오류:", error);
+                                console.error("상담 내용 파싱 오류:", error);
                                 return "내용 없음";
                               }
                             })()}
@@ -2087,7 +1902,7 @@ const StudentManagement: React.FC = () => {
                     ))}
                   </div>
                 ) : (
-                  <p className="text-gray-500">등록된 메모가 없습니다.</p>
+                  <p className="text-gray-500">등록된 상담 기록이 없습니다.</p>
                 )}
               </div>
               {/* 기본 정보 */}
@@ -2106,20 +1921,6 @@ const StudentManagement: React.FC = () => {
                     <span className="text-gray-600">성별:</span>
                     <span className="ml-2 text-gray-900">
                       {getGenderLabel(selectedStudent.gender)}
-                    </span>
-                  </div>
-                  <div>
-                    <span className="text-gray-600">교육 ID:</span>
-                    <span className="ml-2 text-gray-900">
-                      {selectedStudent.lifelong_education_id}
-                    </span>
-                  </div>
-                  <div>
-                    <span className="text-gray-600">입학일:</span>
-                    <span className="ml-2 text-gray-900">
-                      {new Date(
-                        selectedStudent.enrolled_at,
-                      ).toLocaleDateString()}
                     </span>
                   </div>
                   <div>
@@ -2232,7 +2033,7 @@ const StudentManagement: React.FC = () => {
             {/* 모달 헤더 */}
             <div className="flex items-center justify-between border-b border-gray-200 p-6">
               <h2 className="text-xl font-bold text-gray-900">
-                {selectedStudent.name} 학생 메모 추가
+                {selectedStudent.name} 학생 상담 기록
               </h2>
               <button
                 onClick={closeMemoModal}
@@ -2249,7 +2050,7 @@ const StudentManagement: React.FC = () => {
                   htmlFor="memoContent"
                   className="mb-2 block text-sm font-medium text-gray-700"
                 >
-                  메모 내용
+                  상담 내용
                 </label>
                 <textarea
                   id="memoContent"
@@ -2257,7 +2058,7 @@ const StudentManagement: React.FC = () => {
                   onChange={(e) => setNewMemoContent(e.target.value)}
                   rows={6}
                   className="w-full rounded-md border border-gray-300 px-3 py-2 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="학생에 대한 메모를 입력하세요..."
+                  placeholder="학생과의 상담 내용을 입력하세요..."
                 />
               </div>
 
@@ -2287,7 +2088,7 @@ const StudentManagement: React.FC = () => {
             {/* 모달 헤더 */}
             <div className="flex items-center justify-between border-b border-gray-200 p-6">
               <h2 className="text-xl font-bold text-gray-900">
-                메모 수정/삭제
+                상담 기록 수정/삭제
               </h2>
               <button
                 onClick={closeEditMemoModal}
@@ -2304,7 +2105,7 @@ const StudentManagement: React.FC = () => {
                   htmlFor="editMemoContent"
                   className="mb-2 block text-sm font-medium text-gray-700"
                 >
-                  메모 내용
+                  상담 내용
                 </label>
                 <textarea
                   id="editMemoContent"
@@ -2312,7 +2113,7 @@ const StudentManagement: React.FC = () => {
                   onChange={(e) => setEditMemoContent(e.target.value)}
                   rows={6}
                   className="w-full rounded-md border border-gray-300 px-3 py-2 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="메모 내용을 수정하세요..."
+                  placeholder="상담 내용을 수정하세요..."
                 />
               </div>
 

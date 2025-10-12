@@ -85,12 +85,33 @@ const SurveyItem: React.FC<{
                 : "cursor-pointer"
             } ${statusConfig?.color || "bg-gray-100 text-gray-800"}`}
           >
-            {/* 조사기간이 지난 경우 대기중 옵션 제거 */}
-            {new Date() <= new Date(survey.end_date) && (
+            {/* 시작일이 오지 않은 경우: 대기중만 표시 */}
+            {new Date() < new Date(survey.start_date) && (
               <option value="waiting">대기중</option>
             )}
-            <option value="active">진행중</option>
-            <option value="completed">완료</option>
+            {/* 시작일이 지났고 종료일이 지나지 않은 경우: 진행중만 표시 (대기중 주석 처리) */}
+            {new Date() >= new Date(survey.start_date) && new Date() <= new Date(survey.end_date) && (
+              <>
+                {/* 기간이 남아있을 때 대기중 주석 처리 */}
+                {/* <option value="waiting">대기중</option> */}
+                <option value="active">진행중</option>
+              </>
+            )}
+            {/* 종료일이 지난 경우 */}
+            {new Date() > new Date(survey.end_date) && (
+              <>
+                {/* 완료 상태일 때는 대기중, 진행한 옵션 주석 처리 */}
+                {survey.status === 'completed' ? (
+                  <option value="completed">완료</option>
+                ) : (
+                  <>
+                    <option value="waiting">대기중</option>
+                    <option value="active">진행중</option>
+                    <option value="completed">완료</option>
+                  </>
+                )}
+              </>
+            )}
           </select>
 
           {/* 상태 변경 중 표시 */}

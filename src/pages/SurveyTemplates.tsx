@@ -696,22 +696,37 @@ const SurveyConfigModal: React.FC<{
     endDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
       .toISOString()
       .split("T")[0],
+    surveyPeriod: 7, // 설문 기간 (일수)
   });
+
+  // 캘린더 관련 상태
+  const [showCalendar, setShowCalendar] = useState(false);
+  const [currentMonth, setCurrentMonth] = useState(new Date());
+  const [selectedStartDate, setSelectedStartDate] = useState<Date | null>(null);
+  const [selectedEndDate, setSelectedEndDate] = useState<Date | null>(null);
 
   // 템플릿이 선택될 때 초기값 설정
   React.useEffect(() => {
     if (template) {
+      const startDate = new Date().toISOString().split("T")[0];
+      const endDate = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
+        .toISOString()
+        .split("T")[0];
+      
       setConfig({
         title: `${template.title} (${new Date().toLocaleDateString()})`,
         description: template.description,
         targetGrades:
           template.targetGrades.length > 0 ? template.targetGrades : ["3"],
         targetClasses: ["1"],
-        startDate: new Date().toISOString().split("T")[0],
-        endDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
-          .toISOString()
-          .split("T")[0],
+        startDate: startDate,
+        endDate: endDate,
+        surveyPeriod: 7,
       });
+
+      // 캘린더 초기값 설정
+      setSelectedStartDate(new Date(startDate));
+      setSelectedEndDate(new Date(endDate));
     }
   }, [template]);
 
@@ -737,6 +752,97 @@ const SurveyConfigModal: React.FC<{
       );
     }
   }, [teacherInfo]);
+
+  // 설문 기간이 변경될 때 종료일 자동 계산
+  React.useEffect(() => {
+    const startDate = new Date(config.startDate);
+    const endDate = new Date(startDate);
+    endDate.setDate(startDate.getDate() + config.surveyPeriod);
+    
+    setConfig((prev) => ({
+      ...prev,
+      endDate: endDate.toISOString().split("T")[0],
+    }));
+  }, [config.startDate, config.surveyPeriod]);
+
+  // 캘린더 유틸리티 함수들
+  const formatDate = (date: Date): string => {
+    return date.toLocaleDateString('ko-KR', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+      weekday: 'long'
+    });
+  };
+
+  const getDaysInMonth = (date: Date): number => {
+    return new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate();
+  };
+
+  const getFirstDayOfMonth = (date: Date): number => {
+    return new Date(date.getFullYear(), date.getMonth(), 1).getDay();
+  };
+
+  const navigateMonth = (direction: 'prev' | 'next') => {
+    setCurrentMonth(prev => {
+      const newMonth = new Date(prev);
+      if (direction === 'prev') {
+        newMonth.setMonth(prev.getMonth() - 1);
+      } else {
+        newMonth.setMonth(prev.getMonth() + 1);
+      }
+      return newMonth;
+    });
+  };
+
+  const handleDateClick = (day: number, month: Date) => {
+    const clickedDate = new Date(month.getFullYear(), month.getMonth(), day);
+    
+    if (!selectedStartDate || (selectedStartDate && selectedEndDate)) {
+      // 시작일 선택 또는 새로운 범위 시작
+      setSelectedStartDate(clickedDate);
+      setSelectedEndDate(null);
+    } else if (selectedStartDate && !selectedEndDate) {
+      // 종료일 선택
+      if (clickedDate >= selectedStartDate) {
+        setSelectedEndDate(clickedDate);
+        // config 업데이트
+        const startDateStr = selectedStartDate.toISOString().split('T')[0];
+        const endDateStr = clickedDate.toISOString().split('T')[0];
+        const diffTime = Math.abs(clickedDate.getTime() - selectedStartDate.getTime());
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
+        
+        setConfig(prev => ({
+          ...prev,
+          startDate: startDateStr,
+          endDate: endDateStr,
+          surveyPeriod: diffDays
+        }));
+        
+        // 종료일 선택 후 캘린더 닫기
+        setTimeout(() => {
+          setShowCalendar(false);
+        }, 300); // 약간의 지연을 주어 사용자가 선택을 확인할 수 있도록
+      } else {
+        // 종료일이 시작일보다 이전이면 시작일을 다시 설정
+        setSelectedStartDate(clickedDate);
+        setSelectedEndDate(null);
+      }
+    }
+  };
+
+  const isDateInRange = (day: number, month: Date): boolean => {
+    if (!selectedStartDate || !selectedEndDate) return false;
+    
+    const date = new Date(month.getFullYear(), month.getMonth(), day);
+    return date >= selectedStartDate && date <= selectedEndDate;
+  };
+
+  const isDateSelected = (day: number, month: Date): boolean => {
+    const date = new Date(month.getFullYear(), month.getMonth(), day);
+    return (selectedStartDate !== null && date.getTime() === selectedStartDate.getTime()) ||
+           (selectedEndDate !== null && date.getTime() === selectedEndDate.getTime());
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -863,36 +969,134 @@ const SurveyConfigModal: React.FC<{
                 />
               </div>
 
-              {/* 설문 기간 */}
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="mb-2 block text-sm font-medium text-gray-700">
-                    시작일
-                  </label>
-                  <input
-                    type="date"
-                    value={config.startDate}
-                    onChange={(e) =>
-                      setConfig({ ...config, startDate: e.target.value })
-                    }
-                    className="w-full rounded-lg border border-gray-300 p-3 focus:border-blue-500 focus:ring-2 focus:ring-blue-500"
-                    required
-                  />
+              {/* 설문 기간 설정 */}
+              <div>
+                <label className="mb-2 block text-sm font-medium text-gray-700">
+                  설문 기간 설정
+                </label>
+                
+                {/* 선택된 날짜 범위 표시 */}
+                <div className="mb-4 grid grid-cols-2 gap-4">
+                  <div className="relative">
+                    <button
+                      type="button"
+                      onClick={() => setShowCalendar(!showCalendar)}
+                      className="w-full flex items-center rounded-lg border border-gray-300 bg-white p-3 text-left hover:bg-gray-50 focus:border-blue-500 focus:ring-2 focus:ring-blue-500"
+                    >
+                      <svg className="mr-2 h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                      </svg>
+                      <span className="text-sm text-gray-700">
+                        {selectedStartDate ? formatDate(selectedStartDate) : "시작일 선택"}
+                      </span>
+                    </button>
+                  </div>
+                  <div className="relative">
+                    <button
+                      type="button"
+                      onClick={() => setShowCalendar(!showCalendar)}
+                      className="w-full flex items-center rounded-lg border border-gray-300 bg-white p-3 text-left hover:bg-gray-50 focus:border-blue-500 focus:ring-2 focus:ring-blue-500"
+                    >
+                      <svg className="mr-2 h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                      </svg>
+                      <span className="text-sm text-gray-700">
+                        {selectedEndDate ? formatDate(selectedEndDate) : "종료일 선택"}
+                      </span>
+                    </button>
+                  </div>
                 </div>
-                <div>
-                  <label className="mb-2 block text-sm font-medium text-gray-700">
-                    종료일
-                  </label>
-                  <input
-                    type="date"
-                    value={config.endDate}
-                    onChange={(e) =>
-                      setConfig({ ...config, endDate: e.target.value })
-                    }
-                    className="w-full rounded-lg border border-gray-300 p-3 focus:border-blue-500 focus:ring-2 focus:ring-blue-500"
-                    required
-                  />
-                </div>
+
+                {/* 캘린더 */}
+                {showCalendar && (
+                  <div className="mt-4 rounded-lg border border-gray-200 bg-white p-4">
+                    <div className="mb-4 flex items-center justify-between">
+                      <button
+                        type="button"
+                        onClick={() => navigateMonth('prev')}
+                        className="rounded-lg p-2 hover:bg-gray-100"
+                      >
+                        <svg className="h-5 w-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                        </svg>
+                      </button>
+                      <h3 className="text-lg font-semibold text-gray-900">
+                        {currentMonth.getFullYear()}년 {currentMonth.getMonth() + 1}월
+                      </h3>
+                      <div className="flex items-center space-x-2">
+                        <button
+                          type="button"
+                          onClick={() => navigateMonth('next')}
+                          className="rounded-lg p-2 hover:bg-gray-100"
+                        >
+                          <svg className="h-5 w-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                          </svg>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setShowCalendar(false)}
+                          className="rounded-lg p-2 hover:bg-gray-100"
+                        >
+                          <svg className="h-5 w-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                          </svg>
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* 요일 헤더 */}
+                    <div className="mb-2 grid grid-cols-7 gap-1">
+                      {['일', '월', '화', '수', '목', '금', '토'].map((day) => (
+                        <div key={day} className="py-2 text-center text-sm font-medium text-gray-500">
+                          {day}
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* 날짜 그리드 */}
+                    <div className="grid grid-cols-7 gap-1">
+                      {Array.from({ length: getFirstDayOfMonth(currentMonth) }, (_, i) => (
+                        <div key={`empty-${i}`} className="py-2"></div>
+                      ))}
+                      {Array.from({ length: getDaysInMonth(currentMonth) }, (_, i) => {
+                        const day = i + 1;
+                        const isInRange = isDateInRange(day, currentMonth);
+                        const isSelected = isDateSelected(day, currentMonth);
+                        const isToday = new Date().toDateString() === new Date(currentMonth.getFullYear(), currentMonth.getMonth(), day).toDateString();
+                        
+                        return (
+                          <button
+                            key={day}
+                            type="button"
+                            onClick={() => handleDateClick(day, currentMonth)}
+                            className={`
+                              relative py-2 text-sm transition-colors hover:bg-blue-50
+                              ${isToday ? 'bg-blue-100 font-semibold text-blue-800' : ''}
+                              ${isSelected ? 'bg-blue-500 text-white hover:bg-blue-600' : ''}
+                              ${isInRange && !isSelected ? 'bg-blue-100 text-blue-700' : ''}
+                              ${!isInRange && !isSelected && !isToday ? 'text-gray-700 hover:bg-gray-100' : ''}
+                            `}
+                          >
+                            {day}
+                          </button>
+                        );
+                      })}
+                    </div>
+
+                    {/* 선택된 기간 표시 */}
+                    {selectedStartDate && selectedEndDate && (
+                      <div className="mt-4 rounded-lg bg-blue-50 p-3">
+                        <p className="text-sm text-blue-800">
+                          📅 선택된 기간: <span className="font-medium">{config.surveyPeriod}일</span>
+                          <span className="ml-2 text-blue-600">
+                            ({config.startDate} ~ {config.endDate})
+                          </span>
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
 

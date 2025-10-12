@@ -1029,6 +1029,16 @@ class NetworkAnalysisService {
       const recommendations = this.generateImprovementRecommendations(analysisResult);
       const riskIndicators = this.generateRiskIndicators(analysisResult);
 
+      // 상세 메트릭 생성
+      const detailedMetrics = {
+        network_density: analysisResult.metrics.density,
+        clustering_coefficient: analysisResult.metrics.clustering_coefficient,
+        average_path_length: analysisResult.metrics.average_path_length,
+        modularity: analysisResult.metrics.modularity,
+        connected_components: analysisResult.metrics.connected_components,
+        average_degree: analysisResult.metrics.average_degree,
+      };
+
       const { error } = await supabase
         .from('network_analysis_results')
         .insert({
@@ -1038,6 +1048,7 @@ class NetworkAnalysisService {
           community_membership: communityMembership,
           recommendations: recommendations,
           risk_indicators: riskIndicators,
+          detailed_metrics: detailedMetrics,
           calculated_at: new Date().toISOString(),
         });
 
@@ -1049,6 +1060,52 @@ class NetworkAnalysisService {
       console.log('✅ 분석 결과가 저장되었습니다.');
     } catch (error) {
       console.error('분석 결과 저장 실패:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * 개별 학생 분석 결과를 저장합니다 (current_status 포함)
+   */
+  async saveIndividualAnalysis(
+    studentId: string,
+    surveyId: string,
+    analysisResult: any
+  ): Promise<void> {
+    try {
+      const { error } = await supabase
+        .from('network_analysis_results')
+        .upsert({
+          student_id: studentId,
+          survey_id: surveyId,
+          analysis_type: 'individual_analysis',
+          centrality_scores: analysisResult.centrality_metrics,
+          community_membership: analysisResult.community_id?.toString(),
+          recommendations: analysisResult.recommendations,
+          risk_indicators: {
+            isolation_risk: analysisResult.isolation_risk,
+            social_influence: analysisResult.social_influence,
+          },
+          current_status: analysisResult.current_status,
+          detailed_metrics: {
+            network_density: analysisResult.network_density,
+            clustering_coefficient: analysisResult.clustering_coefficient,
+            degree: analysisResult.degree,
+            friendship_type: analysisResult.friendship_type,
+          },
+          calculated_at: new Date().toISOString(),
+        }, {
+          onConflict: 'student_id,survey_id,analysis_type'
+        });
+
+      if (error) {
+        console.error('개별 분석 결과 저장 오류:', error);
+        throw error;
+      }
+
+      console.log('✅ 개별 분석 결과가 저장되었습니다.');
+    } catch (error) {
+      console.error('개별 분석 결과 저장 실패:', error);
       throw error;
     }
   }

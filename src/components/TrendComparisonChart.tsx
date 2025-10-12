@@ -4,10 +4,10 @@ import * as d3 from 'd3';
 interface TrendData {
   period: string;
   외톨이형: number;
-  소수친구학생: number;
-  평균적인학생: number;
-  친구많은학생: number;
-  사교스타: number;
+  "소수 친구 학생": number;
+  "평균적인 학생": number;
+  "친구 많은 학생": number;
+  "사교 스타": number;
 }
 
 interface TrendComparisonChartProps {
@@ -46,13 +46,13 @@ const TrendComparisonChart: React.FC<TrendComparisonChartProps> = ({
     // Y축 스케일 (학생 수)
     const yScale = d3.scaleLinear()
       .domain([0, d3.max(data, d => 
-        Math.max(d.외톨이형, d.소수친구학생, d.평균적인학생, d.친구많은학생, d.사교스타)
+        Math.max(d.외톨이형, d["소수 친구 학생"], d["평균적인 학생"], d["친구 많은 학생"], d["사교 스타"])
       ) || 0])
       .range([chartHeight, 0]);
 
     // 색상 스케일
     const colorScale = d3.scaleOrdinal<string, string>()
-      .domain(["외톨이형", "소수친구학생", "평균적인학생", "친구많은학생", "사교스타"])
+      .domain(["외톨이형", "소수 친구 학생", "평균적인 학생", "친구 많은 학생", "사교 스타"])
       .range(["#ff6b6b", "#ffd93d", "#6bcf7f", "#4ecdc4", "#45b7d1"]);
 
     // X축
@@ -68,7 +68,7 @@ const TrendComparisonChart: React.FC<TrendComparisonChartProps> = ({
     const legend = svg.append("g")
       .attr("transform", `translate(${width - margin.right + 10}, ${margin.top})`);
 
-    const legendItems = ["외톨이형", "소수친구학생", "평균적인학생", "친구많은학생", "사교스타"];
+    const legendItems = ["외톨이형", "소수 친구 학생", "평균적인 학생", "친구 많은 학생", "사교 스타"];
     
     legendItems.forEach((item, i) => {
       const legendGroup = legend.append("g")
@@ -95,10 +95,10 @@ const TrendComparisonChart: React.FC<TrendComparisonChartProps> = ({
     // 각 유형별로 선 그래프 생성
     const types = [
       { key: '외톨이형', label: '외톨이형' },
-      { key: '소수친구학생', label: '소수 친구 학생' },
-      { key: '평균적인학생', label: '평균적인 학생' },
-      { key: '친구많은학생', label: '친구 많은 학생' },
-      { key: '사교스타', label: '사교 스타' }
+      { key: '소수 친구 학생', label: '소수 친구 학생' },
+      { key: '평균적인 학생', label: '평균적인 학생' },
+      { key: '친구 많은 학생', label: '친구 많은 학생' },
+      { key: '사교 스타', label: '사교 스타' }
     ];
 
     types.forEach(type => {

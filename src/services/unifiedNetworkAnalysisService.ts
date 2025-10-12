@@ -24,7 +24,7 @@ import { networkAnalysisSyncManager, DataConsistencyValidator } from '../utils/d
 class UnifiedNetworkAnalysisService {
   private analysisCache: Map<string, AnalysisCache> = new Map();
   private readonly CACHE_DURATION = 30 * 60 * 1000; // 30분
-  private readonly API_BASE_URL = 'http://localhost:3001/api/network-analysis';
+  private readonly API_BASE_URL = 'http://localhost:3001';
 
   /**
    * 전체 네트워크 분석 수행 (최상위 레벨)
@@ -36,7 +36,7 @@ class UnifiedNetworkAnalysisService {
       // Python API 호출로 전체 분석 수행
       const pythonData = await this.getSurveyDataForPython(surveyId);
       
-      const response = await fetch(`${this.API_BASE_URL}/run`, {
+      const response = await fetch(`${this.API_BASE_URL}/api/network-analysis/run`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -66,6 +66,24 @@ class UnifiedNetworkAnalysisService {
       
     } catch (error) {
       console.error('❌ 전체 네트워크 분석 오류:', error);
+      
+      // Python API 실패 시 기존 네트워크 분석 서비스로 fallback
+      if (error instanceof TypeError && error.message.includes('Failed to fetch')) {
+        console.log('🔄 Python API 연결 실패, 기존 분석 서비스로 fallback');
+        try {
+          const { networkAnalysisService } = await import('./networkAnalysisService');
+          const fallbackResult = await networkAnalysisService.analyzeNetwork(surveyId);
+          
+          // 기존 결과를 통합 형식으로 변환
+          const completeAnalysis = this.convertNetworkAnalysisToUnifiedFormat(fallbackResult, surveyId);
+          console.log(`✅ Fallback 분석 완료: ${surveyId}`);
+          return completeAnalysis;
+        } catch (fallbackError) {
+          console.error('❌ Fallback 분석도 실패:', fallbackError);
+          throw new Error('네트워크 분석에 실패했습니다.');
+        }
+      }
+      
       throw new Error('전체 네트워크 분석에 실패했습니다.');
     }
   }
@@ -90,20 +108,60 @@ class UnifiedNetworkAnalysisService {
   }
 
   /**
-   * 개별 학생 분석 (전체 결과에서 추출)
+   * 개별 학생 분석 (Python API 직접 호출)
    */
   async getIndividualAnalysis(surveyId: string, studentId: string): Promise<IndividualAnalysisResult> {
     try {
       console.log(`🔍 개별 학생 분석 시작: ${surveyId} - ${studentId}`);
       
-      const unifiedData = await this.getCachedAnalysis(surveyId);
-      const individualAnalysis = this.extractIndividualAnalysis(unifiedData, studentId);
+      // Python API로 개별 학생 분석 직접 호출
+      const pythonData = await this.getSurveyDataForPython(surveyId);
+      
+      const response = await fetch(`${this.API_BASE_URL}/api/individual-analysis`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          student_id: studentId,
+          friendship_data: pythonData.survey_data,
+          student_info: pythonData.student_info
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error(`Python 개별 분석 API 호출 실패: ${response.status}`);
+      }
+
+      const result = await response.json();
+      
+      if (!result.success) {
+        throw new Error(result.error || 'Python 개별 분석 실패');
+      }
+
+      // Python 결과를 IndividualAnalysisResult 형식으로 변환
+      const individualAnalysis = this.convertPythonIndividualResultToUnifiedFormat(result.data, studentId);
       
       console.log(`✅ 개별 학생 분석 완료: ${studentId}`);
       return individualAnalysis;
       
     } catch (error) {
       console.error('❌ 개별 학생 분석 오류:', error);
+      
+      // Python API 실패 시 전체 분석에서 추출하는 방식으로 fallback
+      if (error instanceof TypeError && error.message.includes('Failed to fetch')) {
+        console.log('🔄 Python API 연결 실패, 전체 분석에서 추출하는 방식으로 fallback');
+        try {
+          const unifiedData = await this.getCachedAnalysis(surveyId);
+          const individualAnalysis = this.extractIndividualAnalysis(unifiedData, studentId);
+          console.log(`✅ Fallback 개별 분석 완료: ${studentId}`);
+          return individualAnalysis;
+        } catch (fallbackError) {
+          console.error('❌ Fallback 개별 분석도 실패:', fallbackError);
+          throw new Error('개별 학생 분석에 실패했습니다.');
+        }
+      }
+      
       throw new Error('개별 학생 분석에 실패했습니다.');
     }
   }
@@ -193,7 +251,7 @@ class UnifiedNetworkAnalysisService {
    * Python 스크립트용 데이터 준비
    */
   private async getSurveyDataForPython(surveyId: string): Promise<{
-    survey_data: Array<[string, string, string]>;
+    survey_data: Array<{student_id: string, friend_student_id: string, relationship_type: string, strength_score: number}>;
     student_info: Array<{id: string, name: string, grade: string, class: string}>;
   }> {
     try {
@@ -258,8 +316,8 @@ class UnifiedNetworkAnalysisService {
       const templateQuestions = surveyData?.survey_templates?.questions as any;
       const questionRelationshipMapping = this.buildQuestionRelationshipMapping(templateQuestions);
 
-      // survey_data 생성
-      const survey_data: Array<[string, string, string]> = [];
+      // survey_data 생성 (딕셔너리 배열로)
+      const survey_data: Array<{student_id: string, friend_student_id: string, relationship_type: string, strength_score: number}> = [];
       const studentMap = new Map(students?.map(s => [s.id, s]) || []);
 
       responses?.forEach(response => {
@@ -273,7 +331,12 @@ class UnifiedNetworkAnalysisService {
                     studentMap.has(targetStudentId) &&
                     response.student_id) {
                   const relationshipType = questionRelationshipMapping[questionKey] || '기타';
-                  survey_data.push([response.student_id, targetStudentId, relationshipType]);
+                  survey_data.push({
+                    student_id: response.student_id,
+                    friend_student_id: targetStudentId,
+                    relationship_type: relationshipType,
+                    strength_score: 1.0
+                  });
                 }
               });
             }
@@ -846,6 +909,136 @@ class UnifiedNetworkAnalysisService {
     } catch (error) {
       console.error('❌ DB 저장 중 오류:', error);
     }
+  }
+
+  /**
+   * 기존 네트워크 분석 결과를 통합 형식으로 변환
+   */
+  private convertNetworkAnalysisToUnifiedFormat(
+    networkResult: any,
+    surveyId: string
+  ): CompleteAnalysisResult {
+    const nodes = networkResult.nodes.map((node: any) => ({
+      id: node.id,
+      name: node.name,
+      grade: node.grade,
+      class: node.class,
+      friendship_type: node.friendship_type || '평균적인 학생',
+      centrality: node.degree_centrality || 0,
+      connection_count: node.connection_count || 0,
+      community_id: node.community_id || 0,
+    }));
+
+    const edges = networkResult.edges.map((edge: any) => ({
+      source: edge.source,
+      target: edge.target,
+      relationship_type: edge.relationship_type || 'friend',
+      strength_score: edge.strength_score || 1,
+    }));
+
+    const communities = networkResult.communities.map((community: any) => ({
+      id: community.id,
+      members: community.members,
+      cohesion: community.cohesion || 0.5,
+      size: community.members.length,
+    }));
+
+    return {
+      nodes,
+      edges,
+      communities,
+      metrics: {
+        totalConnections: networkResult.metrics.totalConnections || networkResult.edges?.length || 0,
+        density: networkResult.metrics.density || 0,
+        averageClustering: networkResult.metrics.clustering_coefficient || networkResult.metrics.averageClustering || 0,
+        communitiesCount: networkResult.metrics.connected_components || networkResult.communities?.length || 1,
+        averageCentrality: networkResult.metrics.average_degree || 0,
+        isolationRiskCount: 0, // 계산 필요
+        popularStudentsCount: 0, // 계산 필요
+      },
+      recommendations: {
+        class_improvements: [],
+        school_wide_actions: [],
+        monitoring_strategies: [],
+        intervention_priorities: [],
+      },
+      analysisMetadata: {
+        surveyId: surveyId,
+        analysisDate: new Date(),
+        totalStudents: nodes.length,
+        totalRelationships: edges.length,
+        analysisVersion: '2.0',
+      },
+    };
+  }
+
+  /**
+   * Python 개별 분석 결과를 통합 형식으로 변환
+   */
+  private convertPythonIndividualResultToUnifiedFormat(
+    pythonResult: any,
+    studentId: string
+  ): IndividualAnalysisResult {
+    const student = {
+      id: studentId,
+      name: pythonResult.student_name || 'Unknown',
+      grade: pythonResult.grade || 1,
+      class: pythonResult.class || 1,
+      centrality: pythonResult.centrality_metrics?.degree || 0,
+      connection_count: pythonResult.degree || 0,
+      community: pythonResult.community_id || 0,
+      friendship_type: pythonResult.friendship_type || '평균적인 학생',
+      neighbors: pythonResult.neighbors || [],
+      degree_centrality: pythonResult.centrality_metrics?.degree || 0,
+      closeness_centrality: pythonResult.centrality_metrics?.closeness || 0,
+      betweenness_centrality: pythonResult.centrality_metrics?.betweenness || 0,
+      eigenvector_centrality: pythonResult.centrality_metrics?.eigenvector || 0,
+    };
+
+    const centralityMetrics = {
+      degree: pythonResult.centrality_metrics?.degree || 0,
+      betweenness: pythonResult.centrality_metrics?.betweenness || 0,
+      closeness: pythonResult.centrality_metrics?.closeness || 0,
+      eigenvector: pythonResult.centrality_metrics?.eigenvector || 0,
+      centrality: pythonResult.centrality_metrics?.degree || 0,
+    };
+
+    const isolationRisk = {
+      level: pythonResult.isolation_risk?.level || 'medium',
+      score: pythonResult.isolation_risk?.score || 50,
+      description: pythonResult.isolation_risk?.description || '평균적인 위험도',
+    };
+
+    const socialInfluence = {
+      level: pythonResult.social_influence?.level || 'medium',
+      score: pythonResult.social_influence?.score || 50,
+      description: pythonResult.social_influence?.description || '평균적인 영향력',
+    };
+
+    const recommendations = {
+      immediate_actions: pythonResult.recommendations?.immediate_actions || [],
+      short_term_goals: pythonResult.recommendations?.short_term_goals || [],
+      long_term_goals: pythonResult.recommendations?.long_term_goals || [],
+      monitoring_points: pythonResult.recommendations?.monitoring_points || [],
+      intervention_level: pythonResult.recommendations?.intervention_level || 'none',
+    };
+
+    const networkPosition = {
+      isCenter: pythonResult.centrality_metrics?.degree > 0.7,
+      isIsolated: pythonResult.degree === 0,
+      isBridge: pythonResult.centrality_metrics?.betweenness > 0.3,
+      isPeripheral: pythonResult.centrality_metrics?.degree < 0.3,
+    };
+
+    return {
+      student,
+      centralityMetrics,
+      communityMembership: pythonResult.community_id || 0,
+      isolationRisk,
+      socialInfluence,
+      recommendations,
+      networkPosition,
+    };
   }
 
   /**

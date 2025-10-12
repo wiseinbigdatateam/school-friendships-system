@@ -9,6 +9,7 @@ import { Toaster } from "react-hot-toast";
 import { AuthProvider } from "./contexts/AuthContext";
 import ProtectedRoute from "./components/ProtectedRoute";
 import LoadingSpinner from "./components/LoadingSpinner";
+import FloatingActionButton from "./components/FloatingActionButton";
 
 // 즉시 로드할 컴포넌트들
 import Landing from "./pages/Landing";
@@ -130,6 +131,7 @@ const ProtectedLayout: React.FC<{ children: React.ReactNode }> = ({
       <main className="pt-10">
         <Suspense fallback={<LoadingSpinner />}>{children}</Suspense>
       </main>
+      <FloatingActionButton />
     </div>
   );
 };
@@ -143,11 +145,36 @@ const App: React.FC = () => {
       <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
         <Routes>
           {/* 공개 라우트 - 즉시 로드 */}
-          <Route path="/" element={<Landing />} />
-          <Route path="/login" element={<Login />} />
-          <Route path="/signup" element={<Signup />} />
-          <Route path="/contact" element={<Contact />} />
-          <Route path="/s/:surveyId" element={<SurveyResponse />} />
+          <Route path="/" element={
+            <div className="min-h-screen bg-gray-50">
+              <Landing />
+              <FloatingActionButton />
+            </div>
+          } />
+          <Route path="/login" element={
+            <div className="min-h-screen bg-gray-50">
+              <Login />
+              <FloatingActionButton />
+            </div>
+          } />
+          <Route path="/signup" element={
+            <div className="min-h-screen bg-gray-50">
+              <Signup />
+              <FloatingActionButton />
+            </div>
+          } />
+          <Route path="/contact" element={
+            <div className="min-h-screen bg-gray-50">
+              <Contact />
+              <FloatingActionButton />
+            </div>
+          } />
+          <Route path="/s/:surveyId" element={
+            <div className="min-h-screen bg-gray-50">
+              <SurveyResponse />
+              <FloatingActionButton />
+            </div>
+          } />
 
           {/* 보호된 라우트 - 지연 로드 */}
           <Route
@@ -194,7 +221,12 @@ const App: React.FC = () => {
             }
           />
 
-          <Route path="/survey/:surveyId" element={<SurveyResponse />} />
+          <Route path="/survey/:surveyId" element={
+            <div className="min-h-screen bg-gray-50">
+              <SurveyResponse />
+              <FloatingActionButton />
+            </div>
+          } />
 
           <Route
             path="/students"

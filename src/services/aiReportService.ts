@@ -157,7 +157,7 @@ export class AIReportService {
   }
 
   /**
-   * AI 리포트를 삭제합니다.
+   * AI 리포트를 삭제합니다 (reportId 기준).
    */
   static async deleteAIReport(reportId: string): Promise<void> {
     try {
@@ -165,6 +165,24 @@ export class AIReportService {
         .from('ai_reports')
         .delete()
         .eq('id', reportId);
+
+      if (error) throw error;
+    } catch (error) {
+      console.error('AI 리포트 삭제 오류:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * AI 리포트를 삭제합니다 (studentId와 surveyId 기준).
+   */
+  static async deleteAIReportByStudentSurvey(studentId: string, surveyId: string): Promise<void> {
+    try {
+      const { error } = await supabase
+        .from('ai_reports')
+        .delete()
+        .eq('student_id', studentId)
+        .eq('survey_id', surveyId);
 
       if (error) throw error;
     } catch (error) {
