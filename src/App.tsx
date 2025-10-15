@@ -145,36 +145,47 @@ const App: React.FC = () => {
       <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
         <Routes>
           {/* 공개 라우트 - 즉시 로드 */}
-          <Route path="/" element={
-            <div className="min-h-screen bg-gray-50">
-              <Landing />
-              <FloatingActionButton />
-            </div>
-          } />
-          <Route path="/login" element={
-            <div className="min-h-screen bg-gray-50">
-              <Login />
-              <FloatingActionButton />
-            </div>
-          } />
-          <Route path="/signup" element={
-            <div className="min-h-screen bg-gray-50">
-              <Signup />
-              <FloatingActionButton />
-            </div>
-          } />
-          <Route path="/contact" element={
-            <div className="min-h-screen bg-gray-50">
-              <Contact />
-              <FloatingActionButton />
-            </div>
-          } />
-          <Route path="/s/:surveyId" element={
-            <div className="min-h-screen bg-gray-50">
-              <SurveyResponse />
-              <FloatingActionButton />
-            </div>
-          } />
+          <Route
+            path="/"
+            element={
+              <div className="min-h-screen bg-gray-50">
+                <Landing />
+              </div>
+            }
+          />
+          <Route
+            path="/login"
+            element={
+              <div className="min-h-screen bg-gray-50">
+                <Login />
+              </div>
+            }
+          />
+          <Route
+            path="/signup"
+            element={
+              <div className="min-h-screen bg-gray-50">
+                <Signup />
+              </div>
+            }
+          />
+          <Route
+            path="/contact"
+            element={
+              <div className="min-h-screen bg-gray-50">
+                <Contact />
+              </div>
+            }
+          />
+          <Route
+            path="/s/:surveyId"
+            element={
+              <div className="min-h-screen bg-gray-50">
+                <SurveyResponse />
+                <FloatingActionButton />
+              </div>
+            }
+          />
 
           {/* 보호된 라우트 - 지연 로드 */}
           <Route
@@ -221,12 +232,15 @@ const App: React.FC = () => {
             }
           />
 
-          <Route path="/survey/:surveyId" element={
-            <div className="min-h-screen bg-gray-50">
-              <SurveyResponse />
-              <FloatingActionButton />
-            </div>
-          } />
+          <Route
+            path="/survey/:surveyId"
+            element={
+              <div className="min-h-screen bg-gray-50">
+                <SurveyResponse />
+                <FloatingActionButton />
+              </div>
+            }
+          />
 
           <Route
             path="/students"

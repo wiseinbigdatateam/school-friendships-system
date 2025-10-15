@@ -670,8 +670,8 @@ const Login: React.FC = () => {
           <p className="text-xs">
             시스템 도입 문의:{" "}
             <Link
-              to="/contact"
-              className="text-[#3F80EA] underline hover:text-blue-600"
+              // to="/contact"
+              className="text-[#3F80EA] hover:text-blue-600"
             >
               고객지원센터
             </Link>
