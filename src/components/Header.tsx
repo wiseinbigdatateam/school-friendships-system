@@ -164,13 +164,16 @@ const Header: React.FC<HeaderProps> = ({ logo, navigationItems }) => {
                 {/* 교우 관계 분석 - 역할에 따라 다른 페이지로 이동 */}
                 <div className="relative">
                   <button
-                    onClick={() => handleNavigationClick(
-                      user?.role === "school_admin" 
-                        ? "/school-wide-analysis" 
-                        : "/grade-analysis"
-                    )}
+                    onClick={() =>
+                      handleNavigationClick(
+                        user?.role === "school_admin"
+                          ? "/school-wide-analysis"
+                          : "/grade-analysis",
+                      )
+                    }
                     className={`rounded-md px-3 py-2 text-sm font-medium transition-colors ${
-                      isCurrentPath("/grade-analysis") || isCurrentPath("/school-wide-analysis")
+                      isCurrentPath("/grade-analysis") ||
+                      isCurrentPath("/school-wide-analysis")
                         ? "bg-blue-50 text-blue-600"
                         : "text-gray-700 hover:bg-gray-50 hover:text-blue-600"
                     }`}
@@ -229,7 +232,9 @@ const Header: React.FC<HeaderProps> = ({ logo, navigationItems }) => {
                     <div className="absolute left-0 top-full z-50 mt-1 w-48 rounded-md border border-gray-200 bg-white shadow-lg">
                       <div className="py-1">
                         <button
-                          onClick={() => handleNavigationClick("/survey-templates")}
+                          onClick={() =>
+                            handleNavigationClick("/survey-templates")
+                          }
                           className={`block w-full px-4 py-2 text-left text-sm transition-colors ${
                             isCurrentPath("/survey-templates")
                               ? "bg-blue-50 text-blue-600"
@@ -255,13 +260,13 @@ const Header: React.FC<HeaderProps> = ({ logo, navigationItems }) => {
                   )}
                 </div>
 
-                {/* 교우 현황 분석 */}
+                {/* 교우 관계 분석 */}
                 <div className="relative">
                   <button
                     onClick={() => handleDropdownToggle("analysis")}
                     className={`flex items-center space-x-1 rounded-md px-3 py-2 text-sm font-medium transition-colors ${
-                      isCurrentPath("/network-analysis") ||
-                      isCurrentPath("/individual-analysis")
+                      isCurrentPath("/network-analysis-new") ||
+                      isCurrentPath("/class-survey")
                         ? "bg-blue-50 text-blue-600"
                         : "text-gray-700 hover:bg-gray-50 hover:text-blue-600"
                     }`}
@@ -289,7 +294,9 @@ const Header: React.FC<HeaderProps> = ({ logo, navigationItems }) => {
                     <div className="absolute left-0 top-full z-50 mt-1 w-48 rounded-md border border-gray-200 bg-white shadow-lg">
                       <div className="py-1">
                         <button
-                          onClick={() => handleNavigationClick("/network-analysis-new")}
+                          onClick={() =>
+                            handleNavigationClick("/network-analysis-new")
+                          }
                           className={`block w-full px-4 py-2 text-left text-sm transition-colors ${
                             isCurrentPath("/network-analysis-new")
                               ? "bg-blue-50 text-blue-600"
@@ -311,9 +318,7 @@ const Header: React.FC<HeaderProps> = ({ logo, navigationItems }) => {
                           학생별 결과분석
                         </button> */}
                         <button
-                          onClick={() =>
-                            handleNavigationClick("/class-survey")
-                          }
+                          onClick={() => handleNavigationClick("/class-survey")}
                           className={`block w-full px-4 py-2 text-left text-sm transition-colors ${
                             isCurrentPath("/class-survey")
                               ? "bg-blue-50 text-blue-600"
@@ -327,10 +332,12 @@ const Header: React.FC<HeaderProps> = ({ logo, navigationItems }) => {
                   )}
                 </div>
 
-                {/* 학급별 분석결과 */}
+                {/* 학생별 AI분석 */}
                 <div className="relative">
                   <button
-                    onClick={() => handleNavigationClick("/individual-analysis")}
+                    onClick={() =>
+                      handleNavigationClick("/individual-analysis")
+                    }
                     className={`rounded-md px-3 py-2 text-sm font-medium transition-colors ${
                       isCurrentPath("/individual-analysis")
                         ? "bg-blue-50 text-blue-600"
