@@ -2066,34 +2066,38 @@ const IndividualAnalysis: React.FC = () => {
                             let friendshipType = "평균적인 학생";
                             let recommendations = null;
                             
-                            // 통합 분석 결과가 있으면 실제 데이터 사용
+                            // 전체 네트워크 분석 데이터에서 해당 학생의 정보 가져오기
+                            if (networkAnalysisData) {
+                              const networkNode = networkAnalysisData.nodes.find(n => n.id === selectedStudent);
+                              if (networkNode) {
+                                // 전체 네트워크에서의 실제 데이터 사용
+                                centrality = networkNode.centrality || centrality;
+                                friendCount = networkNode.connection_count || friendCount;
+                                communityId = networkNode.community || 0;
+                                friendshipType = networkNode.friendship_type || friendshipType;
+                                
+                                // 네트워크 밀도는 전체 분석 결과 사용
+                                networkDensity = networkAnalysisData.metrics.network_density || 0;
+                                
+                                // 전체 학생 수 기준으로 정규화된 위험도 계산
+                                const totalClassStudents = networkAnalysisData.nodes.length;
+                                const normalizedCentrality = centrality / Math.max(totalClassStudents - 1, 1);
+                                
+                                isolationRiskLevel = normalizedCentrality < 0.2 ? "높음" : 
+                                                   normalizedCentrality < 0.5 ? "보통" : "낮음";
+                                socialInfluenceLevel = normalizedCentrality < 0.2 ? "낮음" : 
+                                                     normalizedCentrality < 0.5 ? "보통" : "높음";
+                              }
+                            }
+                            
+                            // 통합 분석 결과가 있으면 추가 정보 사용 (우선순위 낮음)
                             if (unifiedAnalysisResult) {
-                              // 중앙성 메트릭 사용
-                              centrality = unifiedAnalysisResult.centralityMetrics.degree;
-                              friendCount = unifiedAnalysisResult.student.connection_count;
-                              
-                              // 격리 위험도 사용
-                              isolationRiskLevel = unifiedAnalysisResult.isolationRisk.level === 'high' ? '높음' :
-                                                 unifiedAnalysisResult.isolationRisk.level === 'medium' ? '보통' : '낮음';
-                              
-                              // 사회적 영향력 사용
-                              socialInfluenceLevel = unifiedAnalysisResult.socialInfluence.level === 'high' ? '높음' :
-                                                    unifiedAnalysisResult.socialInfluence.level === 'medium' ? '보통' : '낮음';
-                              
-                              // 커뮤니티 ID 사용
-                              communityId = unifiedAnalysisResult.communityMembership;
-                              
-                              // 친구관계 유형 사용
-                              friendshipType = unifiedAnalysisResult.student.friendship_type;
-                              
-                              // 추천사항 사용
+                              // 추천사항만 통합 분석 결과 사용
                               recommendations = unifiedAnalysisResult.recommendations;
-                              
-                              // 네트워크 밀도는 전체 분석에서 가져오기
-                              const selectedStudentData = students.find(s => s.id === selectedStudent);
-                              networkDensity = selectedStudentData?.network_metrics?.network_density || 0;
-                            } else {
-                              // 네트워크 메트릭이 없으면 기본 계산
+                            }
+                            
+                            // 기본 계산 (fallback)
+                            if (!networkAnalysisData) {
                               const totalConnections = individualNetworkData.reduce(
                                 (sum, student) => sum + student.friendCount, 0
                               ) / 2;
@@ -2103,13 +2107,20 @@ const IndividualAnalysis: React.FC = () => {
                               socialInfluenceLevel = centrality < 0.3 ? "낮음" : centrality < 0.6 ? "보통" : "높음";
                             }
                             
-                            // 그룹 분석 (실제 커뮤니티 정보 사용)
+                            // 그룹 분석 (전체 네트워크에서의 실제 커뮤니티 정보 사용)
                             const connectedStudents = individualNetworkData.filter(
                               (s) => !s.isCenter && s.friendCount > 0,
                             );
+                            
+                            // 전체 네트워크에서 같은 커뮤니티의 학생 수 계산
+                            let groupSize = 1; // 최소 본인 포함
+                            if (networkAnalysisData) {
+                              groupSize = networkAnalysisData.nodes.filter(n => n.community === communityId).length;
+                            }
+                            
                             const groupDistribution = connectedStudents.length > 0
-                              ? `연결된 ${connectedStudents.length}명 (커뮤니티 ${communityId})`
-                              : "연결된 학생 없음";
+                              ? `연결된 ${connectedStudents.length}명 (커뮤니티 ${communityId + 1}, 총 ${groupSize}명)`
+                              : `커뮤니티 ${communityId + 1} (총 ${groupSize}명)`;
 
                             return (
                               <div>
@@ -2123,11 +2134,11 @@ const IndividualAnalysis: React.FC = () => {
                                 <div className="space-y-4">
                                   <div>
                                     <h5 className="mb-2 text-sm font-medium text-cyan-500">
-                                      1. 현재 상태 (Current Status)
+                                      1. 현재 상황
                                     </h5>
                                     <ul className="ml-4 space-y-1 text-sm text-gray-600">
                                       {(() => {
-                                        // Python 분석 결과의 current_status 우선 사용
+                                        // 전체 네트워크 분석 데이터에서 해당 학생의 실제 상태 계산
                                         let currentStatus: CurrentStatus;
                                         
                                         if (pythonAnalysisResult?.individual_metrics?.current_status) {
@@ -2139,14 +2150,14 @@ const IndividualAnalysis: React.FC = () => {
                                             networkParticipation: pyStatus.network_participation,
                                           };
                                         } else {
-                                          // 유틸리티 함수로 계산
+                                          // 학생별 실제 데이터를 기반으로 계산
                                           const metrics: StudentMetrics = {
                                             centrality,
                                             friendCount,
                                             networkDensity,
                                             isolationRisk: isolationRiskLevel,
                                             socialInfluence: socialInfluenceLevel,
-                                            totalStudents,
+                                            totalStudents: networkAnalysisData?.nodes.length || totalStudents,
                                             communityId,
                                           };
                                           currentStatus = calculateCurrentStatus(metrics);
@@ -2155,9 +2166,9 @@ const IndividualAnalysis: React.FC = () => {
                                         return (
                                           <>
                                             <li>• 학교생활 만족도: {currentStatus.schoolSatisfaction}</li>
-                                            <li>• 교사와의 관계: {currentStatus.teacherRelationship}</li>
-                                            <li>• 또래 관계: {currentStatus.peerRelationship}</li>
-                                            <li>• 네트워크 참여도: {currentStatus.networkParticipation}</li>
+                                            <li>• 선생님과의 관계: {currentStatus.teacherRelationship}</li>
+                                            <li>• 친구들과의 관계: {currentStatus.peerRelationship}</li>
+                                            <li>• 학급 참여도: {currentStatus.networkParticipation}</li>
                                           </>
                                         );
                                       })()}
@@ -2166,24 +2177,24 @@ const IndividualAnalysis: React.FC = () => {
 
                                   <div>
                                     <h5 className="mb-2 text-sm font-medium text-sky-500">
-                                      2. 네트워크 안정성 (Network Stability)
+                                      2. 친구 관계 분석
                                     </h5>
                                     <ul className="ml-4 space-y-1 text-sm text-gray-600">
                                       <li>
-                                        • 중심성 점수:{" "}
+                                        • 인기도 점수:{" "}
                                         {(centrality * 100).toFixed(1)}%
                                       </li>
                                       <li>
-                                        • 연결된 친구 수: {friendCount}명 (전체{" "}
+                                        • 친구 수: {friendCount}명 (전체{" "}
                                         {totalStudents}명 중)
                                       </li>
                                       <li>
-                                        • 네트워크 밀도:{" "}
+                                        • 학급 친밀도:{" "}
                                         {(networkDensity * 100).toFixed(1)}%
                                       </li>
-                                      <li>• 그룹 분포: {groupDistribution}</li>
+                                      <li>• 소속 그룹: {groupDistribution}</li>
                                       <li>
-                                        • 고립 위험도:{" "}
+                                        • 외톨이 위험도:{" "}
                                         {isolationRiskLevel}
                                       </li>
                                     </ul>
@@ -2191,11 +2202,11 @@ const IndividualAnalysis: React.FC = () => {
 
                                   <div>
                                     <h5 className="mb-2 text-sm font-medium text-blue-500">
-                                      3. 개선방안 (Improvement Plan)
+                                      3. 도움 방안
                                     </h5>
                                     <ul className="ml-4 space-y-1 text-sm text-gray-600">
                                       {(() => {
-                                        // Python 분석 결과 우선 사용, 없으면 유틸리티 함수로 생성
+                                        // 학생별 실제 데이터를 기반으로 개인화된 추천사항 생성
                                         let recommendationPlan: RecommendationPlan;
                                         
                                         if (recommendations) {
@@ -2206,13 +2217,14 @@ const IndividualAnalysis: React.FC = () => {
                                             interventionLevel: recommendations.intervention_level || "관찰",
                                           };
                                         } else {
+                                          // 학생별 실제 메트릭을 기반으로 개인화된 추천사항 생성
                                           const metrics: StudentMetrics = {
                                             centrality,
                                             friendCount,
                                             networkDensity,
                                             isolationRisk: isolationRiskLevel,
                                             socialInfluence: socialInfluenceLevel,
-                                            totalStudents,
+                                            totalStudents: networkAnalysisData?.nodes.length || totalStudents,
                                             communityId,
                                           };
                                           recommendationPlan = generateRecommendationPlan(metrics);
@@ -2222,7 +2234,7 @@ const IndividualAnalysis: React.FC = () => {
                                           <>
                                             {recommendationPlan.immediate.length > 0 && (
                                               <>
-                                                <li className="font-medium text-blue-600">즉시 실행 가능한 조치:</li>
+                                                <li className="font-medium text-blue-600">지금 바로 할 수 있는 것:</li>
                                                 {recommendationPlan.immediate.map((action, index) => (
                                                   <li key={index}>• {action}</li>
                                                 ))}
@@ -2231,7 +2243,7 @@ const IndividualAnalysis: React.FC = () => {
                                             
                                             {recommendationPlan.shortTerm.length > 0 && (
                                               <>
-                                                <li className="font-medium text-green-600">단기 목표 (1-3개월):</li>
+                                                <li className="font-medium text-green-600">짧은 기간 목표 (1-3개월):</li>
                                                 {recommendationPlan.shortTerm.map((goal, index) => (
                                                   <li key={index}>• {goal}</li>
                                                 ))}
@@ -2240,7 +2252,7 @@ const IndividualAnalysis: React.FC = () => {
                                             
                                             {recommendationPlan.longTerm.length > 0 && (
                                               <>
-                                                <li className="font-medium text-purple-600">장기 목표 (3-6개월):</li>
+                                                <li className="font-medium text-purple-600">긴 기간 목표 (3-6개월):</li>
                                                 {recommendationPlan.longTerm.map((goal, index) => (
                                                   <li key={index}>• {goal}</li>
                                                 ))}
@@ -2248,7 +2260,18 @@ const IndividualAnalysis: React.FC = () => {
                                             )}
                                             
                                             <li className="font-medium text-orange-600">
-                                              개입 수준: {recommendationPlan.interventionLevel}
+                                              도움 필요도: {(() => {
+                                                const level = recommendationPlan.interventionLevel;
+                                                switch (level) {
+                                                  case "urgent": return "긴급";
+                                                  case "high": return "높음";
+                                                  case "medium": return "보통";
+                                                  case "moderate": return "보통";
+                                                  case "low": return "낮음";
+                                                  case "observation": return "관찰";
+                                                  default: return level;
+                                                }
+                                              })()}
                                             </li>
                                           </>
                                         );
@@ -2257,23 +2280,24 @@ const IndividualAnalysis: React.FC = () => {
                                   </div>
                                   <div>
                                     <h5 className="mb-2 text-sm font-medium text-indigo-500">
-                                      4. 모니터링 포인트 (Monitoring Points)
+                                      4. 주의해서 볼 점
                                     </h5>
                                     <ul className="ml-4 space-y-1 text-sm text-gray-600">
                                       {(() => {
-                                        // Python 분석 결과 우선 사용, 없으면 유틸리티 함수로 생성
+                                        // 학생별 실제 데이터를 기반으로 개인화된 모니터링 포인트 생성
                                         let monitoringPoints: string[];
                                         
                                         if (recommendations?.monitoring_points && recommendations.monitoring_points.length > 0) {
                                           monitoringPoints = recommendations.monitoring_points;
                                         } else {
+                                          // 학생별 실제 메트릭을 기반으로 개인화된 모니터링 포인트 생성
                                           const metrics: StudentMetrics = {
                                             centrality,
                                             friendCount,
                                             networkDensity,
                                             isolationRisk: isolationRiskLevel,
                                             socialInfluence: socialInfluenceLevel,
-                                            totalStudents,
+                                            totalStudents: networkAnalysisData?.nodes.length || totalStudents,
                                             communityId,
                                           };
                                           monitoringPoints = generateMonitoringPoints(metrics).points;

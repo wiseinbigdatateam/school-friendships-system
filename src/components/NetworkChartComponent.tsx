@@ -33,6 +33,19 @@ const NetworkChartComponent: React.FC<NetworkChartComponentProps> = ({
   const [secondGraphData, setSecondGraphData] =
     useState<NetworkAnalysisData | null>(null);
 
+  // 클러스터 수 계산 유틸리티 함수
+  const getClusterCount = (graphData: NetworkAnalysisData): number => {
+    const clusters = new Map<number, any>();
+    graphData.nodes.forEach((node) => {
+      const clusterId = node.community ?? 0;
+      if (!clusters.has(clusterId)) {
+        clusters.set(clusterId, []);
+      }
+      clusters.get(clusterId)?.push(node);
+    });
+    return clusters.size;
+  };
+
   // 실제 네트워크 데이터 사용
   const getNetworkData = (data: NetworkAnalysisData) => {
     console.log("📊 실제 네트워크 데이터 사용:", data);
@@ -81,7 +94,7 @@ const NetworkChartComponent: React.FC<NetworkChartComponentProps> = ({
           </div>
 
           {/* 기본 통계 정보 */}
-          <div className="mt-6 grid grid-cols-1 gap-4 md:grid-cols-3">
+          <div className="mt-6 grid grid-cols-1 gap-4 md:grid-cols-4">
             <div className="flex flex-col items-center rounded-lg bg-gray-50 p-4">
               <h4 className="text-sm font-medium text-blue-400">총 학생 수</h4>
               <p className="text-2xl font-bold text-blue-400">
@@ -96,12 +109,28 @@ const NetworkChartComponent: React.FC<NetworkChartComponentProps> = ({
                 {(firstGraphData.metrics.network_density * 100).toFixed(1)}%
               </p>
             </div>
+            <div className="flex flex-col items-center rounded-lg bg-gradient-to-br from-blue-50 to-blue-100 p-4 shadow-sm">
+              <h4 className="text-sm font-medium text-blue-700">
+                🎯 친구 그룹 수
+              </h4>
+              <p className="text-3xl font-bold text-blue-600">
+                {getClusterCount(firstGraphData)}개
+              </p>
+              <p className="mt-1 text-xs text-blue-600">
+                {(() => {
+                  const clusterCount = getClusterCount(firstGraphData);
+                  return clusterCount <= 2 ? "매우 통합됨" :
+                         clusterCount <= 4 ? "적절함" :
+                         clusterCount <= 6 ? "다소 분산됨" : "주의 필요";
+                })()}
+              </p>
+            </div>
             <div className="flex flex-col items-center rounded-lg bg-gray-50 p-4">
               <h4 className="text-sm font-medium text-blue-600">
-                친구 그룹 수
+                평균 친구 수
               </h4>
               <p className="text-2xl font-bold text-blue-600">
-                {firstGraphData.metrics.connected_components}
+                {firstGraphData.metrics.average_degree.toFixed(1)}명
               </p>
             </div>
           </div>
@@ -343,7 +372,7 @@ const NetworkChartComponent: React.FC<NetworkChartComponentProps> = ({
           </div>
 
           {/* 기본 통계 정보 */}
-          <div className="mt-6 grid grid-cols-1 gap-4 md:grid-cols-3">
+          <div className="mt-6 grid grid-cols-1 gap-4 md:grid-cols-4">
             <div className="flex flex-col items-center rounded-lg bg-gray-50 p-4">
               <h4 className="text-sm font-medium text-blue-400">총 학생 수</h4>
               <p className="text-2xl font-bold text-blue-400">
@@ -358,12 +387,28 @@ const NetworkChartComponent: React.FC<NetworkChartComponentProps> = ({
                 {(secondGraphData.metrics.network_density * 100).toFixed(1)}%
               </p>
             </div>
+            <div className="flex flex-col items-center rounded-lg bg-gradient-to-br from-blue-50 to-blue-100 p-4 shadow-sm">
+              <h4 className="text-sm font-medium text-blue-700">
+                🎯 친구 그룹 수
+              </h4>
+              <p className="text-3xl font-bold text-blue-600">
+                {getClusterCount(secondGraphData)}개
+              </p>
+              <p className="mt-1 text-xs text-blue-600">
+                {(() => {
+                  const clusterCount = getClusterCount(secondGraphData);
+                  return clusterCount <= 2 ? "매우 통합됨" :
+                         clusterCount <= 4 ? "적절함" :
+                         clusterCount <= 6 ? "다소 분산됨" : "주의 필요";
+                })()}
+              </p>
+            </div>
             <div className="flex flex-col items-center rounded-lg bg-gray-50 p-4">
               <h4 className="text-sm font-medium text-blue-600">
-                친구 그룹 수
+                평균 친구 수
               </h4>
               <p className="text-2xl font-bold text-blue-600">
-                {secondGraphData.metrics.connected_components}
+                {secondGraphData.metrics.average_degree.toFixed(1)}명
               </p>
             </div>
           </div>
@@ -390,6 +435,62 @@ const NetworkChartComponent: React.FC<NetworkChartComponentProps> = ({
               <p className="text-sm text-gray-600">
                 두 시기 간의 지표 변화를 통해 학급 내 친구 관계가 어떻게 발전했는지 확인할 수 있습니다.
               </p>
+
+              {/* 친구 그룹 수 변화 */}
+              <div className="rounded-lg bg-gradient-to-br from-blue-50 to-blue-100 p-4">
+                <div className="mb-3 flex items-center justify-between">
+                  <span className="text-sm font-medium text-blue-800">
+                    🎯 친구 그룹 수 변화
+                  </span>
+                  {(() => {
+                    const firstClusterCount = getClusterCount(firstGraphData);
+                    const secondClusterCount = getClusterCount(secondGraphData);
+                    const change = secondClusterCount - firstClusterCount;
+                    const isPositive = change < 0; // 그룹 수가 줄어든 것이 긍정적
+                    return (
+                      <span className={`text-xs font-bold ${
+                        isPositive ? 'text-green-700' : change === 0 ? 'text-gray-700' : 'text-red-700'
+                      }`}>
+                        {change > 0 ? '+' : ''}{change}개
+                      </span>
+                    );
+                  })()}
+                </div>
+                <div className="flex items-center justify-center gap-4">
+                  <div className="text-center">
+                    <div className="text-2xl font-bold text-blue-700">
+                      {getClusterCount(firstGraphData)}개
+                    </div>
+                    <div className="text-xs text-blue-600">첫 번째 설문</div>
+                  </div>
+                  <div className="text-2xl">
+                    {(() => {
+                      const firstCount = getClusterCount(firstGraphData);
+                      const secondCount = getClusterCount(secondGraphData);
+                      return secondCount < firstCount 
+                        ? "✅" : secondCount > firstCount
+                        ? "⚠️" : "→";
+                    })()}
+                  </div>
+                  <div className="text-center">
+                    <div className="text-2xl font-bold text-blue-700">
+                      {getClusterCount(secondGraphData)}개
+                    </div>
+                    <div className="text-xs text-blue-600">두 번째 설문</div>
+                  </div>
+                </div>
+                <p className="mt-2 text-xs text-blue-700 text-center">
+                  {(() => {
+                    const firstCount = getClusterCount(firstGraphData);
+                    const secondCount = getClusterCount(secondGraphData);
+                    return secondCount < firstCount 
+                      ? "✨ 그룹이 통합되어 학급 응집력이 향상되었습니다" 
+                      : secondCount > firstCount
+                      ? "⚠️ 그룹이 분산되어 학급 통합에 관심이 필요합니다"
+                      : "그룹 수는 동일하게 유지되고 있습니다";
+                  })()}
+                </p>
+              </div>
 
               {/* 네트워크 밀도 */}
               <div className="space-y-2">
