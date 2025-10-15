@@ -5,6 +5,7 @@ import { supabase } from "../lib/supabase";
 import { toast } from "react-hot-toast";
 import { emailService } from "../services/emailService";
 import { hashPassword } from "../utils/password";
+import TermsModal from "../components/TermsModal";
 
 interface LoginFormData {
   email: string;
@@ -26,6 +27,7 @@ const Login: React.FC = () => {
   const [showForgotPassword, setShowForgotPassword] = useState(false);
   const [forgotPasswordEmail, setForgotPasswordEmail] = useState("");
   const [forgotPasswordLoading, setForgotPasswordLoading] = useState(false);
+  const [showTermsModal, setShowTermsModal] = useState<'service' | 'privacy' | null>(null);
 
   // 이미 로그인된 경우 대시보드로 리다이렉트
   React.useEffect(() => {
@@ -228,7 +230,7 @@ const Login: React.FC = () => {
                     </strong>{" "}
                     - (담임교사)
                   </div>
-                  <div className="rounded bg-blue-100 px-2 py-1">
+                  {/* <div className="rounded bg-blue-100 px-2 py-1">
                     <strong>
                       📧{" "}
                       <button
@@ -251,7 +253,7 @@ const Login: React.FC = () => {
                       </button>
                     </strong>{" "}
                     - (학교관리자)
-                  </div>
+                  </div> */}
                   {/* <div className="bg-blue-100 rounded px-2 py-1">
                     <strong>📧 <button onClick={handleDemoDistrictLogin} className="text-sm text-blue-600 hover:text-blue-700 font-medium underline">
                     test_district@school.com</button></strong> - (교육청관리자)
@@ -658,11 +660,17 @@ const Login: React.FC = () => {
         <div className="mt-8 space-y-2 text-center text-sm text-gray-500">
           <p>
             로그인하시면{" "}
-            <button className="text-[#3F80EA] underline hover:text-blue-600">
+            <button 
+              onClick={() => setShowTermsModal('service')}
+              className="text-[#3F80EA] underline hover:text-blue-600"
+            >
               이용약관
             </button>{" "}
             및{" "}
-            <button className="text-[#3F80EA] underline hover:text-blue-600">
+            <button 
+              onClick={() => setShowTermsModal('privacy')}
+              className="text-[#3F80EA] underline hover:text-blue-600"
+            >
               개인정보처리방침
             </button>
             에 동의하는 것으로 간주됩니다.
@@ -680,6 +688,14 @@ const Login: React.FC = () => {
           </p>
         </div>
       </div>
+
+      {/* 약관 모달 */}
+      {showTermsModal && (
+        <TermsModal 
+          type={showTermsModal}
+          onClose={() => setShowTermsModal(null)}
+        />
+      )}
     </div>
   );
 };
