@@ -480,9 +480,12 @@ const NetworkAnalysisPage: React.FC = () => {
               )}
             </h2>
             <div className="flex items-center space-x-4 text-sm text-gray-600">
-              <span>설문프로젝트를 클릭하여 선택해주세요.</span>
+              <span>완료된 설문프로젝트를 클릭하여 선택해주세요.</span>
               <span className="font-medium text-[#3F80EA]">
                 *최대 2개까지 가능
+              </span>
+              <span className="ml-2 text-xs text-gray-500">
+                (응답자가 있는 완료된 설문만 분석 가능)
               </span>
               <span className="ml-auto text-xs text-gray-500">
                 총 {projectsData.length}개 설문
@@ -504,22 +507,32 @@ const NetworkAnalysisPage: React.FC = () => {
                     : "선택할 교우현황 설문이 없습니다."}
                 </p>
               ) : (
-                draggableItems.map((item) => (
-                  <div
-                    key={item.pid}
-                    onClick={() => handleProjectSelect(item)}
-                    className="cursor-pointer rounded-lg border border-gray-300 bg-white p-3 transition-colors duration-200 hover:border-blue-500 hover:bg-blue-50"
-                  >
-                    <div className="text-sm font-medium text-gray-900">{item.name}</div>
-                    <div className="mt-1 flex items-center space-x-2 text-xs text-gray-600">
-                      <span>템플릿: {item.template_category || "분석가능"}</span>
-                      <span>•</span>
-                      <span>응답: {surveyResponseCounts[item.pid] || 0}명</span>
-                      <span>•</span>
-                      <span>{formatDate(item.created_at)}</span>
-                    </div>
-                  </div>
-                ))
+                draggableItems
+                  .filter((item) => {
+                    const isCompleted = item.status === "completed";
+                    const responseCount = surveyResponseCounts[item.pid] || 0;
+                    return isCompleted && responseCount > 0;
+                  })
+                  .map((item) => {
+                    const responseCount = surveyResponseCounts[item.pid] || 0;
+                    
+                    return (
+                      <div
+                        key={item.pid}
+                        onClick={() => handleProjectSelect(item)}
+                        className="cursor-pointer rounded-lg border border-gray-300 bg-white p-3 transition-colors duration-200 hover:border-blue-500 hover:bg-blue-50"
+                      >
+                        <div className="text-sm font-medium text-gray-900">{item.name}</div>
+                        <div className="mt-1 flex items-center space-x-2 text-xs text-gray-600">
+                          <span>템플릿: {item.template_category || "분석가능"}</span>
+                          <span>•</span>
+                          <span>응답: {responseCount}명</span>
+                          <span>•</span>
+                          <span>{formatDate(item.created_at)}</span>
+                        </div>
+                      </div>
+                    );
+                  })
               )}
             </div>
           </div>
@@ -561,200 +574,40 @@ const NetworkAnalysisPage: React.FC = () => {
 
         {/* 결과 : 그래프, 테이블 */}
         {chartData.length !== 0 && (
-          <div className="flex flex-col space-y-6">
-            {/* 친구 그룹 수 안내 섹션 (교육적 표현) */}
-            <div className="rounded-lg border border-blue-200 bg-blue-50 p-6 shadow-sm">
-              <div className="flex items-start space-x-4">
-                <div className="flex-shrink-0">
-                  <div className="flex h-12 w-12 items-center justify-center rounded-full bg-blue-100">
-                    <svg className="h-6 w-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-                    </svg>
-                  </div>
-                </div>
-                <div className="flex-1">
-                  <h3 className="mb-2 text-lg font-semibold text-gray-900">
-                    친구 그룹 응집도 분석
-                  </h3>
-                  <p className="mb-4 text-sm text-gray-600">
-                    학급 내에서 형성된 친구 그룹의 수를 분석합니다. 그룹 수가 적을수록 학급이 하나로 잘 통합되어 있음을 의미합니다.
-                  </p>
-                  
-                  {/* 친구 그룹 수 표시 */}
-                  {chartData.length === 1 ? (
-                    <div className="space-y-3">
-                      <div className="flex items-center space-x-3">
-                        <span className="text-sm font-medium text-gray-700">친구 그룹 응집도:</span>
-                        <div className="flex-1 h-3 bg-gray-200 rounded-full overflow-hidden">
-                          <div 
-                            className="h-full bg-gradient-to-r from-green-400 to-blue-500 rounded-full transition-all duration-500"
-                            style={{
-                              width: `${Math.min(100, (1 / Math.max(chartData[0].metrics.connected_components, 1)) * 100)}%`
-                            }}
-                          />
-                        </div>
-                        <span className="text-lg font-bold text-blue-600">
-                          {chartData[0].metrics.connected_components}개 그룹
-                        </span>
-                      </div>
-                      
-                      {/* 해석 가이드 */}
-                      <div className="rounded-lg bg-white p-4">
-                        <div className="text-sm">
-                          {chartData[0].metrics.connected_components === 1 && (
-                            <div className="flex items-start space-x-2">
-                              <span className="text-green-500">✓</span>
-                              <div>
-                                <p className="font-medium text-green-700">매우 좋음</p>
-                                <p className="text-gray-600">학급 전체가 하나로 잘 통합되어 있습니다.</p>
-                              </div>
-                            </div>
-                          )}
-                          {chartData[0].metrics.connected_components === 2 && (
-                            <div className="flex items-start space-x-2">
-                              <span className="text-blue-500">ℹ</span>
-                              <div>
-                                <p className="font-medium text-blue-700">양호함</p>
-                                <p className="text-gray-600">대부분의 학생이 서로 연결되어 있으나, 일부 분리된 그룹이 있습니다.</p>
-                              </div>
-                            </div>
-                          )}
-                          {chartData[0].metrics.connected_components >= 3 && chartData[0].metrics.connected_components <= 4 && (
-                            <div className="flex items-start space-x-2">
-                              <span className="text-yellow-500">⚠</span>
-                              <div>
-                                <p className="font-medium text-yellow-700">주의 필요</p>
-                                <p className="text-gray-600">여러 개의 작은 그룹으로 나뉘어 있습니다. 그룹 간 교류를 늘릴 필요가 있습니다.</p>
-                              </div>
-                            </div>
-                          )}
-                          {chartData[0].metrics.connected_components > 4 && (
-                            <div className="flex items-start space-x-2">
-                              <span className="text-red-500">!</span>
-                              <div>
-                                <p className="font-medium text-red-700">관심 필요</p>
-                                <p className="text-gray-600">학급이 많은 작은 그룹으로 분산되어 있습니다. 통합적인 활동이 필요합니다.</p>
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                        
-                        {/* 권장사항 */}
-                        {chartData[0].metrics.connected_components > 1 && (
-                          <div className="mt-3 rounded-md bg-blue-50 p-3">
-                            <p className="text-xs font-medium text-blue-800">💡 권장사항</p>
-                            <ul className="mt-1 space-y-1 text-xs text-blue-700">
-                              <li>• 그룹 간 협력 활동 진행 (조별 프로젝트, 팀 게임 등)</li>
-                              <li>• 자리 배치 변경을 통한 새로운 교류 기회 제공</li>
-                              <li>• 학급 전체가 참여하는 공동체 활동 강화</li>
-                            </ul>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  ) : (
-                    // 두 개 설문 비교 시
-                    <div className="space-y-3">
-                      <div className="flex items-center justify-center space-x-4">
-                        <div className="text-center">
-                          <div className="text-3xl font-bold text-gray-700">
-                            {chartData[0].metrics.connected_components}개
-                          </div>
-                          <div className="text-xs text-gray-500">첫 번째 설문</div>
-                        </div>
-                        
-                        <div className="text-2xl">
-                          {chartData[1].metrics.connected_components < chartData[0].metrics.connected_components 
-                            ? "📈" : chartData[1].metrics.connected_components > chartData[0].metrics.connected_components 
-                            ? "📉" : "➡️"}
-                        </div>
-                        
-                        <div className="text-center">
-                          <div className="text-3xl font-bold text-gray-700">
-                            {chartData[1].metrics.connected_components}개
-                          </div>
-                          <div className="text-xs text-gray-500">두 번째 설문</div>
-                        </div>
-                      </div>
-                      
-                      {/* 변화 해석 */}
-                      <div className="rounded-lg bg-white p-4">
-                        <div className="text-sm">
-                          {chartData[1].metrics.connected_components < chartData[0].metrics.connected_components ? (
-                            <div className="flex items-start space-x-2">
-                              <span className="text-green-500">✓</span>
-                              <div>
-                                <p className="font-medium text-green-700">긍정적 변화</p>
-                                <p className="text-gray-600">
-                                  친구 그룹이 {chartData[0].metrics.connected_components - chartData[1].metrics.connected_components}개 
-                                  줄어들어 학급 응집도가 개선되었습니다.
-                                </p>
-                              </div>
-                            </div>
-                          ) : chartData[1].metrics.connected_components > chartData[0].metrics.connected_components ? (
-                            <div className="flex items-start space-x-2">
-                              <span className="text-yellow-500">⚠</span>
-                              <div>
-                                <p className="font-medium text-yellow-700">관심 필요</p>
-                                <p className="text-gray-600">
-                                  친구 그룹이 {chartData[1].metrics.connected_components - chartData[0].metrics.connected_components}개 
-                                  증가하여 학급이 더 분산되었습니다. 통합 활동이 필요합니다.
-                                </p>
-                              </div>
-                            </div>
-                          ) : (
-                            <div className="flex items-start space-x-2">
-                              <span className="text-blue-500">ℹ</span>
-                              <div>
-                                <p className="font-medium text-blue-700">변화 없음</p>
-                                <p className="text-gray-600">친구 그룹 수가 동일하게 유지되고 있습니다.</p>
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  )}
+          <div className="flex flex-col rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
+            {/* 두 개의 차트를 비교할 때만 렌더링되는 탭 메뉴 */}
+            {chartData.length === 2 && (
+              <div className="flex items-center justify-between self-end px-6">
+                <div className="flex space-x-1 rounded-lg bg-gray-100 p-1">
+                  <button
+                    onClick={() => setActiveTab(1)}
+                    className={`rounded-md px-4 py-2 text-sm font-medium transition-colors ${
+                      activeTab === 1
+                        ? "bg-white text-[#3F80EA] shadow-sm"
+                        : "text-gray-600 hover:text-gray-900"
+                    }`}
+                  >
+                    첫 번째 설문
+                  </button>
+                  <button
+                    onClick={() => setActiveTab(2)}
+                    className={`rounded-md px-4 py-2 text-sm font-medium transition-colors ${
+                      activeTab === 2
+                        ? "bg-white text-[#3F80EA] shadow-sm"
+                        : "text-gray-600 hover:text-gray-900"
+                    }`}
+                  >
+                    두 번째 설문
+                  </button>
                 </div>
               </div>
-            </div>
-
-            {/* 네트워크 그래프 */}
-            <div className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
-              {/* 두 개의 차트를 비교할 때만 렌더링되는 탭 메뉴 */}
-              {chartData.length === 2 && (
-                <div className="flex items-center justify-between self-end px-6">
-                  <div className="flex space-x-1 rounded-lg bg-gray-100 p-1">
-                    <button
-                      onClick={() => setActiveTab(1)}
-                      className={`rounded-md px-4 py-2 text-sm font-medium transition-colors ${
-                        activeTab === 1
-                          ? "bg-white text-[#3F80EA] shadow-sm"
-                          : "text-gray-600 hover:text-gray-900"
-                      }`}
-                    >
-                      첫 번째 설문
-                    </button>
-                    <button
-                      onClick={() => setActiveTab(2)}
-                      className={`rounded-md px-4 py-2 text-sm font-medium transition-colors ${
-                        activeTab === 2
-                          ? "bg-white text-[#3F80EA] shadow-sm"
-                          : "text-gray-600 hover:text-gray-900"
-                      }`}
-                    >
-                      두 번째 설문
-                    </button>
-                  </div>
-                </div>
-              )}
-              <NetworkChartComponent
-                chartData={chartData}
-                activeTab={activeTab}
-                onNodeClick={handleNodeClick}
-                selectedStudentData={selectedStudentData}
-              />
-            </div>
+            )}
+            <NetworkChartComponent
+              chartData={chartData}
+              activeTab={activeTab}
+              onNodeClick={handleNodeClick}
+              selectedStudentData={selectedStudentData}
+            />
           </div>
         )}
 
