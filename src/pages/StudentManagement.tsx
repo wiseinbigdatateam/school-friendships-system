@@ -1406,6 +1406,7 @@ const StudentManagement: React.FC = () => {
   const closeDetailModal = () => {
     setDetailModalOpen(false);
     setSelectedStudent(null);
+    setActiveTab("memo");
   };
 
   const closeMemoModal = () => {
@@ -1759,7 +1760,7 @@ const StudentManagement: React.FC = () => {
       )}
 
       {/* 학생 목록 */}
-      <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 2xl:grid-cols-3">
+      <div className="grid grid-cols-1 gap-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 2xl:grid-cols-3">
         {sortedStudents.length === 0 ? (
           <div className="col-span-full rounded-lg border border-gray-200 bg-white p-12 text-center">
             <svg
@@ -1784,56 +1785,43 @@ const StudentManagement: React.FC = () => {
           sortedStudents.map((student) => (
             <div
               key={student.id}
-              className="rounded-lg border border-gray-200 bg-white p-6 transition-shadow hover:shadow-md"
+              className="flex flex-col gap-2 rounded-lg border border-gray-200 bg-white p-5 transition-shadow hover:shadow-md"
             >
-              <div className="mb-4 flex items-start justify-between">
-                <div className="flex items-center space-x-4">
-                  <div className="flex h-12 w-12 items-center justify-center rounded-full bg-gray-300">
-                    <span className="font-semibold text-white">
-                      {student.name.charAt(0)}
+              {/* 이름, 번호 */}
+              <div className="flex items-start justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="flex h-[42px] w-[42px] items-center justify-center rounded-full bg-gray-100">
+                    <span className="text-sm text-gray-600">
+                      {parseInt(student.student_number)}번
                     </span>
                   </div>
-                  <div>
-                    <h3 className="text-lg font-semibold text-gray-900">
-                      {student.name}
-                    </h3>
-                    <p className="text-sm text-gray-600">
+
+                  <p className="text-lg font-semibold text-gray-950">
+                    {student.name}
+                  </p>
+                  {/* <p className="text-sm text-gray-600">
                       {student.grade}학년 {student.class}반{" "}
                       {parseInt(student.student_number)}번
-                    </p>
-                  </div>
+                    </p> */}
                 </div>
               </div>
 
-              {/* 메모 수 */}
-              {/* <div className="mb-4 text-sm">
-                <span className="text-gray-600">교사 메모:</span>
-                <span className="ml-2 text-gray-900">
-                  {student.teacher_memos?.length || 0}개
-                </span>
-                <span className="ml-4 text-gray-600">개입 기록:</span>
-                <span className="ml-2 text-gray-900">
-                  {student.intervention_logs?.length || 0}개
-                </span>
-              </div> */}
-
-              <div className="flex items-center justify-between space-x-2">
+              {/* 상담기록, 상세보기 모달 */}
+              <div className="flex items-center justify-between">
                 <div className="flex gap-2 text-sm">
-                  <span className="text-gray-600">상담 기록:</span>
-                  <span className="text-gray-900">
-                    {student.teacher_memos?.length || 0}개
-                  </span>
+                  <span className="text-gray-950">상담 기록:</span>
+                  {student.teacher_memos?.length || 0}개
                 </div>
-                <div className="flex gap-1">
+                <div className="flex gap-2">
                   <button
                     onClick={() => handleViewDetails(student)}
-                    className="rounded-md bg-[#3F80EA] px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-blue-600"
+                    className="border-b border-gray-400 px-2 py-2.5 text-sm text-gray-950"
                   >
                     상세보기
                   </button>
                   <button
                     onClick={() => handleAddMemo(student)}
-                    className="rounded-md bg-gray-100 px-4 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-200"
+                    className="border-b border-gray-400 px-2 py-2.5 text-sm text-gray-950"
                   >
                     상담 기록
                   </button>
