@@ -55,6 +55,7 @@ const StudentManagement: React.FC = () => {
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [uploadTotal, setUploadTotal] = useState(0);
+  const [activeTab, setActiveTab] = useState("memo");
 
   // 담임 정보 및 정렬 관련 상태
   const [currentUser, setCurrentUser] = useState<any>(null);
@@ -62,17 +63,19 @@ const StudentManagement: React.FC = () => {
   const [schoolName, setSchoolName] = useState<string | null>(null);
   const [sortField, setSortField] = useState<string>("name");
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
-  const [unifiedAnalysisData, setUnifiedAnalysisData] = useState<Map<string, IndividualAnalysisResult>>(new Map());
+  const [unifiedAnalysisData, setUnifiedAnalysisData] = useState<
+    Map<string, IndividualAnalysisResult>
+  >(new Map());
   const [analysisLoading, setAnalysisLoading] = useState(false);
 
   // 통합 서비스를 사용한 학생 네트워크 분석 데이터 로드
   const loadUnifiedAnalysisData = async () => {
     if (!teacherInfo || students.length === 0) return;
-    
+
     try {
       setAnalysisLoading(true);
       console.log("🔍 통합 분석 데이터 로드 시작");
-      
+
       // 최신 설문 ID 찾기
       const { data: surveys, error: surveyError } = await supabase
         .from("surveys")
@@ -81,33 +84,33 @@ const StudentManagement: React.FC = () => {
         .eq("status", "completed")
         .order("created_at", { ascending: false })
         .limit(1);
-      
+
       if (surveyError || !surveys || surveys.length === 0) {
         console.log("완료된 설문이 없습니다.");
         return;
       }
-      
+
       const latestSurvey = surveys[0];
       console.log(`📊 최신 설문 사용: ${latestSurvey.title}`);
-      
+
       // 각 학생에 대한 개별 분석 수행
       const analysisMap = new Map<string, IndividualAnalysisResult>();
-      
+
       for (const student of students) {
         try {
-          const analysis = await unifiedNetworkAnalysisService.getIndividualAnalysis(
-            latestSurvey.id,
-            student.id
-          );
+          const analysis =
+            await unifiedNetworkAnalysisService.getIndividualAnalysis(
+              latestSurvey.id,
+              student.id,
+            );
           analysisMap.set(student.id, analysis);
         } catch (error) {
           console.error(`학생 ${student.name} 분석 오류:`, error);
         }
       }
-      
+
       setUnifiedAnalysisData(analysisMap);
       console.log(`✅ 통합 분석 데이터 로드 완료: ${analysisMap.size}명`);
-      
     } catch (error) {
       console.error("❌ 통합 분석 데이터 로드 오류:", error);
     } finally {
@@ -564,7 +567,7 @@ const StudentManagement: React.FC = () => {
     if (unifiedAnalysis) {
       return unifiedAnalysis.isolationRisk.level;
     }
-    
+
     // 기존 방식 폴백
     if (!student.network_metrics) return "low";
 
@@ -1403,6 +1406,7 @@ const StudentManagement: React.FC = () => {
   const closeDetailModal = () => {
     setDetailModalOpen(false);
     setSelectedStudent(null);
+    setActiveTab("memo");
   };
 
   const closeMemoModal = () => {
@@ -1611,7 +1615,6 @@ const StudentManagement: React.FC = () => {
             )}
         </div>
 
-
         <div className="grid grid-cols-1 gap-3 md:grid-cols-4">
           {/* 검색 */}
           <div className="relative">
@@ -1757,7 +1760,7 @@ const StudentManagement: React.FC = () => {
       )}
 
       {/* 학생 목록 */}
-      <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 2xl:grid-cols-3">
+      <div className="grid grid-cols-1 gap-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 2xl:grid-cols-3">
         {sortedStudents.length === 0 ? (
           <div className="col-span-full rounded-lg border border-gray-200 bg-white p-12 text-center">
             <svg
@@ -1782,58 +1785,43 @@ const StudentManagement: React.FC = () => {
           sortedStudents.map((student) => (
             <div
               key={student.id}
-              className="rounded-lg border border-gray-200 bg-white p-6 transition-shadow hover:shadow-md"
+              className="flex flex-col gap-2 rounded-lg border border-gray-200 bg-white p-5 transition-shadow hover:shadow-md"
             >
-              <div className="mb-4 flex items-start justify-between">
-                <div className="flex items-center space-x-4">
-                  <div className="flex h-12 w-12 items-center justify-center rounded-full bg-gray-300">
-                    <span className="font-semibold text-white">
-                      {student.name.charAt(0)}
+              {/* 이름, 번호 */}
+              <div className="flex items-start justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="flex h-[42px] w-[42px] items-center justify-center rounded-full bg-gray-100">
+                    <span className="text-sm text-gray-600">
+                      {parseInt(student.student_number)}번
                     </span>
                   </div>
-                  <div>
-                    <h3 className="text-lg font-semibold text-gray-900">
-                      {student.name}
-                    </h3>
-                    <p className="text-sm text-gray-600">
+
+                  <p className="text-lg font-semibold text-gray-950">
+                    {student.name}
+                  </p>
+                  {/* <p className="text-sm text-gray-600">
                       {student.grade}학년 {student.class}반{" "}
                       {parseInt(student.student_number)}번
-                    </p>
-                  </div>
+                    </p> */}
                 </div>
-
               </div>
 
-
-              {/* 메모 수 */}
-              {/* <div className="mb-4 text-sm">
-                <span className="text-gray-600">교사 메모:</span>
-                <span className="ml-2 text-gray-900">
-                  {student.teacher_memos?.length || 0}개
-                </span>
-                <span className="ml-4 text-gray-600">개입 기록:</span>
-                <span className="ml-2 text-gray-900">
-                  {student.intervention_logs?.length || 0}개
-                </span>
-              </div> */}
-
-              <div className="flex items-center justify-between space-x-2">
+              {/* 상담기록, 상세보기 모달 */}
+              <div className="flex items-center justify-between">
                 <div className="flex gap-2 text-sm">
-                  <span className="text-gray-600">상담 기록:</span>
-                  <span className="text-gray-900">
-                    {student.teacher_memos?.length || 0}개
-                  </span>
+                  <span className="text-gray-950">상담 기록:</span>
+                  {student.teacher_memos?.length || 0}개
                 </div>
-                <div className="flex gap-1">
+                <div className="flex gap-2">
                   <button
                     onClick={() => handleViewDetails(student)}
-                    className="rounded-md bg-[#3F80EA] px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-blue-600"
+                    className="border-b border-gray-400 px-2 py-2.5 text-sm text-gray-950"
                   >
                     상세보기
                   </button>
                   <button
                     onClick={() => handleAddMemo(student)}
-                    className="rounded-md bg-gray-100 px-4 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-200"
+                    className="border-b border-gray-400 px-2 py-2.5 text-sm text-gray-950"
                   >
                     상담 기록
                   </button>
@@ -1862,165 +1850,206 @@ const StudentManagement: React.FC = () => {
             </div>
 
             {/* 모달 내용 */}
-            <div className="space-y-6 p-6">
-              {/* 학생 상담 기록 */}
-              <div>
-                <h3 className="mb-4 text-base font-semibold text-gray-900">
-                  • 학생 상담 기록
-                </h3>
-                {selectedStudent.teacher_memos &&
-                Array.isArray(selectedStudent.teacher_memos) &&
-                selectedStudent.teacher_memos.length > 0 ? (
-                  <div className="max-h-32 space-y-2 overflow-y-auto">
-                    {selectedStudent.teacher_memos.map((memo, index) => (
-                      <div
-                        key={memo.id || index}
-                        className="cursor-pointer rounded-lg bg-gray-50 p-3 transition-colors hover:bg-gray-100"
-                        onClick={() => handleEditMemo(memo)}
-                      >
-                        <div className="flex items-center space-x-2">
-                          <span className="whitespace-nowrap text-sm text-gray-600">
-                            {memo.created_at
-                              ? new Date(memo.created_at).toLocaleDateString()
-                              : "날짜 없음"}
-                          </span>
-                          <span className="truncate text-gray-900">
-                            {(() => {
-                              try {
-                                const content = memo.content;
-                                return content !== undefined && content !== null
-                                  ? content
-                                  : "내용 없음";
-                              } catch (error) {
-                                console.error("상담 내용 파싱 오류:", error);
-                                return "내용 없음";
-                              }
-                            })()}
-                          </span>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="text-gray-500">등록된 상담 기록이 없습니다.</p>
-                )}
-              </div>
-              {/* 기본 정보 */}
-              <div>
-                <h3 className="mb-4 text-base font-semibold text-gray-900">
-                  • 기본 정보
-                </h3>
-                <div className="ml-4 grid grid-cols-2 gap-4 text-sm">
-                  <div>
-                    <span className="text-gray-600">학생 번호:</span>
-                    <span className="ml-2 font-medium text-blue-600 text-gray-900">
-                      {parseInt(selectedStudent.student_number)}번
-                    </span>
-                  </div>
-                  <div>
-                    <span className="text-gray-600">성별:</span>
-                    <span className="ml-2 text-gray-900">
-                      {getGenderLabel(selectedStudent.gender)}
-                    </span>
-                  </div>
-                  <div>
-                    <span className="text-gray-600">학급:</span>
-                    <span className="ml-2 text-gray-900">
-                      {selectedStudent.grade}학년 {selectedStudent.class}반
-                    </span>
-                  </div>
-                  <div>
-                    <span className="text-gray-600">생년월일:</span>
-                    <span className="ml-2 text-gray-900">
-                      {selectedStudent.birth_date}
-                    </span>
-                  </div>
+            <div className="flex flex-col p-6">
+              {/* 탭 메뉴 */}
+              <div className="flex items-center justify-between self-end">
+                <div className="flex space-x-1 rounded-lg bg-gray-100 p-1">
+                  <button
+                    onClick={() => setActiveTab("memo")}
+                    className={`rounded-md px-4 py-2 text-sm font-medium transition-colors ${
+                      activeTab === "memo"
+                        ? "bg-white text-[#3F80EA] shadow-sm"
+                        : "text-gray-600 hover:text-gray-900"
+                    }`}
+                  >
+                    교사 메모
+                  </button>
+                  <button
+                    onClick={() => setActiveTab("info")}
+                    className={`rounded-md px-4 py-2 text-sm font-medium transition-colors ${
+                      activeTab === "info"
+                        ? "bg-white text-[#3F80EA] shadow-sm"
+                        : "text-gray-600 hover:text-gray-900"
+                    }`}
+                  >
+                    정보
+                  </button>
                 </div>
               </div>
 
-              {/* 학부모 연락처 */}
-              <div>
-                <h3 className="mb-4 text-base font-semibold text-gray-900">
-                  • 학부모 연락처
-                </h3>
-                {selectedStudent.parent_contact &&
-                typeof selectedStudent.parent_contact === "object" ? (
-                  <div className="ml-4 grid grid-cols-2 gap-4 text-sm">
-                    <div>
-                      <span className="text-gray-600">어머니:</span>
-                      <span className="ml-2 text-gray-900">
-                        {(() => {
-                          try {
-                            const value = (
-                              selectedStudent.parent_contact as any
-                            )?.mother_name;
-                            return value !== undefined && value !== null
-                              ? value
-                              : "정보 없음";
-                          } catch (error) {
-                            console.error("어머니 이름 파싱 오류:", error);
-                            return "정보 없음";
-                          }
-                        })()}
-                      </span>
-                      {(() => {
-                        try {
-                          const phone = (selectedStudent.parent_contact as any)
-                            ?.mother_phone;
-                          return phone &&
-                            phone !== undefined &&
-                            phone !== null ? (
-                            <span className="ml-2 text-gray-600">
-                              ({phone})
+              {activeTab === "memo" ? (
+                // 교사메모
+                <div>
+                  <h3 className="mb-4 text-base font-semibold text-gray-900">
+                    • 학생 상담 기록
+                  </h3>
+                  {selectedStudent.teacher_memos &&
+                  Array.isArray(selectedStudent.teacher_memos) &&
+                  selectedStudent.teacher_memos.length > 0 ? (
+                    <div className="max-h-32 space-y-2 overflow-y-auto">
+                      {selectedStudent.teacher_memos.map((memo, index) => (
+                        <div
+                          key={memo.id || index}
+                          className="cursor-pointer rounded-lg bg-gray-50 p-3 transition-colors hover:bg-gray-100"
+                          onClick={() => handleEditMemo(memo)}
+                        >
+                          <div className="flex items-center space-x-2">
+                            <span className="whitespace-nowrap text-sm text-gray-600">
+                              {memo.created_at
+                                ? new Date(memo.created_at).toLocaleDateString()
+                                : "날짜 없음"}
                             </span>
-                          ) : null;
-                        } catch (error) {
-                          console.error("어머니 전화번호 파싱 오류:", error);
-                          return null;
-                        }
-                      })()}
+                            <span className="truncate text-gray-900">
+                              {(() => {
+                                try {
+                                  const content = memo.content;
+                                  return content !== undefined &&
+                                    content !== null
+                                    ? content
+                                    : "내용 없음";
+                                } catch (error) {
+                                  console.error("상담 내용 파싱 오류:", error);
+                                  return "내용 없음";
+                                }
+                              })()}
+                            </span>
+                          </div>
+                        </div>
+                      ))}
                     </div>
-                    <div>
-                      <span className="text-gray-600">아버지:</span>
-                      <span className="ml-2 text-gray-900">
-                        {(() => {
-                          try {
-                            const value = (
-                              selectedStudent.parent_contact as any
-                            )?.father_name;
-                            return value !== undefined && value !== null
-                              ? value
-                              : "정보 없음";
-                          } catch (error) {
-                            console.error("아버지 이름 파싱 오류:", error);
-                            return "정보 없음";
-                          }
-                        })()}
-                      </span>
-                      {(() => {
-                        try {
-                          const phone = (selectedStudent.parent_contact as any)
-                            ?.father_phone;
-                          return phone &&
-                            phone !== undefined &&
-                            phone !== null ? (
-                            <span className="ml-2 text-gray-600">
-                              ({phone})
-                            </span>
-                          ) : null;
-                        } catch (error) {
-                          console.error("아버지 전화번호 파싱 오류:", error);
-                          return null;
-                        }
-                      })()}
+                  ) : (
+                    <p className="text-gray-500">
+                      등록된 상담 기록이 없습니다.
+                    </p>
+                  )}
+                </div>
+              ) : (
+                // 정보
+                <div className="flex flex-col gap-5">
+                  <div>
+                    <h3 className="mb-4 text-base font-semibold text-gray-900">
+                      • 기본 정보
+                    </h3>
+                    <div className="ml-4 grid grid-cols-2 gap-4 text-sm">
+                      <div>
+                        <span className="text-gray-600">학생 번호:</span>
+                        <span className="ml-2 font-medium text-blue-600 text-gray-900">
+                          {parseInt(selectedStudent.student_number)}번
+                        </span>
+                      </div>
+                      <div>
+                        <span className="text-gray-600">성별:</span>
+                        <span className="ml-2 text-gray-900">
+                          {getGenderLabel(selectedStudent.gender)}
+                        </span>
+                      </div>
+                      <div>
+                        <span className="text-gray-600">학급:</span>
+                        <span className="ml-2 text-gray-900">
+                          {selectedStudent.grade}학년 {selectedStudent.class}반
+                        </span>
+                      </div>
+                      <div>
+                        <span className="text-gray-600">생년월일:</span>
+                        <span className="ml-2 text-gray-900">
+                          {selectedStudent.birth_date}
+                        </span>
+                      </div>
                     </div>
                   </div>
-                ) : (
-                  <p className="text-gray-500">
-                    등록된 학부모 연락처가 없습니다.
-                  </p>
-                )}
-              </div>
+
+                  <div>
+                    <h3 className="mb-4 text-base font-semibold text-gray-900">
+                      • 학부모 연락처
+                    </h3>
+                    {selectedStudent.parent_contact &&
+                    typeof selectedStudent.parent_contact === "object" ? (
+                      <div className="ml-4 grid grid-cols-2 gap-4 text-sm">
+                        <div>
+                          <span className="text-gray-600">어머니:</span>
+                          <span className="ml-2 text-gray-900">
+                            {(() => {
+                              try {
+                                const value = (
+                                  selectedStudent.parent_contact as any
+                                )?.mother_name;
+                                return value !== undefined && value !== null
+                                  ? value
+                                  : "정보 없음";
+                              } catch (error) {
+                                console.error("어머니 이름 파싱 오류:", error);
+                                return "정보 없음";
+                              }
+                            })()}
+                          </span>
+                          {(() => {
+                            try {
+                              const phone = (
+                                selectedStudent.parent_contact as any
+                              )?.mother_phone;
+                              return phone &&
+                                phone !== undefined &&
+                                phone !== null ? (
+                                <span className="ml-2 text-gray-600">
+                                  ({phone})
+                                </span>
+                              ) : null;
+                            } catch (error) {
+                              console.error(
+                                "어머니 전화번호 파싱 오류:",
+                                error,
+                              );
+                              return null;
+                            }
+                          })()}
+                        </div>
+                        <div>
+                          <span className="text-gray-600">아버지:</span>
+                          <span className="ml-2 text-gray-900">
+                            {(() => {
+                              try {
+                                const value = (
+                                  selectedStudent.parent_contact as any
+                                )?.father_name;
+                                return value !== undefined && value !== null
+                                  ? value
+                                  : "정보 없음";
+                              } catch (error) {
+                                console.error("아버지 이름 파싱 오류:", error);
+                                return "정보 없음";
+                              }
+                            })()}
+                          </span>
+                          {(() => {
+                            try {
+                              const phone = (
+                                selectedStudent.parent_contact as any
+                              )?.father_phone;
+                              return phone &&
+                                phone !== undefined &&
+                                phone !== null ? (
+                                <span className="ml-2 text-gray-600">
+                                  ({phone})
+                                </span>
+                              ) : null;
+                            } catch (error) {
+                              console.error(
+                                "아버지 전화번호 파싱 오류:",
+                                error,
+                              );
+                              return null;
+                            }
+                          })()}
+                        </div>
+                      </div>
+                    ) : (
+                      <p className="text-gray-500">
+                        등록된 학부모 연락처가 없습니다.
+                      </p>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>

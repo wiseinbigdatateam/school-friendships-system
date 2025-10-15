@@ -26,8 +26,12 @@ interface SurveyTemplate {
 }
 
 const Dashboard: React.FC = () => {
-  const { user: currentUser, loading: authLoading, isAuthenticated } = useAuth();
-  
+  const {
+    user: currentUser,
+    loading: authLoading,
+    isAuthenticated,
+  } = useAuth();
+
   const [loading, setLoading] = useState(true);
   const [schoolId, setSchoolId] = useState("");
   const [schoolName, setSchoolName] = useState("");
@@ -99,20 +103,22 @@ const Dashboard: React.FC = () => {
   // 상태 필터 변경 핸들러
   const handleStatusFilterChange = (newStatusFilter: string) => {
     setStatusFilter(newStatusFilter);
-    
+
     // 필터링된 프로젝트가 있으면 첫 번째 프로젝트를 자동 선택
     const filteredProjects = surveyProjects.filter((project) => {
       if (newStatusFilter === "all") return true;
       return project.status === newStatusFilter;
     });
-    
+
     if (filteredProjects.length > 0) {
       handleProjectSelect(filteredProjects[0].id);
     } else {
       // 필터링된 프로젝트가 없으면 선택 해제 및 데이터 초기화
       setSelectedProject("");
-      setSurveyProjects(surveyProjects.map(project => ({ ...project, isSelected: false })));
-      
+      setSurveyProjects(
+        surveyProjects.map((project) => ({ ...project, isSelected: false })),
+      );
+
       // 참여 데이터 초기화
       setParticipationData({
         totalStudents: students.length,
@@ -267,7 +273,7 @@ const Dashboard: React.FC = () => {
     const loadRealData = async () => {
       try {
         console.log("🚀 Dashboard 데이터 로딩 시작");
-        
+
         // 1. 인증 상태 확인
         if (authLoading) {
           console.log("⏳ 인증 로딩 중...");
@@ -287,19 +293,19 @@ const Dashboard: React.FC = () => {
           schoolId: currentUser.schoolId,
           school_id: currentUser.school_id,
           grade: currentUser.grade,
-          class: currentUser.class
+          class: currentUser.class,
         });
 
         // 2. 사용자 정보에서 학교, 학년, 반 정보 추출
         const schoolId = currentUser.school_id || currentUser.schoolId || "";
         const gradeLevel = currentUser.grade?.toString() || "1";
         const classNumber = currentUser.class?.toString() || "1";
-        
-        console.log("🏫 사용자 정보 기반 설정:", { 
-          schoolId, 
-          gradeLevel, 
-          classNumber, 
-          role: currentUser.role 
+
+        console.log("🏫 사용자 정보 기반 설정:", {
+          schoolId,
+          gradeLevel,
+          classNumber,
+          role: currentUser.role,
         });
 
         setSchoolId(schoolId);
@@ -313,7 +319,7 @@ const Dashboard: React.FC = () => {
             .select("name")
             .eq("id", schoolId)
             .single();
-            
+
           if (schoolError) {
             console.warn("⚠️ 학교 정보 조회 실패:", schoolError);
             setSchoolName("알 수 없는 학교");
@@ -327,7 +333,7 @@ const Dashboard: React.FC = () => {
 
         // 4. 학생 목록 조회 (역할에 따라 다르게 처리)
         console.log("👥 학생 목록 조회 시작");
-        
+
         if (!schoolId) {
           console.warn("⚠️ 학교 ID가 없어서 학생 조회를 건너뜀");
           setParticipationData({
@@ -342,7 +348,7 @@ const Dashboard: React.FC = () => {
           setLoading(false);
           return;
         }
-        
+
         let studentsQuery = supabase
           .from("students")
           .select("*")
@@ -363,10 +369,13 @@ const Dashboard: React.FC = () => {
           studentsQuery = studentsQuery
             .eq("grade", gradeLevel)
             .eq("class", classNumber);
-          console.log(`👨‍🏫 담임교사 권한으로 ${gradeLevel}학년 ${classNumber}반 학생 조회`);
+          console.log(
+            `👨‍🏫 담임교사 권한으로 ${gradeLevel}학년 ${classNumber}반 학생 조회`,
+          );
         }
 
-        const { data: studentsData, error: studentsError } = await studentsQuery;
+        const { data: studentsData, error: studentsError } =
+          await studentsQuery;
 
         if (studentsError) {
           console.error("❌ 학생 조회 실패:", studentsError);
@@ -374,7 +383,11 @@ const Dashboard: React.FC = () => {
           return;
         }
 
-        console.log("✅ 학생 데이터 조회 성공:", studentsData?.length || 0, "명");
+        console.log(
+          "✅ 학생 데이터 조회 성공:",
+          studentsData?.length || 0,
+          "명",
+        );
         setStudents(studentsData || []);
 
         if (!studentsData || studentsData.length === 0) {
@@ -399,10 +412,10 @@ const Dashboard: React.FC = () => {
             .order("created_at", { ascending: false });
 
           const { data: surveys, error: surveysError } = await surveysQuery;
-          
-          console.log("📊 설문 조회 결과:", { 
-            surveysCount: surveys?.length || 0, 
-            error: surveysError 
+
+          console.log("📊 설문 조회 결과:", {
+            surveysCount: surveys?.length || 0,
+            error: surveysError,
           });
 
           if (surveysError) {
@@ -426,10 +439,13 @@ const Dashboard: React.FC = () => {
 
                 if (currentUser.role === "school_admin") {
                   // 학교관리자: 해당 교육청 학교의 모든 학년 반의 설문
-                  console.log(`📋 학교관리자용 설문 "${survey.title}" 매칭 결과:`, {
-                    includeAll: true,
-                    reason: "학교관리자는 학교 전체 설문 접근 가능"
-                  });
+                  console.log(
+                    `📋 학교관리자용 설문 "${survey.title}" 매칭 결과:`,
+                    {
+                      includeAll: true,
+                      reason: "학교관리자는 학교 전체 설문 접근 가능",
+                    },
+                  );
                   return true;
                 } else if (currentUser.role === "grade_teacher") {
                   // 학년부장: 해당 교육청 학교 선생님의 학년 모든 반의 설문
@@ -437,11 +453,14 @@ const Dashboard: React.FC = () => {
                   const gradeMatch = Array.isArray(targetGrades)
                     ? targetGrades.includes(assignedGrade)
                     : targetGrades === assignedGrade;
-                  console.log(`📋 학년부장용 설문 "${survey.title}" 매칭 결과:`, {
-                    assignedGrade,
-                    gradeMatch,
-                    reason: "학년부장은 담당 학년의 모든 반 설문 접근 가능"
-                  });
+                  console.log(
+                    `📋 학년부장용 설문 "${survey.title}" 매칭 결과:`,
+                    {
+                      assignedGrade,
+                      gradeMatch,
+                      reason: "학년부장은 담당 학년의 모든 반 설문 접근 가능",
+                    },
+                  );
                   return gradeMatch;
                 } else if (currentUser.role === "homeroom_teacher") {
                   // 담임교사: 해당 교육청 학교 선생님의 학년 반의 설문
@@ -454,21 +473,27 @@ const Dashboard: React.FC = () => {
                     : targetClasses === classNumber;
 
                   const isMatch = gradeMatch && classMatch;
-                  console.log(`📋 담임교사용 설문 "${survey.title}" 매칭 결과:`, {
-                    gradeLevel,
-                    classNumber,
-                    gradeMatch,
-                    classMatch,
-                    isMatch,
-                    reason: "담임교사는 담당 학급 설문만 접근 가능"
-                  });
+                  console.log(
+                    `📋 담임교사용 설문 "${survey.title}" 매칭 결과:`,
+                    {
+                      gradeLevel,
+                      classNumber,
+                      gradeMatch,
+                      classMatch,
+                      isMatch,
+                      reason: "담임교사는 담당 학급 설문만 접근 가능",
+                    },
+                  );
                   return isMatch;
                 } else {
                   // 기타 역할의 경우 기본적으로 모든 설문 표시하지 않음
-                  console.log(`📋 기타 역할용 설문 "${survey.title}" 매칭 결과:`, {
-                    userRole: currentUser.role,
-                    reason: "알 수 없는 역할로 설문 접근 제한"
-                  });
+                  console.log(
+                    `📋 기타 역할용 설문 "${survey.title}" 매칭 결과:`,
+                    {
+                      userRole: currentUser.role,
+                      reason: "알 수 없는 역할로 설문 접근 제한",
+                    },
+                  );
                   return false;
                 }
               }) || [];
@@ -722,19 +747,19 @@ const Dashboard: React.FC = () => {
 
                 setDailyParticipationData(dailyData);
               }
-        } else {
-          // 설문이 없으면 기본 데이터만 설정
-          console.log("⚠️ 설문 데이터가 없음 - 기본 데이터 설정");
-          setParticipationData({
-            totalStudents: studentsData.length,
-            participatedStudents: 0,
-            nonParticipatedStudents: studentsData.length,
-            completionRate: 0,
-          });
+            } else {
+              // 설문이 없으면 기본 데이터만 설정
+              console.log("⚠️ 설문 데이터가 없음 - 기본 데이터 설정");
+              setParticipationData({
+                totalStudents: studentsData.length,
+                participatedStudents: 0,
+                nonParticipatedStudents: studentsData.length,
+                completionRate: 0,
+              });
 
-          setStudentParticipationList([]);
-          setDailyParticipationData([]);
-        }
+              setStudentParticipationList([]);
+              setDailyParticipationData([]);
+            }
           }
         }
 
@@ -743,8 +768,8 @@ const Dashboard: React.FC = () => {
       } catch (error) {
         console.error("❌ 실제 데이터 로드 실패:", error);
         console.error("❌ 에러 상세:", {
-          message: error instanceof Error ? error.message : 'Unknown error',
-          stack: error instanceof Error ? error.stack : undefined
+          message: error instanceof Error ? error.message : "Unknown error",
+          stack: error instanceof Error ? error.stack : undefined,
         });
         setLoading(false);
       }
@@ -757,9 +782,11 @@ const Dashboard: React.FC = () => {
     return (
       <div className="flex min-h-screen items-center justify-center bg-gray-50">
         <div className="text-center">
-          <div className="h-32 w-32 animate-spin rounded-full border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <div className="mx-auto mb-4 h-32 w-32 animate-spin rounded-full border-b-2 border-blue-600"></div>
           <p className="text-gray-600">데이터를 불러오는 중...</p>
-          <p className="text-sm text-gray-500 mt-2">브라우저 개발자 도구 콘솔을 확인해주세요</p>
+          <p className="mt-2 text-sm text-gray-500">
+            브라우저 개발자 도구 콘솔을 확인해주세요
+          </p>
         </div>
       </div>
     );
@@ -772,14 +799,14 @@ const Dashboard: React.FC = () => {
       {/* 사용 가이드 모달 */}
       {showGuideModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-          <div className="mx-4 w-full max-w-4xl rounded-lg bg-white p-8 shadow-xl">
+          <div className="mx-4 w-fit rounded-lg bg-white p-9 shadow-xl">
             {/* 모달 헤더 */}
-            <div className="mb-6 flex items-center justify-between">
-              <div className="text-center">
-                <h2 className="text-2xl font-bold text-gray-900">
-                  언제든지 교우관계를 파악할 수 있는 와즈온스쿨을 만나보세요
+            <div className="mb-5 flex items-center justify-between">
+              <div className="flex flex-col">
+                <h2 className="text-lg font-semibold text-gray-950">
+                  언제든지 교우관계를 파악할 수 있는 와이즈온스쿨을 만나보세요
                 </h2>
-                <p className="mt-2 text-gray-600">
+                <p className="text-sm text-blue-500">
                   번거로움 없이 처음부터 끝까지 클릭만 하세요
                 </p>
               </div>
@@ -787,135 +814,129 @@ const Dashboard: React.FC = () => {
                 onClick={() => setShowGuideModal(false)}
                 className="rounded-full p-2 text-gray-400 hover:bg-gray-100 hover:text-gray-600"
               >
-                <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                <svg
+                  className="h-6 w-6"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M6 18L18 6M6 6l12 12"
+                  />
                 </svg>
               </button>
             </div>
 
             {/* 모달 내용 */}
-            <div className="grid grid-cols-1 gap-8 lg:grid-cols-2">
+            <div className="flex items-center gap-5">
               {/* 왼쪽: 기능 설명 */}
-              <div className="space-y-6">
-                {/* 기능 1 */}
-                <div className="flex items-start space-x-4">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-100">
-                    <svg className="h-5 w-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                    </svg>
+              <div className="flex flex-col gap-3">
+                <div className="space-y-3">
+                  {/* 기능 1 */}
+                  <div className="relative flex items-start space-x-4 after:absolute after:left-[9px] after:top-[19px] after:h-[calc(100%-4px)] after:w-[1px] after:border-r after:border-dashed after:border-blue-200 after:content-['']">
+                    <img
+                      src="/dashboard/calendar.svg"
+                      alt="달력 아이콘"
+                      className="pt-[2px]"
+                    />
+                    <div className="flex flex-col gap-1">
+                      <h3 className="text-sm font-semibold text-gray-950">
+                        오늘 설문(교우관계) 시작
+                      </h3>
+                      <p className="text-xs text-gray-600">
+                        설문 문항 만들지 않음 → 설문템플릿 사용
+                      </p>
+                      <p className="text-xs text-gray-600">
+                        단 1개의 설문으로 교우 만족 폭력 조사
+                      </p>
+                    </div>
                   </div>
-                  <div>
-                    <h3 className="font-semibold text-gray-900">오늘 설문(교우관계) 시작</h3>
-                    <p className="mt-1 text-sm text-gray-600">
-                      설문 문항 만들지 않음 → 설문템플릿 사용
-                    </p>
-                    <p className="text-sm text-gray-600">
-                      단 1개의 설문으로 교우 만족 폭력 조사
-                    </p>
+
+                  {/* 기능 2 */}
+                  <div className="relative flex items-start space-x-4 after:absolute after:left-[9px] after:top-[19px] after:h-[calc(100%-4px)] after:w-[1px] after:border-r after:border-dashed after:border-blue-200 after:content-['']">
+                    <img
+                      src="/dashboard/profile.svg"
+                      alt="프로필 아이콘"
+                      className="pt-[2px]"
+                    />
+                    <div className="flex flex-col gap-1">
+                      <h3 className="text-sm font-semibold text-gray-950">
+                        설문 진행 응답 현황
+                      </h3>
+                      <p className="text-xs text-gray-600">
+                        대시보드 화면으로 학생들의 참여 관리
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* 기능 3 */}
+                  <div className="relative flex items-start space-x-4 after:absolute after:left-[9px] after:top-[19px] after:h-[calc(100%-4px)] after:w-[1px] after:border-r after:border-dashed after:border-blue-200 after:content-['']">
+                    <img
+                      src="/dashboard/check.svg"
+                      alt="체크 아이콘"
+                      className="pt-[2px]"
+                    />
+                    <div className="flex flex-col gap-1">
+                      <h3 className="text-sm font-semibold text-gray-950">
+                        분석과 AI로 LLM 가이드 제공
+                      </h3>
+                      <p className="text-xs text-gray-600">
+                        교우관계 전 후 관계 분석
+                      </p>
+                      <p className="text-xs text-gray-600">
+                        학급 전체와 학생 개인별 분석
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* 기능 4 */}
+                  <div className="flex items-start space-x-4">
+                    <img
+                      src="/dashboard/shield.svg"
+                      alt="방패 아이콘"
+                      className="pt-[2px]"
+                    />
+                    <div className="flex flex-col gap-1">
+                      <h3 className="text-sm font-semibold text-gray-950">
+                        교권방어에 도움
+                      </h3>
+                      <p className="text-xs text-gray-600">
+                        데이터 기반 지도 근거 확보
+                      </p>
+                      <p className="text-xs text-gray-600">
+                        허위 신고 차별 주장에 대응 가능
+                      </p>
+                    </div>
                   </div>
                 </div>
 
-                {/* 기능 2 */}
-                <div className="flex items-start space-x-4">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-green-100">
-                    <svg className="h-5 w-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-                    </svg>
-                  </div>
-                  <div>
-                    <h3 className="font-semibold text-gray-900">설문 진행 응답 현황</h3>
-                    <p className="mt-1 text-sm text-gray-600">
-                      데쉬보드 화면으로 학생들의 참여 관리
-                    </p>
-                  </div>
-                </div>
-
-                {/* 기능 3 */}
-                <div className="flex items-start space-x-4">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-purple-100">
-                    <svg className="h-5 w-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-                    </svg>
-                  </div>
-                  <div>
-                    <h3 className="font-semibold text-gray-900">분석과 AI로 LLM 가이드 제공</h3>
-                    <p className="mt-1 text-sm text-gray-600">
-                      교우관계 전 후 관계 분석
-                    </p>
-                    <p className="text-sm text-gray-600">
-                      학급 전체와 학생 개인별 분석
-                    </p>
-                  </div>
-                </div>
-
-                {/* 기능 4 */}
-                <div className="flex items-start space-x-4">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-red-100">
-                    <svg className="h-5 w-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-                    </svg>
-                  </div>
-                  <div>
-                    <h3 className="font-semibold text-gray-900">교권방어에 도움</h3>
-                    <p className="mt-1 text-sm text-gray-600">
-                      데이터 기반 지도 근거 확보
-                    </p>
-                    <p className="text-sm text-gray-600">
-                      허위 신고 차별 주장에 대응 가능
-                    </p>
-                  </div>
+                {/* 시작하기 버튼 */}
+                <div className="flex text-center">
+                  <button
+                    onClick={() => setShowGuideModal(false)}
+                    className="w-[230px] rounded-[4px] bg-blue-600 px-5 py-2 text-sm text-white transition-colors hover:bg-blue-700"
+                  >
+                    시작하기
+                  </button>
                 </div>
               </div>
 
               {/* 오른쪽: 이미지 미리보기 */}
-              <div className="space-y-4">
-                {/* 상단 이미지 미리보기 */}
-                <div className="rounded-lg border border-gray-200 bg-gray-50 p-4">
-                  <div className="mb-2 text-sm font-medium text-gray-700">학생 관계 학교생활 종합조사</div>
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between text-xs text-gray-600">
-                      <span>번호</span>
-                      <span>이름</span>
-                      <span>참여</span>
-                      <span>최근</span>
-                    </div>
-                    <div className="space-y-1">
-                      <div className="flex items-center justify-between text-xs">
-                        <span>1</span>
-                        <span>김철수</span>
-                        <div className="h-2 w-2 rounded-full bg-green-500"></div>
-                        <span>오늘</span>
-                      </div>
-                      <div className="flex items-center justify-between text-xs">
-                        <span>2</span>
-                        <span>이영희</span>
-                        <div className="h-2 w-2 rounded-full bg-gray-300"></div>
-                        <span>-</span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* 하단 이미지 미리보기 */}
-                <div className="rounded-lg border border-gray-200 bg-gray-50 p-4">
-                  <div className="mb-2 text-sm font-medium text-gray-700">1) 종합진단</div>
-                  <div className="text-xs text-gray-600">
-                    <p>• 교우관계 만족도 조사</p>
-                    <p>• 학교생활 적응도 평가</p>
-                    <p>• 사회적 관계 분석</p>
-                  </div>
-                </div>
+              <div className="flex flex-col gap-1">
+                <img
+                  src="/dashboard/card_top.png"
+                  alt="상단 미리보기 이미지"
+                  className="w-[344px]"
+                />
+                <img
+                  src="/dashboard/card_bottom.png"
+                  alt="하단 미리보기 이미지"
+                  className="w-[344px]"
+                />
               </div>
-            </div>
-
-            {/* 모달 푸터 */}
-            <div className="mt-8 text-center">
-              <button
-                onClick={() => setShowGuideModal(false)}
-                className="rounded-lg bg-blue-600 px-8 py-3 text-white font-medium hover:bg-blue-700 transition-colors"
-              >
-                시작하기
-              </button>
             </div>
           </div>
         </div>
@@ -964,15 +985,15 @@ const Dashboard: React.FC = () => {
             <div className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
               <div className="mb-4 flex items-center justify-between">
                 <h3 className="text-lg font-semibold text-gray-900">
-                  {currentUser?.role === "school_admin" 
+                  {currentUser?.role === "school_admin"
                     ? `학교 전체 설문 프로젝트 총 ${surveyProjects.length}개`
-                    : currentUser?.role === "grade_teacher" 
-                    ? `${currentUser?.grade_level || gradeLevel}학년 설문 프로젝트 총 ${surveyProjects.length}개`
-                    : currentUser?.role === "homeroom_teacher"
-                    ? `${gradeLevel}학년 ${classNumber}반 설문 프로젝트 총 ${surveyProjects.length}개`
-                    : `설문 프로젝트 총 ${surveyProjects.length}개`}
+                    : currentUser?.role === "grade_teacher"
+                      ? `${currentUser?.grade_level || gradeLevel}학년 설문 프로젝트 총 ${surveyProjects.length}개`
+                      : currentUser?.role === "homeroom_teacher"
+                        ? `${gradeLevel}학년 ${classNumber}반 설문 프로젝트 총 ${surveyProjects.length}개`
+                        : `설문 프로젝트 총 ${surveyProjects.length}개`}
                 </h3>
-                
+
                 {/* 상태 필터 드롭다운 */}
                 <div className="flex items-center space-x-2">
                   <label className="text-sm font-medium text-gray-700">
@@ -994,7 +1015,7 @@ const Dashboard: React.FC = () => {
                   filteredSurveyProjects.map((project) => (
                     <div
                       key={project.id}
-                      className={`h-36 min-w-72 cursor-pointer rounded-lg border p-4 transition-all duration-200 ${
+                      className={`min-w-72 cursor-pointer rounded-lg border p-4 transition-all duration-200 ${
                         project.isSelected
                           ? "border-blue-500 bg-blue-50 shadow-md"
                           : "border-gray-200 hover:border-gray-300 hover:shadow-sm"
@@ -1004,7 +1025,9 @@ const Dashboard: React.FC = () => {
                       <div className="mb-2 flex items-start justify-between">
                         <h3
                           className={`w-3/4 truncate text-sm font-medium ${
-                            project.isSelected ? "text-blue-900" : "text-gray-900"
+                            project.isSelected
+                              ? "text-blue-900"
+                              : "text-gray-900"
                           }`}
                         >
                           {project.title}
@@ -1023,25 +1046,35 @@ const Dashboard: React.FC = () => {
                         <p>생성일: {project.date}</p>
                       </div>
 
-                      {project.isSelected && (
+                      {/* {project.isSelected && (
                         <div className="mt-3 border-t border-blue-200 pt-2">
                           <div className="flex items-center text-xs text-blue-600">
                             <div className="mr-2 h-2 w-2 rounded-full bg-blue-500"></div>
                             선택됨
                           </div>
                         </div>
-                      )}
+                      )} */}
                     </div>
                   ))
                 ) : (
                   <div className="flex h-36 w-full items-center justify-center text-gray-500">
                     <div className="text-center">
-                      <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                      <svg
+                        className="mx-auto h-12 w-12 text-gray-400"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                        />
                       </svg>
                       <p className="mt-2 text-sm">
-                        {statusFilter === "all" 
-                          ? "설문 프로젝트가 없습니다" 
+                        {statusFilter === "all"
+                          ? "설문 프로젝트가 없습니다"
                           : `${getStatusLabel(statusFilter)} 상태의 설문이 없습니다`}
                       </p>
                     </div>
@@ -1057,13 +1090,14 @@ const Dashboard: React.FC = () => {
             <div className="mb-6 rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
               <h3 className="mb-6 text-center text-lg font-semibold text-gray-900">
                 {schoolName || "와이즈 초등학교"} [
-                {currentUser?.role === "school_admin" 
+                {currentUser?.role === "school_admin"
                   ? "학교 전체 모니터링"
-                  : currentUser?.role === "grade_teacher" 
-                  ? `${currentUser?.grade_level || gradeLevel}학년 전체 모니터링` 
-                  : currentUser?.role === "homeroom_teacher"
-                  ? `${gradeLevel}학년 ${classNumber}반 모니터링`
-                  : "모니터링"}]
+                  : currentUser?.role === "grade_teacher"
+                    ? `${currentUser?.grade_level || gradeLevel}학년 전체 모니터링`
+                    : currentUser?.role === "homeroom_teacher"
+                      ? `${gradeLevel}학년 ${classNumber}반 모니터링`
+                      : "모니터링"}
+                ]
               </h3>
               <div className="grid grid-cols-4 gap-8">
                 {/* 설문 참여 예상 학생 수 */}
@@ -1266,13 +1300,13 @@ const Dashboard: React.FC = () => {
                 <table className="w-full divide-y divide-gray-200">
                   <thead className="bg-gray-50">
                     <tr>
-                      <th className="min-w-[70px] max-w-[70px] px-3 py-3 text-center text-xs font-medium uppercase tracking-wider text-gray-500">
+                      <th className="sticky left-0 z-10 min-w-[70px] max-w-[70px] bg-gray-100 px-3 py-3 text-center text-xs font-medium uppercase tracking-wider text-gray-500">
                         번호
                       </th>
-                      <th className="min-w-[94px] max-w-[94px] px-3 py-3 text-center text-xs font-medium uppercase tracking-wider text-gray-500">
+                      <th className="sticky left-[70px] z-10 min-w-[94px] max-w-[94px] bg-gray-100 px-3 py-3 text-center text-xs font-medium uppercase tracking-wider text-gray-500">
                         이름
                       </th>
-                      <th className="min-w-[118px] max-w-[118px] px-3 py-3 text-center text-xs font-medium uppercase tracking-wider text-gray-500">
+                      <th className="sticky left-[164px] z-10 min-w-[118px] max-w-[118px] bg-gray-100 px-3 py-3 text-center text-xs font-medium uppercase tracking-wider text-gray-500">
                         참여상태
                       </th>
                       {selectedProject &&
@@ -1294,13 +1328,13 @@ const Dashboard: React.FC = () => {
                   <tbody className="divide-y divide-gray-200 bg-white">
                     {studentParticipationList.map((student) => (
                       <tr key={student.id} className="hover:bg-gray-50">
-                        <td className="whitespace-nowrap px-3 py-3 text-center text-xs text-gray-900">
+                        <td className="sticky left-0 z-10 whitespace-nowrap bg-gray-50 px-3 py-3 text-center text-xs text-gray-900">
                           {student.id}
                         </td>
-                        <td className="whitespace-nowrap px-3 py-3 text-xs font-medium text-gray-900">
+                        <td className="sticky left-[70px] z-10 whitespace-nowrap bg-gray-50 px-3 py-3 text-xs font-medium text-gray-900">
                           {student.name}
                         </td>
-                        <td className="whitespace-nowrap px-3 py-3 text-center">
+                        <td className="sticky left-[164px] z-10 whitespace-nowrap bg-gray-50 px-3 py-3 text-center">
                           <div className="flex items-center">
                             <div
                               className={`mx-auto h-3.5 w-3.5 rounded-full ${
@@ -1335,18 +1369,18 @@ const Dashboard: React.FC = () => {
                                   try {
                                     const responseData =
                                       studentResponse.responses as any;
-                                    
 
                                     // 다양한 키 형태로 시도
                                     let answerValue = null;
-                                    
+
                                     // 1. 원본 질문 ID로 시도
                                     if (responseData[question.id]) {
                                       answerValue = responseData[question.id];
                                     }
                                     // 2. q1, q2 형태인 경우 숫자 키로 변환하여 시도
-                                    else if (question.id.startsWith('q')) {
-                                      const numericKey = question.id.substring(1);
+                                    else if (question.id.startsWith("q")) {
+                                      const numericKey =
+                                        question.id.substring(1);
                                       if (responseData[numericKey]) {
                                         answerValue = responseData[numericKey];
                                       }
@@ -1360,14 +1394,18 @@ const Dashboard: React.FC = () => {
                                     }
                                     // 4. 모든 키를 순회하며 질문 텍스트와 매칭되는지 확인
                                     else {
-                                      for (const key of Object.keys(responseData)) {
-                                        if (key.includes(question.id) || question.id.includes(key)) {
+                                      for (const key of Object.keys(
+                                        responseData,
+                                      )) {
+                                        if (
+                                          key.includes(question.id) ||
+                                          question.id.includes(key)
+                                        ) {
                                           answerValue = responseData[key];
                                           break;
                                         }
                                       }
                                     }
-
 
                                     if (answerValue) {
                                       // UUID를 이름으로 변환하는 함수

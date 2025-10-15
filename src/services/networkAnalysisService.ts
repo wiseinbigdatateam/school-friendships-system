@@ -458,8 +458,8 @@ class NetworkAnalysisService {
       // 중심성 계산 (연결 수 기반)
       const centrality = connectionCount > 0 ? Math.min(0.1 + connectionCount * 0.1, 1.0) : 0.1;
 
-      // 커뮤니티 할당은 detectCommunities에서 처리하므로 임시값 사용
-      const community = 0; // detectCommunities에서 실제 할당됨
+      // 커뮤니티 할당 (간단한 로직)
+      const community = connectionCount > 0 ? connectionCount % 3 : 0;
 
       // 교우관계 유형 분류
       const friendshipType = this.classifyFriendshipType(connectionCount);
@@ -489,17 +489,8 @@ class NetworkAnalysisService {
     // 커뮤니티 생성
     const communities = this.detectCommunities(nodes, edges);
 
-    // 노드에 실제 커뮤니티 ID 할당
-    const nodesWithCommunities = nodes.map(node => {
-      const community = communities.find(c => c.members.includes(node.id));
-      return {
-        ...node,
-        community: community ? community.id : 0
-      };
-    });
-
     // 중심성 지표 계산
-    const nodesWithCentrality = this.calculateCentralityMetrics(nodesWithCommunities, edges);
+    const nodesWithCentrality = this.calculateCentralityMetrics(nodes, edges);
 
     // 메트릭 계산
     const metrics = this.calculateMetrics(nodesWithCentrality, edges, communities);

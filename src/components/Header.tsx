@@ -68,7 +68,7 @@ const Header: React.FC<HeaderProps> = ({ logo, navigationItems }) => {
   };
 
   const handleLogoClick = () => {
-    navigate("/");
+    navigate("/dashboard");
   };
 
   const handleNavigationClick = (href: string) => {

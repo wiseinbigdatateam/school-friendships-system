@@ -113,7 +113,7 @@ export class AIReportService {
         .select('*')
         .eq('student_id', studentId)
         .eq('survey_id', surveyId)
-        .maybeSingle();
+        .single();
 
       if (error) {
         if (error.code === 'PGRST116') {

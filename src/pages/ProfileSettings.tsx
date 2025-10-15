@@ -14,58 +14,20 @@ const ProfileSettings: React.FC = () => {
     email: '',
     phone: '',
     department: '',
-    position: '',
-    gradeLevel: '',
-    classNumber: '',
-    schoolName: ''
+    position: ''
   });
 
   // 사용자 정보 로드
   useEffect(() => {
-    const loadUserProfile = async () => {
-      if (!user?.id) return;
-
-      try {
-        // DB에서 최신 사용자 정보 조회 (학교 정보 포함)
-        const { data: userData, error } = await supabase
-          .from('users')
-          .select(`
-            name, 
-            email, 
-            grade_level, 
-            class_number, 
-            contact_info,
-            schools (
-              name
-            )
-          `)
-          .eq('id', user.id)
-          .single();
-
-        if (error) {
-          console.error('사용자 정보 조회 오류:', error);
-          return;
-        }
-
-        if (userData) {
-          const contactInfo = userData.contact_info as any || {};
-          setProfileData({
-            name: userData.name || '',
-            email: userData.email || '',
-            phone: contactInfo.phone || '',
-            department: contactInfo.department || '',
-            position: contactInfo.position || '',
-            gradeLevel: userData.grade_level || '',
-            classNumber: userData.class_number || '',
-            schoolName: (userData.schools as any)?.name || ''
-          });
-        }
-      } catch (error) {
-        console.error('프로필 로드 오류:', error);
-      }
-    };
-
-    loadUserProfile();
+    if (user) {
+      setProfileData({
+        name: user.name || '',
+        email: user.email || '',
+        phone: (user as any).phone || '',
+        department: (user as any).department || '',
+        position: (user as any).position || ''
+      });
+    }
   }, [user]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -90,8 +52,6 @@ const ProfileSettings: React.FC = () => {
         .from('users')
         .update({
           name: profileData.name,
-          grade_level: profileData.gradeLevel,
-          class_number: profileData.classNumber,
           contact_info: {
             phone: profileData.phone,
             department: profileData.department,
@@ -201,20 +161,6 @@ const ProfileSettings: React.FC = () => {
               <p className="mt-1 text-xs text-gray-500">이메일은 보안상 수정할 수 없습니다.</p>
             </div>
 
-            {/* 학교 (읽기 전용) */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                소속 학교
-              </label>
-              <input
-                type="text"
-                value={profileData.schoolName}
-                disabled
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50 text-gray-500 cursor-not-allowed"
-              />
-              <p className="mt-1 text-xs text-gray-500">학교 정보는 수정할 수 없습니다.</p>
-            </div>
-
             {/* 전화번호 */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -258,36 +204,6 @@ const ProfileSettings: React.FC = () => {
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 placeholder="직책을 입력하세요"
               />
-            </div>
-
-            {/* 담당 학년/반 */}
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  담당 학년
-                </label>
-                <input
-                  type="text"
-                  name="gradeLevel"
-                  value={profileData.gradeLevel}
-                  onChange={handleInputChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  placeholder="예: 3"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  담당 반
-                </label>
-                <input
-                  type="text"
-                  name="classNumber"
-                  value={profileData.classNumber}
-                  onChange={handleInputChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  placeholder="예: 1"
-                />
-              </div>
             </div>
 
             {/* 버튼 */}

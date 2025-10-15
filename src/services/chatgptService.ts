@@ -293,9 +293,6 @@ ${JSON.stringify(additionalSurveyData, null, 2)}
 
         if (response.status === 429) {
           // Rate limit - 재시도
-          if (retryCount >= maxRetries - 1) {
-            throw new Error('API 사용량 제한에 도달했습니다. 잠시 후 다시 시도해주세요.');
-          }
           retryCount++;
           const waitTime = Math.pow(2, retryCount) * 1000; // 지수 백오프
           console.log(`API 제한으로 인한 재시도 ${retryCount}/${maxRetries}, ${waitTime}ms 대기...`);
@@ -325,17 +322,9 @@ ${JSON.stringify(additionalSurveyData, null, 2)}
     }
 
     const data = await response.json();
-    
-    // 응답 데이터 구조 검증
-    if (!data || !data.choices || !Array.isArray(data.choices) || data.choices.length === 0) {
-      console.error('API 응답 구조 오류:', data);
-      throw new Error('API 응답 구조가 올바르지 않습니다.');
-    }
-    
     const content = data.choices[0]?.message?.content;
     
     if (!content) {
-      console.error('API 응답 내용 없음:', data);
       throw new Error('API 응답에서 내용을 찾을 수 없습니다.');
     }
 

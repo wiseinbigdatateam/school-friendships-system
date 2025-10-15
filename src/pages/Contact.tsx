@@ -48,15 +48,13 @@ const Contact: React.FC = () => {
       )
     ) {
       alert("취소되었습니다");
-      navigate("/");
+      navigate("/login");
     }
   };
 
   const handleCancelBtn = () => {
     if (isAnyFieldFilled) {
       callConfirmMessage();
-    } else {
-      navigate("/");
     }
   };
 
