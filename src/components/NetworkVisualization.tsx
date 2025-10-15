@@ -156,7 +156,7 @@ const NetworkVisualization: React.FC<NetworkVisualizationProps> = ({
     networkInstanceRef.current = network;
 
     // 이벤트 리스너 등록
-    network.on("click", (params) => {
+    network.on("click", (params: any) => {
       if (params.nodes.length > 0) {
         const nodeId = params.nodes[0];
         const node = data.nodes.find((n) => n.id === nodeId);
