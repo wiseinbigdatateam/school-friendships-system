@@ -98,7 +98,7 @@ const ClassSurvey: React.FC = () => {
         position: "top" as const,
       },
       title: {
-        display: true,
+        display: false,
         text: "응답 분포",
         font: {
           size: 16,
@@ -128,7 +128,6 @@ const ClassSurvey: React.FC = () => {
     plugins: {
       legend: {
         position: "bottom" as const,
-        align: "start" as const,
       },
       title: {
         display: true,
@@ -218,7 +217,7 @@ const ClassSurvey: React.FC = () => {
           {
             label: "응답자 수",
             data: [data.yes_count, data.no_count],
-            backgroundColor: ["#094185", "rgba(59, 130, 246, 0.8)"],
+            backgroundColor: ["#3b82f6", "#094185"],
             borderSkipped: false,
             barThickness: 28,
           },
@@ -232,7 +231,7 @@ const ClassSurvey: React.FC = () => {
   //   datasets: [
   //     {
   //       data: [data.yes_count, data.no_count],
-  //       backgroundColor: ["#094185", "rgba(59, 130, 246, 0.8)"],
+  //       backgroundColor: ["#094185", "#3b82f6"],
   //       hoverOffset: 4,
   //     },
   //   ],
@@ -246,6 +245,8 @@ const ClassSurvey: React.FC = () => {
     // 현재 선택된 설문이 학교 폭력 조사인지 확인
     const isViolenceSurvey =
       currentSurvey?.title && currentSurvey.title.includes("폭력");
+    const isComprehensiveSurvey =
+      currentSurvey?.survey_templates?.metadata?.category === "종합조사";
 
     if (isViolenceSurvey) {
       // 학교 폭력 조사 3단계 추이
@@ -256,9 +257,9 @@ const ClassSurvey: React.FC = () => {
             label: "전혀 없다",
             data: chartData.map((data) => data.never_count || 0),
             borderColor: "#93c5fd",
-            backgroundColor: "rgba(64, 134, 247, 0.1)",
+            backgroundColor: "rgba(147,197,253,0.25)",
             borderWidth: 2,
-            fill: false,
+            fill: true,
             tension: 0.4,
             pointBackgroundColor: "#93c5fd",
             pointBorderColor: "#fff",
@@ -269,9 +270,9 @@ const ClassSurvey: React.FC = () => {
             label: "한 두번 당한 적 있다",
             data: chartData.map((data) => data.sometimes_count || 0),
             borderColor: "#3b82f6",
-            backgroundColor: "rgba(31, 65, 179, 0.1)",
+            backgroundColor: "rgba(59,130,246,0.20)",
             borderWidth: 2,
-            fill: false,
+            fill: true,
             tension: 0.4,
             pointBackgroundColor: "#3b82f6",
             pointBorderColor: "#fff",
@@ -282,9 +283,9 @@ const ClassSurvey: React.FC = () => {
             label: "자주 있다",
             data: chartData.map((data) => data.often_count || 0),
             borderColor: "#094185",
-            backgroundColor: "rgba(15, 7, 54, 0.1)",
+            backgroundColor: "rgba(30,58,138,0.25)",
             borderWidth: 2,
-            fill: false,
+            fill: true,
             tension: 0.4,
             pointBackgroundColor: "#094185",
             pointBorderColor: "#fff",
@@ -292,6 +293,87 @@ const ClassSurvey: React.FC = () => {
             pointRadius: 6,
           },
         ],
+      };
+    } else if (isComprehensiveSurvey) {
+      // 종합조사 - 만족도와 학교폭력 분리된 선그래프
+      return {
+        satisfaction: {
+          labels: ["문항 02", "문항 03", "문항 04", "문항 05"],
+          datasets: [
+            {
+              label: "예",
+              data: chartData.slice(0, 4).map((data) => data.yes_count || 0),
+              borderColor: "#3b82f6",
+              backgroundColor: "rgba(147,197,253,0.25)",
+              borderWidth: 2,
+              fill: true,
+              tension: 0.4,
+              pointBackgroundColor: "#3b82f6",
+              pointBorderColor: "#fff",
+              pointBorderWidth: 2,
+              pointRadius: 6,
+            },
+            {
+              label: "아니오",
+              data: chartData.slice(0, 4).map((data) => data.no_count || 0),
+              borderColor: "#094185",
+              backgroundColor: "rgba(30,58,138,0.25)",
+              borderWidth: 2,
+              fill: true,
+              tension: 0.4,
+              pointBackgroundColor: "#094185",
+              pointBorderColor: "#fff",
+              pointBorderWidth: 2,
+              pointRadius: 6,
+            },
+          ],
+        },
+        violence: {
+          labels: ["문항 06", "문항 07", "문항 08"],
+          datasets: [
+            {
+              label: "전혀 없다",
+              data: chartData.slice(4, 7).map((data) => data.never_count || 0),
+              borderColor: "#93c5fd",
+              backgroundColor: "rgba(147,197,253,0.25)",
+              borderWidth: 2,
+              fill: true,
+              tension: 0.4,
+              pointBackgroundColor: "#93c5fd",
+              pointBorderColor: "#fff",
+              pointBorderWidth: 2,
+              pointRadius: 6,
+            },
+            {
+              label: "한 두번 당한 적 있다",
+              data: chartData
+                .slice(4, 7)
+                .map((data) => data.sometimes_count || 0),
+              borderColor: "#3b82f6",
+              backgroundColor: "rgba(59,130,246,0.20)",
+              borderWidth: 2,
+              fill: true,
+              tension: 0.4,
+              pointBackgroundColor: "#3b82f6",
+              pointBorderColor: "#fff",
+              pointBorderWidth: 2,
+              pointRadius: 6,
+            },
+            {
+              label: "자주 있다",
+              data: chartData.slice(4, 7).map((data) => data.often_count || 0),
+              borderColor: "#094185",
+              backgroundColor: "rgba(30,58,138,0.25)",
+              borderWidth: 2,
+              fill: true,
+              tension: 0.4,
+              pointBackgroundColor: "#094185",
+              pointBorderColor: "#fff",
+              pointBorderWidth: 2,
+              pointRadius: 6,
+            },
+          ],
+        },
       };
     } else {
       // 일반 예/아니오 추이
@@ -301,12 +383,12 @@ const ClassSurvey: React.FC = () => {
           {
             label: "예 답변",
             data: chartData.map((data) => data.yes_count || 0),
-            borderColor: "#3b82f6",
+            borderColor: "rgba(59, 130, 246, 1)",
             backgroundColor: "rgba(59, 130, 246, 0.1)",
             borderWidth: 2,
             fill: true,
             tension: 0.4,
-            pointBackgroundColor: "#3b82f6",
+            pointBackgroundColor: "rgba(59, 130, 246, 1)",
             pointBorderColor: "#fff",
             pointBorderWidth: 2,
             pointRadius: 6,
@@ -314,12 +396,12 @@ const ClassSurvey: React.FC = () => {
           {
             label: "아니오 답변",
             data: chartData.map((data) => data.no_count || 0),
-            borderColor: "#094185",
+            borderColor: "rgba(30, 64, 175, 1)",
             backgroundColor: "rgba(30, 64, 175, 0.1)",
             borderWidth: 2,
             fill: true,
             tension: 0.4,
-            pointBackgroundColor: "#094185",
+            pointBackgroundColor: "rgba(30, 64, 175, 1)",
             pointBorderColor: "#fff",
             pointBorderWidth: 2,
             pointRadius: 6,
@@ -334,6 +416,8 @@ const ClassSurvey: React.FC = () => {
     // 현재 선택된 설문이 학교 폭력 조사인지 확인
     const isViolenceSurvey =
       currentSurvey?.title && currentSurvey.title.includes("폭력");
+    const isComprehensiveSurvey =
+      currentSurvey?.survey_templates?.metadata?.category === "종합조사";
 
     if (isViolenceSurvey) {
       // 학교 폭력 조사 3단계 요약
@@ -356,13 +440,74 @@ const ClassSurvey: React.FC = () => {
           {
             data: [totalNever, totalSometimes, totalOften],
             backgroundColor: [
-              "rgba(34, 197, 94, 0.8)", // 초록색 (전혀 없다)
-              "rgba(251, 146, 60, 0.8)", // 주황색 (한 두번)
-              "rgba(239, 68, 68, 0.8)", // 빨간색 (자주)
+              "#93c5fd", // tailwind color: blue-300
+              "#3b82f6", // tailwind color: blue-500
+              "#094185",
             ],
             hoverOffset: 4,
           },
         ],
+      };
+    } else if (isComprehensiveSurvey) {
+      // 종합조사 - 만족도와 학교폭력 분리 (1번, 9번 제외)
+      // 2~5번 질문 (만족도) - 필터링 후 인덱스 0~3
+      const satisfactionData = chartData.slice(0, 4); // 인덱스 0~3 (2~5번 질문)
+      const totalSatisfactionYes = satisfactionData.reduce(
+        (sum, data) => sum + (data.yes_count || 0),
+        0,
+      );
+      const totalSatisfactionNo = satisfactionData.reduce(
+        (sum, data) => sum + (data.no_count || 0),
+        0,
+      );
+
+      // 6~8번 질문 (학교폭력) - 필터링 후 인덱스 4~6
+      const violenceData = chartData.slice(4, 7); // 인덱스 4~6 (6~8번 질문)
+      const totalViolenceNever = violenceData.reduce(
+        (sum, data) => sum + (data.never_count || 0),
+        0,
+      );
+      const totalViolenceSometimes = violenceData.reduce(
+        (sum, data) => sum + (data.sometimes_count || 0),
+        0,
+      );
+      const totalViolenceOften = violenceData.reduce(
+        (sum, data) => sum + (data.often_count || 0),
+        0,
+      );
+
+      return {
+        satisfaction: {
+          labels: ["예", "아니오"],
+          datasets: [
+            {
+              data: [totalSatisfactionYes, totalSatisfactionNo],
+              backgroundColor: [
+                "#3b82f6", // tailwind color: blue-500
+                "#094185",
+              ],
+              hoverOffset: 4,
+            },
+          ],
+        },
+        violence: {
+          labels: ["전혀 없다", "한 두번 당한 적 있다", "자주 있다"],
+          datasets: [
+            {
+              data: [
+                totalViolenceNever,
+                totalViolenceSometimes,
+                totalViolenceOften,
+              ],
+              backgroundColor: [
+                "#93c5fd", // tailwind color: blue-300
+                "#3b82f6", // tailwind color: blue-500
+                "#094185",
+              ],
+              hoverOffset: 4,
+            },
+          ],
+        },
       };
     } else {
       // 일반 예/아니오 요약
@@ -441,7 +586,7 @@ const ClassSurvey: React.FC = () => {
 
       console.log("Templates found:", templates);
 
-      // 카테고리가 "학교폭력" 또는 "만족도"인 템플릿 ID들 찾기
+      // 카테고리가 "학교폭력", "만족도", 또는 "종합조사"인 템플릿 ID들 찾기
       const targetTemplateIds = templates
         .filter((template: any) => {
           const metadata = template.metadata;
@@ -449,7 +594,9 @@ const ClassSurvey: React.FC = () => {
           return (
             metadata &&
             metadata.category &&
-            (metadata.category === "학교폭력" || metadata.category === "만족도")
+            (metadata.category === "학교폭력" ||
+              metadata.category === "만족도" ||
+              metadata.category === "종합조사")
           );
         })
         .map((template: any) => template.id);
@@ -649,16 +796,23 @@ const ClassSurvey: React.FC = () => {
         const questions = surveyData.questions as any[];
         console.log("Questions from survey:", questions);
 
-        const chartDataArray: ChartData[] = questions.map(
-          (question: any, index: number) => {
-            console.log(`처리 중인 질문 ${index + 1}:`, question);
+        const chartDataArray: ChartData[] = questions
+          .filter((question: any, index: number) => {
+            // 1번(교우관계)과 9번(주관식) 문항 제외
+            return index !== 0 && index !== 8;
+          })
+          .map((question: any, index: number) => {
+            // 필터링 후 실제 인덱스 계산 (1번, 9번 제외)
+            // 원본 질문 인덱스 1 (2번 질문)이 필터링 후 인덱스 0이 되므로 +2
+            const originalIndex = index + 2;
+            console.log(`처리 중인 질문 ${originalIndex}:`, question);
 
-            // 다양한 키 형식으로 응답 데이터 찾기
-            const questionId = question.id || `q${index + 1}`;
-            const numericKey = (index + 1).toString();
-            const qKey = `q${index + 1}`;
+            // 다양한 키 형식으로 응답 데이터 찾기 (원본 인덱스 사용)
+            const questionId = question.id || `q${originalIndex}`;
+            const numericKey = originalIndex.toString();
+            const qKey = `q${originalIndex}`;
 
-            console.log(`질문 ${index + 1} 키 후보:`, {
+            console.log(`질문 ${originalIndex} 키 후보:`, {
               questionId,
               numericKey,
               qKey,
@@ -691,24 +845,28 @@ const ClassSurvey: React.FC = () => {
               ? findResponseValue(sampleResponse)
               : null;
 
-            console.log(`질문 ${index + 1} - 샘플 응답 값:`, sampleValue);
+            console.log(`질문 ${originalIndex} - 샘플 응답 값:`, sampleValue);
             console.log(
-              `질문 ${index + 1} - 샘플 응답 타입:`,
+              `질문 ${originalIndex} - 샘플 응답 타입:`,
               typeof sampleValue,
             );
             console.log(
-              `질문 ${index + 1} - 샘플 응답이 배열인가:`,
+              `질문 ${originalIndex} - 샘플 응답이 배열인가:`,
               Array.isArray(sampleValue),
             );
 
             // 응답 값이 문자열인 경우 (예/아니오 또는 빈도 기반)
             if (typeof sampleValue === "string") {
-              console.log(`질문 ${index + 1} - 문자열 응답 처리`);
+              console.log(`질문 ${originalIndex} - 문자열 응답 처리`);
 
-              // 학교 폭력 조사 감지 - 설문 제목과 질문 텍스트 모두 확인
+              // 학교 폭력 조사 감지 - 설문 제목, 질문 텍스트, 종합조사 6~8번 질문 확인
               const isViolenceSurvey =
                 (currentSurvey?.title &&
                   currentSurvey.title.includes("폭력")) ||
+                (currentSurvey?.survey_templates?.metadata?.category ===
+                  "종합조사" &&
+                  originalIndex >= 6 &&
+                  originalIndex <= 8) || // 종합조사 6~8번 질문
                 (question.text &&
                   (question.text.includes("폭력") ||
                     question.text.includes("괴롭힘") ||
@@ -722,7 +880,7 @@ const ClassSurvey: React.FC = () => {
                     question.text.includes("소지품") ||
                     question.text.includes("무시")));
 
-              console.log(`질문 ${index + 1} - 학교 폭력 조사 감지:`, {
+              console.log(`질문 ${originalIndex} - 학교 폭력 조사 감지:`, {
                 surveyTitle: currentSurvey?.title,
                 questionText: question.text,
                 isViolenceSurvey,
@@ -730,7 +888,7 @@ const ClassSurvey: React.FC = () => {
 
               if (isViolenceSurvey) {
                 console.log(
-                  `질문 ${index + 1} - 학교 폭력 조사 3단계 빈도 처리`,
+                  `질문 ${originalIndex} - 학교 폭력 조사 3단계 빈도 처리`,
                 );
 
                 // 학교 폭력 조사 3단계 빈도 처리
@@ -774,12 +932,12 @@ const ClassSurvey: React.FC = () => {
                   );
                 }).length;
 
-                console.log(`질문 ${index + 1} 응답 수 (폭력조사 3단계):`, {
+                console.log(`질문 ${originalIndex} 응답 수 (폭력조사 3단계):`, {
                   neverCount,
                   sometimesCount,
                   oftenCount,
                 });
-                console.log(`질문 ${index + 1} - 빈도 키워드 매칭:`, {
+                console.log(`질문 ${originalIndex} - 빈도 키워드 매칭:`, {
                   neverKeywords,
                   sometimesKeywords,
                   oftenKeywords,
@@ -791,7 +949,9 @@ const ClassSurvey: React.FC = () => {
                 // 학교 폭력 조사는 3개 카테고리로 분리
                 return {
                   question:
-                    question.text || question.question || `질문 ${index + 1}`,
+                    question.text ||
+                    question.question ||
+                    `질문 ${originalIndex}`,
                   never_count: neverCount,
                   sometimes_count: sometimesCount,
                   often_count: oftenCount,
@@ -852,7 +1012,7 @@ const ClassSurvey: React.FC = () => {
                 };
               } else {
                 // 일반적인 예/아니오 응답 처리 (만족도 조사 등)
-                console.log(`질문 ${index + 1} - 일반 예/아니오 응답 처리`);
+                console.log(`질문 ${originalIndex} - 일반 예/아니오 응답 처리`);
 
                 const yesCount = responsesData.filter((response: any) => {
                   const value = findResponseValue(response);
@@ -876,14 +1036,16 @@ const ClassSurvey: React.FC = () => {
                   );
                 }).length;
 
-                console.log(`질문 ${index + 1} 응답 수:`, {
+                console.log(`질문 ${originalIndex} 응답 수:`, {
                   yesCount,
                   noCount,
                 });
 
                 return {
                   question:
-                    question.text || question.question || `질문 ${index + 1}`,
+                    question.text ||
+                    question.question ||
+                    `질문 ${originalIndex}`,
                   yes_count: yesCount,
                   no_count: noCount,
                   yes_students: responsesData
@@ -925,7 +1087,7 @@ const ClassSurvey: React.FC = () => {
             }
             // 응답 값이 배열인 경우 (교우관계 설문 등)
             else if (Array.isArray(sampleValue)) {
-              console.log(`질문 ${index + 1} - 배열 응답 처리`);
+              console.log(`질문 ${originalIndex} - 배열 응답 처리`);
 
               const yesCount = responsesData.filter((response: any) => {
                 const value = findResponseValue(response);
@@ -937,11 +1099,14 @@ const ClassSurvey: React.FC = () => {
                 return !value || (Array.isArray(value) && value.length === 0);
               }).length;
 
-              console.log(`질문 ${index + 1} 응답 수:`, { yesCount, noCount });
+              console.log(`질문 ${originalIndex} 응답 수:`, {
+                yesCount,
+                noCount,
+              });
 
               return {
                 question:
-                  question.text || question.question || `질문 ${index + 1}`,
+                  question.text || question.question || `질문 ${originalIndex}`,
                 yes_count: yesCount,
                 no_count: noCount,
                 yes_students: responsesData
@@ -972,7 +1137,7 @@ const ClassSurvey: React.FC = () => {
             }
             // 기타 경우
             else {
-              console.log(`질문 ${index + 1} - 기타 응답 처리`);
+              console.log(`질문 ${originalIndex} - 기타 응답 처리`);
 
               const yesCount = responsesData.filter((response: any) => {
                 const value = findResponseValue(response);
@@ -994,11 +1159,14 @@ const ClassSurvey: React.FC = () => {
                 );
               }).length;
 
-              console.log(`질문 ${index + 1} 응답 수:`, { yesCount, noCount });
+              console.log(`질문 ${originalIndex} 응답 수:`, {
+                yesCount,
+                noCount,
+              });
 
               return {
                 question:
-                  question.text || question.question || `질문 ${index + 1}`,
+                  question.text || question.question || `질문 ${originalIndex}`,
                 yes_count: yesCount,
                 no_count: noCount,
                 yes_students: responsesData
@@ -1035,8 +1203,7 @@ const ClassSurvey: React.FC = () => {
                   }),
               };
             }
-          },
-        );
+          });
 
         console.log("Final chart data:", chartDataArray);
         setChartData(chartDataArray);
@@ -1161,38 +1328,90 @@ const ClassSurvey: React.FC = () => {
                         {currentSurvey?.title &&
                         currentSurvey.title.includes("폭력")
                           ? "전체 폭력 경험 분포"
-                          : "전체 응답 요약"}
+                          : currentSurvey?.survey_templates?.metadata
+                                ?.category === "종합조사"
+                            ? "종합조사 결과 요약"
+                            : "전체 응답 요약"}
                       </h3>
-                      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-                        <div className="flex flex-col">
-                          <h4 className="mb-4 text-lg font-medium text-gray-800">
-                            {currentSurvey?.title &&
-                            currentSurvey.title.includes("폭력")
-                              ? "폭력 경험 빈도별 분포"
-                              : "전체 응답 분포"}
-                          </h4>
-                          <div className="h-64 self-center">
-                            <Doughnut
-                              data={createSummaryChartData()}
-                              options={doughnutChartOptions}
-                            />
+                      {currentSurvey?.survey_templates?.metadata?.category ===
+                      "종합조사" ? (
+                        // 종합조사 - 만족도와 학교폭력 분리된 차트
+                        <div className="space-y-8">
+                          {/* 학교생활 만족도 분포 */}
+                          <div>
+                            <h4 className="mb-4 text-lg font-medium text-gray-800">
+                              학교생활 만족도 분포 (문항 2~5)
+                            </h4>
+                            <div className="grid grid-cols-1 justify-items-center gap-6 lg:grid-cols-2">
+                              <div className="h-64">
+                                <Doughnut
+                                  data={createSummaryChartData().satisfaction!}
+                                  options={doughnutChartOptions}
+                                />
+                              </div>
+                              <div className="h-64 w-[480px]">
+                                <Line
+                                  data={createLineChartData().satisfaction!}
+                                  options={lineChartOptions}
+                                />
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* 학교폭력 분포 */}
+                          <div>
+                            <h4 className="mb-4 text-lg font-medium text-gray-800">
+                              학교폭력 분포 (문항 6~8)
+                            </h4>
+                            <div className="grid grid-cols-1 justify-items-center gap-6 lg:grid-cols-2">
+                              <div className="h-64">
+                                <Doughnut
+                                  data={createSummaryChartData().violence!}
+                                  options={doughnutChartOptions}
+                                />
+                              </div>
+                              <div className="h-64 w-[480px]">
+                                <Line
+                                  data={createLineChartData().violence!}
+                                  options={lineChartOptions}
+                                />
+                              </div>
+                            </div>
                           </div>
                         </div>
-                        <div className="flex flex-col">
-                          <h4 className="mb-4 text-lg font-medium text-gray-800">
-                            {currentSurvey?.title &&
-                            currentSurvey.title.includes("폭력")
-                              ? "문항별 폭력 경험 빈도 추이"
-                              : "문항별 응답 추이"}
-                          </h4>
-                          <div className="h-64 w-[400px] self-center">
-                            <Line
-                              data={createLineChartData()}
-                              options={lineChartOptions}
-                            />
+                      ) : (
+                        // 일반 설문 차트
+                        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+                          <div className="flex flex-col">
+                            <h4 className="mb-4 text-lg font-medium text-gray-800">
+                              {currentSurvey?.title &&
+                              currentSurvey.title.includes("폭력")
+                                ? "폭력 경험 빈도별 분포"
+                                : "전체 응답 분포"}
+                            </h4>
+                            <div className="h-64 self-center">
+                              <Doughnut
+                                data={createSummaryChartData() as any}
+                                options={doughnutChartOptions}
+                              />
+                            </div>
+                          </div>
+                          <div className="flex flex-col">
+                            <h4 className="mb-4 text-lg font-medium text-gray-800">
+                              {currentSurvey?.title &&
+                              currentSurvey.title.includes("폭력")
+                                ? "문항별 폭력 경험 빈도 추이"
+                                : "문항별 응답 추이"}
+                            </h4>
+                            <div className="h-64 w-[480px] self-center">
+                              <Line
+                                data={createLineChartData() as any}
+                                options={lineChartOptions}
+                              />
+                            </div>
                           </div>
                         </div>
-                      </div>
+                      )}
                     </div>
                   )}
 
@@ -1204,16 +1423,13 @@ const ClassSurvey: React.FC = () => {
                         className="rounded-lg border border-gray-200 bg-white p-6"
                       >
                         <h3 className="mb-6 text-lg font-medium text-gray-900">
-                          문항 {(index + 1).toString().padStart(2, "0")}.{" "}
+                          문항 {(index + 2).toString().padStart(2, "0")}.{" "}
                           {data.question}
                         </h3>
 
                         <div className="space-y-6">
                           {/* 막대 차트 */}
                           <div>
-                            <h4 className="mb-3 text-sm font-medium text-gray-700">
-                              응답 분포 (막대 차트)
-                            </h4>
                             <div className="h-64">
                               <Bar
                                 data={createBarChartData(data, data.question)}
@@ -1237,8 +1453,12 @@ const ClassSurvey: React.FC = () => {
 
                           {/* 응답 현황 요약 */}
                           <div className="rounded-lg bg-gray-50 p-4">
-                            {currentSurvey?.title &&
-                            currentSurvey.title.includes("폭력") &&
+                            {((currentSurvey?.title &&
+                              currentSurvey.title.includes("폭력")) ||
+                              (currentSurvey?.survey_templates?.metadata
+                                ?.category === "종합조사" &&
+                                index >= 4 &&
+                                index <= 6)) &&
                             data.never_count !== undefined ? (
                               <div className="grid grid-cols-3 gap-4 text-center">
                                 <div>
@@ -1269,7 +1489,7 @@ const ClassSurvey: React.FC = () => {
                             ) : (
                               <div className="grid grid-cols-2 gap-4 text-center">
                                 <div>
-                                  <div className="text-2xl font-bold text-[#094185]">
+                                  <div className="text-2xl font-bold text-blue-500">
                                     {data.yes_count}
                                   </div>
                                   <div className="text-sm text-gray-600">
@@ -1277,7 +1497,7 @@ const ClassSurvey: React.FC = () => {
                                   </div>
                                 </div>
                                 <div>
-                                  <div className="text-2xl font-bold text-blue-500">
+                                  <div className="text-2xl font-bold text-[#094185]">
                                     {data.no_count}
                                   </div>
                                   <div className="text-sm text-gray-600">
@@ -1300,7 +1520,7 @@ const ClassSurvey: React.FC = () => {
                       className="rounded-lg border border-gray-200 bg-white p-6"
                     >
                       <h3 className="mb-6 text-lg font-medium text-gray-900">
-                        문항 {(index + 1).toString().padStart(2, "0")}.{" "}
+                        문항 {(index + 2).toString().padStart(2, "0")}.{" "}
                         {data.question}
                       </h3>
 
@@ -1310,9 +1530,6 @@ const ClassSurvey: React.FC = () => {
                           <div className="space-y-6">
                             {/* 막대 차트 */}
                             <div>
-                              <h4 className="mb-3 text-sm font-medium text-gray-700">
-                                응답 분포 (막대 차트)
-                              </h4>
                               <div className="h-64">
                                 <Bar
                                   data={createBarChartData(data, data.question)}
@@ -1361,15 +1578,19 @@ const ClassSurvey: React.FC = () => {
                               </thead>
                               <tbody className="divide-y divide-gray-200 bg-white">
                                 {/* 학교 폭력 조사인 경우 3개 행, 아니면 2개 행 */}
-                                {currentSurvey?.title &&
-                                currentSurvey.title.includes("폭력") &&
+                                {((currentSurvey?.title &&
+                                  currentSurvey.title.includes("폭력")) ||
+                                  (currentSurvey?.survey_templates?.metadata
+                                    ?.category === "종합조사" &&
+                                    index >= 4 &&
+                                    index <= 6)) &&
                                 data.never_count !== undefined ? (
                                   <>
                                     {/* 전혀 없다 행 */}
                                     <tr>
                                       <td className="px-4 py-3">
                                         <div className="flex items-center space-x-2">
-                                          <div className="h-3 w-3 rounded bg-green-500"></div>
+                                          <div className="h-3 w-3 rounded bg-blue-300"></div>
                                           <span className="text-sm font-medium text-gray-900">
                                             전혀 없다
                                           </span>
@@ -1403,7 +1624,7 @@ const ClassSurvey: React.FC = () => {
                                         </div>
                                       </td>
                                       <td className="px-4 py-3 text-center">
-                                        <span className="text-sm font-semibold text-green-600">
+                                        <span className="text-sm font-semibold text-blue-300">
                                           {data.never_count}명
                                         </span>
                                       </td>
@@ -1413,7 +1634,7 @@ const ClassSurvey: React.FC = () => {
                                     <tr>
                                       <td className="px-4 py-3">
                                         <div className="flex items-center space-x-2">
-                                          <div className="h-3 w-3 rounded bg-orange-500"></div>
+                                          <div className="h-3 w-3 rounded bg-blue-500"></div>
                                           <span className="text-sm font-medium text-gray-900">
                                             한 두번 당한 적 있다
                                           </span>
@@ -1447,7 +1668,7 @@ const ClassSurvey: React.FC = () => {
                                         </div>
                                       </td>
                                       <td className="px-4 py-3 text-center">
-                                        <span className="text-sm font-semibold text-orange-600">
+                                        <span className="text-sm font-semibold text-blue-600">
                                           {data.sometimes_count}명
                                         </span>
                                       </td>
@@ -1457,7 +1678,7 @@ const ClassSurvey: React.FC = () => {
                                     <tr>
                                       <td className="px-4 py-3">
                                         <div className="flex items-center space-x-2">
-                                          <div className="h-3 w-3 rounded bg-red-500"></div>
+                                          <div className="h-3 w-3 rounded bg-[#094185]"></div>
                                           <span className="text-sm font-medium text-gray-900">
                                             자주 있다
                                           </span>
@@ -1491,7 +1712,7 @@ const ClassSurvey: React.FC = () => {
                                         </div>
                                       </td>
                                       <td className="px-4 py-3 text-center">
-                                        <span className="text-sm font-semibold text-red-600">
+                                        <span className="text-sm font-semibold text-[#094185]">
                                           {data.often_count}명
                                         </span>
                                       </td>
@@ -1537,7 +1758,7 @@ const ClassSurvey: React.FC = () => {
                                         </div>
                                       </td>
                                       <td className="px-4 py-3 text-center">
-                                        <span className="text-sm font-semibold text-blue-600">
+                                        <span className="text-sm font-semibold text-blue-500">
                                           {data.yes_count || 0}명
                                         </span>
                                       </td>
@@ -1547,7 +1768,7 @@ const ClassSurvey: React.FC = () => {
                                     <tr>
                                       <td className="px-4 py-3">
                                         <div className="flex items-center space-x-2">
-                                          <div className="h-3 w-3 rounded bg-blue-700"></div>
+                                          <div className="h-3 w-3 rounded bg-[#094185]"></div>
                                           <span className="text-sm font-medium text-gray-900">
                                             아니오
                                           </span>
@@ -1581,7 +1802,7 @@ const ClassSurvey: React.FC = () => {
                                         </div>
                                       </td>
                                       <td className="px-4 py-3 text-center">
-                                        <span className="text-sm font-semibold text-blue-700">
+                                        <span className="text-sm font-semibold text-[#094185]">
                                           {data.no_count || 0}명
                                         </span>
                                       </td>

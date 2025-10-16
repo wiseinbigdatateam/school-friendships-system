@@ -26,7 +26,7 @@ const Contact: React.FC = () => {
     >,
   ) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({
+    setFormData((prev: ContactFormData) => ({
       ...prev,
       [name]: value,
     }));
@@ -37,7 +37,7 @@ const Contact: React.FC = () => {
 
   // formData의 값 중 하나라도 작성되었는지 확인
   const isAnyFieldFilled = Object.values(formData).some(
-    (value) => value.trim() !== "",
+    (value) => (value as string).trim() !== "",
   );
 
   // confirm 창을 띄우는 함수
@@ -48,13 +48,15 @@ const Contact: React.FC = () => {
       )
     ) {
       alert("취소되었습니다");
-      navigate("/login");
+      navigate("/");
     }
   };
 
   const handleCancelBtn = () => {
     if (isAnyFieldFilled) {
       callConfirmMessage();
+    } else {
+      navigate("/");
     }
   };
 
@@ -96,7 +98,7 @@ const Contact: React.FC = () => {
 
     try {
       // 실제 문의 API 호출
-      const response = await contactService.submitInquiry(formData);
+      const response = await contactService.submitContactForm(formData);
       
       console.log("Contact form submitted successfully:", response);
       setSubmitted(true);

@@ -2,6 +2,9 @@ import React, { useState, useEffect } from "react";
 import { supabase } from "../lib/supabase";
 import { useAuth } from "../contexts/AuthContext";
 import NetworkChartComponent from "../components/NetworkChartComponent";
+import LoadingSpinner from "../components/LoadingSpinner";
+import { unifiedNetworkAnalysisService } from "../services/unifiedNetworkAnalysisService";
+import { ClassAnalysisResult } from "../types/unifiedNetworkTypes";
 
 interface Student {
   id: string;
@@ -43,6 +46,8 @@ const GradeAnalysis: React.FC = () => {
   const [analysisResults, setAnalysisResults] = useState<NetworkAnalysisResult[]>([]);
   const [selectedAnalysis, setSelectedAnalysis] = useState<NetworkAnalysisResult | null>(null);
   const [gradeData, setGradeData] = useState<any>(null);
+  const [classAnalysisResult, setClassAnalysisResult] = useState<ClassAnalysisResult | null>(null);
+  const [analysisLoading, setAnalysisLoading] = useState(false);
 
   // 사용자 역할에 따른 담당 학년 정보 가져오기
   const getUserGradeScope = () => {
@@ -156,6 +161,68 @@ const GradeAnalysis: React.FC = () => {
     }
   };
 
+  // 통합 서비스를 사용한 학급별 분석 수행
+  const performClassAnalysis = async (survey: Survey) => {
+    if (!survey || !user?.school_id) return;
+    
+    try {
+      setAnalysisLoading(true);
+      console.log(`🔍 학급별 분석 시작: ${survey.title}`);
+      
+      // 통합 서비스에서 학급별 분석 결과 조회
+      const classAnalysis = await unifiedNetworkAnalysisService.getClassAnalysis(
+        survey.id,
+        user.class_number || "1" // 담임교사의 담당 반
+      );
+      
+      setClassAnalysisResult(classAnalysis);
+      
+      // 기존 형식과 호환되도록 데이터 변환
+      const convertedGradeData = {
+        nodes: classAnalysis.students.map(student => ({
+          id: student.id,
+          label: student.name,
+          group: student.class.toString(),
+          title: `${student.name} (${student.grade}-${student.class})`,
+          color: getClassColor(student.class.toString()),
+          // 네트워크 메트릭 추가
+          centrality: student.centrality,
+          connection_count: student.connection_count,
+          community: student.community,
+          friendship_type: student.friendship_type
+        })),
+        edges: classAnalysis.networkData.edges.map(edge => ({
+          from: edge.source,
+          to: edge.target,
+          label: edge.relationship_type,
+          color: { color: "#3b82f6", highlight: "#1d4ed8" },
+          weight: edge.weight
+        })),
+        statistics: {
+          totalStudents: classAnalysis.students.length,
+          totalClasses: 1,
+          averageClassSize: classAnalysis.students.length,
+          classDistribution: [
+            {
+              class: user.class_number || "1",
+              count: classAnalysis.students.length
+            }
+          ]
+        }
+      };
+      
+      setGradeData(convertedGradeData);
+      console.log(`✅ 학급별 분석 완료: ${survey.title}`);
+      
+    } catch (error) {
+      console.error("❌ 학급별 분석 오류:", error);
+      // 오류 발생 시 기존 방식으로 폴백
+      generateGradeData();
+    } finally {
+      setAnalysisLoading(false);
+    }
+  };
+
   // 학년별 통합 데이터 생성
   const generateGradeData = () => {
     if (!selectedAnalysis || !students.length) return;
@@ -257,10 +324,10 @@ const GradeAnalysis: React.FC = () => {
     loadData();
   }, [user]);
 
-  // 설문 변경 시 분석 결과 로드
+  // 설문 변경 시 통합 서비스로 분석 수행
   useEffect(() => {
     if (selectedSurvey) {
-      loadAnalysisResults();
+      performClassAnalysis(selectedSurvey);
     }
   }, [selectedSurvey]);
 
@@ -323,6 +390,16 @@ const GradeAnalysis: React.FC = () => {
         </div>
       </div>
 
+      {/* 분석 로딩 상태 */}
+      {analysisLoading && (
+        <div className="mb-6 rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
+          <div className="flex items-center justify-center py-8">
+            <div className="mr-4 h-8 w-8 animate-spin rounded-full border-b-2 border-blue-600"></div>
+            <p className="text-gray-600">학급별 네트워크 분석을 수행하는 중...</p>
+          </div>
+        </div>
+      )}
+
       {/* 분석 결과 선택 */}
       {selectedSurvey && analysisResults.length > 0 && (
         <div className="mb-6 rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
@@ -347,6 +424,56 @@ const GradeAnalysis: React.FC = () => {
               </button>
             ))}
           </div>
+        </div>
+      )}
+
+      {/* 통합 분석 결과 */}
+      {classAnalysisResult && (
+        <div className="mb-6 rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
+          <h2 className="mb-4 text-lg font-semibold text-gray-900">
+            통합 네트워크 분석 결과
+          </h2>
+          <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
+            <div className="text-center">
+              <div className="text-3xl font-bold text-blue-600">
+                {classAnalysisResult.classMetrics.networkDensity.toFixed(3)}
+              </div>
+              <div className="text-sm text-gray-600">네트워크 밀도</div>
+            </div>
+            <div className="text-center">
+              <div className="text-3xl font-bold text-green-600">
+                {classAnalysisResult.classMetrics.averageCentrality.toFixed(3)}
+              </div>
+              <div className="text-sm text-gray-600">평균 중심성</div>
+            </div>
+            <div className="text-center">
+              <div className="text-3xl font-bold text-purple-600">
+                {classAnalysisResult.classMetrics.communitiesCount}
+              </div>
+              <div className="text-sm text-gray-600">커뮤니티 수</div>
+            </div>
+            <div className="text-center">
+              <div className="text-3xl font-bold text-orange-600">
+                {classAnalysisResult.classMetrics.isolationRiskStudents.length}
+              </div>
+              <div className="text-sm text-gray-600">고립 위험 학생</div>
+            </div>
+          </div>
+          
+          {/* 권장사항 */}
+          {classAnalysisResult.recommendations.class_improvements.length > 0 && (
+            <div className="mt-6">
+              <h3 className="mb-3 text-md font-semibold text-gray-900">학급 개선 권장사항</h3>
+              <ul className="space-y-2">
+                {classAnalysisResult.recommendations.class_improvements.map((recommendation, index) => (
+                  <li key={index} className="flex items-start">
+                    <span className="mr-2 text-blue-600">•</span>
+                    <span className="text-gray-700">{recommendation}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
         </div>
       )}
 

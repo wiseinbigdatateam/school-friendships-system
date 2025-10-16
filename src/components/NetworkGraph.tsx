@@ -79,11 +79,42 @@ const NetworkGraph: React.FC<NetworkGraphProps> = ({
           }))
       : [];
 
-    // 색상 스케일 설정
-    const colorScale = d3
-      .scaleOrdinal<string>()
-      .domain(["center", "friend", "other"])
-      .range(["#ef4444", "#3b82f6", "#10b981"]);
+    // 학생 유형별 색상 매핑 함수 (NetworkVisualization과 동일한 색상)
+    const getStudentTypeColor = (student: Student) => {
+      console.log(`🎨 NetworkGraph 색상 결정: ${student.name}`, {
+        friendship_type: (student as any).friendship_type,
+        friendCount: student.friendCount,
+        totalStudents: students.length
+      });
+      
+      // friendship_type이 있으면 직접 사용
+      if ((student as any).friendship_type) {
+        const colorMap: { [key: string]: string } = {
+          "외톨이형": "#FF6B6B",
+          "소수 친구 학생": "#4ECDC4", 
+          "평균적인 학생": "#45B7D1",
+          "친구 많은 학생": "#96CEB4",
+          "사교 스타": "#FFEAA7"
+        };
+        const color = colorMap[(student as any).friendship_type] || "#94a3b8";
+        console.log(`✅ friendship_type 사용: ${(student as any).friendship_type} → ${color}`);
+        return color;
+      }
+      
+      // friendship_type이 없으면 friendCount 기반으로 계산
+      const maxPossibleConnections = students.length - 1;
+      const normalizedCentrality = student.friendCount / Math.max(maxPossibleConnections, 1);
+      
+      let color: string;
+      if (normalizedCentrality < 0.1) color = "#FF6B6B";      // 외톨이형
+      else if (normalizedCentrality < 0.3) color = "#4ECDC4"; // 소수 친구 학생
+      else if (normalizedCentrality < 0.6) color = "#45B7D1"; // 평균적인 학생
+      else if (normalizedCentrality < 0.8) color = "#96CEB4"; // 친구 많은 학생
+      else color = "#FFEAA7";                                 // 사교 스타
+      
+      console.log(`⚠️ friendCount 기반 계산: ${student.friendCount}/${maxPossibleConnections} = ${normalizedCentrality.toFixed(2)} → ${color}`);
+      return color;
+    };
 
     // 노드 크기 스케일 설정
     const radiusScale = d3
@@ -147,9 +178,8 @@ const NetworkGraph: React.FC<NetworkGraphProps> = ({
       .append("circle")
       .attr("r", (d: D3Node) => radiusScale(d.friendCount))
       .attr("fill", (d: D3Node) => {
-        if (d.isCenter) return colorScale("center");
-        if (d.friendCount > 0) return colorScale("friend");
-        return colorScale("other");
+        const student = students.find(s => s.id === d.id);
+        return student ? getStudentTypeColor(student) : "#94a3b8";
       })
       .attr("stroke", "#fff")
       .attr("stroke-width", 2)
@@ -288,18 +318,26 @@ const NetworkGraph: React.FC<NetworkGraphProps> = ({
         />
       </div>
 
-      <div className="mt-7 flex items-center space-x-6 text-sm">
+      <div className="mt-7 flex flex-wrap items-center justify-center gap-4 text-sm">
         <div className="flex items-center space-x-2">
-          <div className="h-3 w-3 rounded-full bg-red-500"></div>
-          <span className="text-gray-700">중심 학생</span>
+          <div className="h-3 w-3 rounded-full" style={{ backgroundColor: "#FF6B6B" }}></div>
+          <span className="text-gray-700">외톨이형</span>
         </div>
         <div className="flex items-center space-x-2">
-          <div className="h-3 w-3 rounded-full bg-blue-500"></div>
-          <span className="text-gray-700">친구 관계</span>
+          <div className="h-3 w-3 rounded-full" style={{ backgroundColor: "#4ECDC4" }}></div>
+          <span className="text-gray-700">소수 친구 학생</span>
         </div>
         <div className="flex items-center space-x-2">
-          <div className="h-3 w-3 rounded-full bg-green-500"></div>
-          <span className="text-gray-700">기타 학생</span>
+          <div className="h-3 w-3 rounded-full" style={{ backgroundColor: "#45B7D1" }}></div>
+          <span className="text-gray-700">평균적인 학생</span>
+        </div>
+        <div className="flex items-center space-x-2">
+          <div className="h-3 w-3 rounded-full" style={{ backgroundColor: "#96CEB4" }}></div>
+          <span className="text-gray-700">친구 많은 학생</span>
+        </div>
+        <div className="flex items-center space-x-2">
+          <div className="h-3 w-3 rounded-full" style={{ backgroundColor: "#FFEAA7" }}></div>
+          <span className="text-gray-700">사교 스타</span>
         </div>
       </div>
     </div>

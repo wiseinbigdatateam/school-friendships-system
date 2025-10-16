@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { NetworkNode, NetworkEdge, NetworkAnalysisData } from "../types";
+import { NetworkNode, NetworkAnalysisData } from "../types";
 import NetworkVisualization from "./NetworkVisualization";
 import {
   FRIENDSHIP_TYPE_COLORS,
@@ -9,16 +9,69 @@ import {
 interface NetworkChartComponentProps {
   chartData: NetworkAnalysisData[];
   activeTab: number;
+  onNodeClick?: (node: any) => void;
+  selectedStudentData?: {
+    id: string;
+    name: string;
+    grade: string;
+    class: string;
+    friendship_type: string;
+    centrality: number;
+    degree: number;
+    connection_count: number;
+  } | null;
 }
+
+const friendType = [
+  {
+    type: "외톨이형",
+    color: "#FF6B6B",
+  },
+  {
+    type: "소수 친구 학생",
+    color: "#4ECDC4",
+  },
+  {
+    type: "평균적인 학생",
+    color: "#45B7D1",
+  },
+  {
+    type: "친구 많은 학생",
+    color: "#96CEB4",
+  },
+  {
+    type: "사교 스타",
+    color: "#FFEAA7",
+  },
+];
 
 const NetworkChartComponent: React.FC<NetworkChartComponentProps> = ({
   chartData,
   activeTab,
+  onNodeClick,
+  selectedStudentData,
 }) => {
   const [firstGraphData, setFirstGraphData] =
     useState<NetworkAnalysisData | null>(null);
   const [secondGraphData, setSecondGraphData] =
     useState<NetworkAnalysisData | null>(null);
+
+  // 클러스터 수 계산 유틸리티 함수 (외톨이형 제외)
+  const getClusterCount = (graphData: NetworkAnalysisData): number => {
+    const clusters = new Map<number, any>();
+    graphData.nodes.forEach((node) => {
+      // 외톨이형은 그룹 수에서 제외
+      if (node.friendship_type === "외톨이형") {
+        return;
+      }
+      const clusterId = node.community ?? 0;
+      if (!clusters.has(clusterId)) {
+        clusters.set(clusterId, []);
+      }
+      clusters.get(clusterId)?.push(node);
+    });
+    return clusters.size;
+  };
 
   // 실제 네트워크 데이터 사용
   const getNetworkData = (data: NetworkAnalysisData) => {
@@ -59,30 +112,43 @@ const NetworkChartComponent: React.FC<NetworkChartComponentProps> = ({
           <h3 className="mb-4 text-xl font-semibold text-gray-900">
             첫 번째 설문 - 학급 친구 관계 현황
           </h3>
-          <p className="mb-6 text-sm text-gray-600">
-            첫 번째 선택한 설문의 학급 내 학생들의 친구 관계를 시각화합니다.
-          </p>
 
-          <div className="relative">
-            <NetworkVisualization data={getNetworkData(firstGraphData)} />
+          <div className="mb-4 flex justify-between">
+            <p className="text-sm text-gray-600">
+              첫 번째 선택한 설문의 학급 내 학생들의 친구 관계를 시각화합니다.
+            </p>
+
+            {/* 친구 유형 범례 */}
+            <div className="flex gap-3">
+              {friendType.map((item) => (
+                <div key={item.type} className="flex items-center gap-1">
+                  <div
+                    className="h-4 w-4 rounded-full"
+                    style={{ backgroundColor: item.color }}
+                  />
+                  <span className="text-xs font-medium text-gray-700">
+                    {item.type}
+                  </span>
+                </div>
+              ))}
+            </div>
           </div>
 
-          {/* 통계 정보 */}
-          <div className="mt-6 grid grid-cols-1 gap-4 md:grid-cols-3">
+          <div className="relative">
+            <NetworkVisualization
+              data={getNetworkData(firstGraphData)}
+              onNodeClick={onNodeClick}
+            />
+          </div>
+
+          {/* 기본 통계 정보 */}
+          <div className="mt-6 grid grid-cols-1 gap-4 md:grid-cols-4">
             <div className="flex flex-col items-center rounded-lg bg-gray-50 p-4">
               <h4 className="text-sm font-medium text-blue-400">총 학생 수</h4>
               <p className="text-2xl font-bold text-blue-400">
                 {firstGraphData.metrics.total_students}
               </p>
             </div>
-            {/* <div className="rounded-lg bg-green-50 p-4">
-              <h4 className="text-sm font-medium text-green-800">
-                총 친구 관계
-              </h4>
-              <p className="text-2xl font-bold text-green-900">
-                {firstGraphData.metrics.total_relationships}
-              </p>
-            </div> */}
             <div className="flex flex-col items-center rounded-lg bg-gray-50 p-4">
               <h4 className="text-sm font-medium text-blue-500">
                 친구 관계 밀도
@@ -91,15 +157,305 @@ const NetworkChartComponent: React.FC<NetworkChartComponentProps> = ({
                 {(firstGraphData.metrics.network_density * 100).toFixed(1)}%
               </p>
             </div>
+            <div className="flex flex-col items-center rounded-lg bg-gradient-to-br from-blue-50 to-blue-100 p-4 shadow-sm">
+              <h4 className="text-sm font-medium text-blue-700">
+                🎯 친구 그룹 수
+              </h4>
+              <p className="text-3xl font-bold text-blue-600">
+                {getClusterCount(firstGraphData)}개
+              </p>
+              <p className="mt-1 text-xs text-blue-600">
+                {(() => {
+                  const clusterCount = getClusterCount(firstGraphData);
+                  return clusterCount <= 2
+                    ? "매우 통합됨"
+                    : clusterCount <= 4
+                      ? "적절함"
+                      : clusterCount <= 6
+                        ? "다소 분산됨"
+                        : "주의 필요";
+                })()}
+              </p>
+            </div>
             <div className="flex flex-col items-center rounded-lg bg-gray-50 p-4">
               <h4 className="text-sm font-medium text-blue-600">
-                친구 그룹 수
+                평균 친구 수
               </h4>
               <p className="text-2xl font-bold text-blue-600">
-                {firstGraphData.metrics.connected_components}
+                {firstGraphData.metrics.average_degree.toFixed(1)}명
               </p>
             </div>
           </div>
+
+          {/* 단일 설문일 때만 안정성 지표와 학생 유형별 수 표시 */}
+          {!secondGraphData && (
+            <>
+              {/* 선택된 학생 정보 섹션 */}
+              {selectedStudentData && (
+                <div className="mt-8 rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
+                  <h3 className="mb-4 text-xl font-semibold text-gray-900">
+                    선택된 학생 정보
+                  </h3>
+                  <p className="mb-6 text-sm text-gray-600">
+                    네트워크 그래프에서 클릭한 학생의 상세 정보를 확인할 수
+                    있습니다.
+                  </p>
+
+                  <div className="rounded-lg bg-blue-50 p-6">
+                    <div className="flex flex-wrap items-center justify-center gap-6">
+                      <div className="flex items-center space-x-2">
+                        <span className="text-sm font-medium text-gray-600">
+                          이름:
+                        </span>
+                        <span className="text-lg font-semibold text-gray-900">
+                          {selectedStudentData.name}
+                        </span>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <div
+                          className="h-4 w-4 rounded-full"
+                          style={{
+                            backgroundColor:
+                              selectedStudentData.friendship_type === "외톨이형"
+                                ? "#FF6B6B"
+                                : selectedStudentData.friendship_type ===
+                                    "소수 친구 학생"
+                                  ? "#4ECDC4"
+                                  : selectedStudentData.friendship_type ===
+                                      "평균적인 학생"
+                                    ? "#45B7D1"
+                                    : selectedStudentData.friendship_type ===
+                                        "친구 많은 학생"
+                                      ? "#96CEB4"
+                                      : selectedStudentData.friendship_type ===
+                                          "사교 스타"
+                                        ? "#FFEAA7"
+                                        : "#45B7D1",
+                          }}
+                        ></div>
+                        <span className="text-sm font-medium text-gray-600">
+                          유형:
+                        </span>
+                        <span className="text-lg font-semibold text-gray-900">
+                          {selectedStudentData.friendship_type ||
+                            "평균적인 학생"}
+                        </span>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <span className="text-sm font-medium text-gray-600">
+                          연결 수:
+                        </span>
+                        <span className="text-lg font-semibold text-gray-900">
+                          {selectedStudentData.connection_count || 0}명
+                        </span>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <span className="text-sm font-medium text-gray-600">
+                          연결 정도:
+                        </span>
+                        <span className="text-lg font-semibold text-gray-900">
+                          {(
+                            (selectedStudentData.centrality || 0) * 100
+                          ).toFixed(1)}
+                          %
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              <div className="flex">
+                {/* 학급 친구 관계 안정성 지표 */}
+                <div className="mt-8 w-1/2 rounded-lg bg-white p-6">
+                  <h4 className="mb-4 text-lg font-medium text-gray-900">
+                    🔍 학급 친구 관계 안정성 지표
+                  </h4>
+                  <p className="mb-6 text-sm text-gray-600">
+                    각 지표의 수치가 높을수록 학급 내 친구 관계가 더 활발하고
+                    안정적임을 의미합니다.
+                  </p>
+
+                  <div className="grid grid-cols-1 gap-6">
+                    {/* 네트워크 밀도 */}
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm font-medium text-gray-700">
+                          친구 관계 밀도
+                        </span>
+                        <span className="text-xs text-gray-500">
+                          학급 내 친구 관계의 활발함
+                        </span>
+                      </div>
+                      <div className="relative h-6 rounded-full bg-gray-200">
+                        <div
+                          className="flex h-6 items-center justify-center rounded-full bg-gradient-to-r from-red-400 via-yellow-400 to-green-400"
+                          style={{
+                            width: `${Math.min(100, firstGraphData.metrics.network_density * 100)}%`,
+                          }}
+                        >
+                          <span className="text-xs font-bold text-white">
+                            {firstGraphData.metrics.network_density.toFixed(3)}
+                          </span>
+                        </div>
+                      </div>
+                      <div className="flex justify-between text-xs text-gray-500">
+                        <span>낮음 (0.0)</span>
+                        <span>보통 (0.5)</span>
+                        <span>높음 (1.0)</span>
+                      </div>
+                    </div>
+
+                    {/* 평균 경로 길이 */}
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm font-medium text-gray-700">
+                          친구 연결 효율성
+                        </span>
+                        <span className="text-xs text-gray-500">
+                          친구를 통해 다른 친구를 만나는 용이함
+                        </span>
+                      </div>
+                      <div className="relative h-6 rounded-full bg-gray-200">
+                        <div
+                          className="flex h-6 items-center justify-center rounded-full bg-gradient-to-r from-green-400 via-yellow-400 to-red-400"
+                          style={{
+                            width: `${Math.min(100, Math.max(0, 100 - firstGraphData.metrics.average_path_length * 20))}%`,
+                          }}
+                        >
+                          <span className="text-xs font-bold text-white">
+                            {firstGraphData.metrics.average_path_length.toFixed(
+                              2,
+                            )}
+                          </span>
+                        </div>
+                      </div>
+                      <div className="flex justify-between text-xs text-gray-500">
+                        <span>효율적 (1.0)</span>
+                        <span>보통 (3.0)</span>
+                        <span>비효율적 (5.0)</span>
+                      </div>
+                    </div>
+
+                    {/* 클러스터링 계수 */}
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm font-medium text-gray-700">
+                          소그룹 형성도
+                        </span>
+                        <span className="text-xs text-gray-500">
+                          작은 친구 그룹이 얼마나 잘 형성되는지
+                        </span>
+                      </div>
+                      <div className="relative h-6 rounded-full bg-gray-200">
+                        <div
+                          className="flex h-6 items-center justify-center rounded-full bg-gradient-to-r from-red-400 via-yellow-400 to-green-400"
+                          style={{
+                            width: `${Math.min(100, firstGraphData.metrics.clustering_coefficient * 100)}%`,
+                          }}
+                        >
+                          <span className="text-xs font-bold text-white">
+                            {firstGraphData.metrics.clustering_coefficient.toFixed(
+                              3,
+                            )}
+                          </span>
+                        </div>
+                      </div>
+                      <div className="flex justify-between text-xs text-gray-500">
+                        <span>낮음 (0.0)</span>
+                        <span>보통 (0.5)</span>
+                        <span>높음 (1.0)</span>
+                      </div>
+                    </div>
+
+                    {/* 모듈성 */}
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm font-medium text-gray-700">
+                          커뮤니티 구조성
+                        </span>
+                        <span className="text-xs text-gray-500">
+                          명확한 친구 그룹이 얼마나 잘 형성되는지
+                        </span>
+                      </div>
+                      <div className="relative h-6 rounded-full bg-gray-200">
+                        <div
+                          className="flex h-6 items-center justify-center rounded-full bg-gradient-to-r from-red-400 via-yellow-400 to-green-400"
+                          style={{
+                            width: `${Math.min(100, Math.max(0, firstGraphData.metrics.modularity * 100))}%`,
+                          }}
+                        >
+                          <span className="text-xs font-bold text-white">
+                            {firstGraphData.metrics.modularity.toFixed(3)}
+                          </span>
+                        </div>
+                      </div>
+                      <div className="flex justify-between text-xs text-gray-500">
+                        <span>낮음 (0.0)</span>
+                        <span>보통 (0.3)</span>
+                        <span>높음 (0.7)</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* 학생 유형별 수 */}
+                <div className="mt-8 w-1/2 rounded-lg bg-white p-6">
+                  <h4 className="mb-4 text-lg font-medium text-gray-900">
+                    👥 학생 유형별 분포
+                  </h4>
+                  <p className="mb-6 text-sm text-gray-600">
+                    각 학생의 친구 관계 패턴에 따른 유형별 분포를 확인할 수
+                    있습니다.
+                  </p>
+
+                  <div className="grid grid-cols-1 gap-3">
+                    {FRIENDSHIP_TYPES.map((type) => {
+                      const count = firstGraphData.nodes.filter(
+                        (node: NetworkNode) => node.friendship_type === type,
+                      ).length;
+                      const percentage =
+                        firstGraphData.metrics.total_students > 0
+                          ? (
+                              (count / firstGraphData.metrics.total_students) *
+                              100
+                            ).toFixed(1)
+                          : "0.0";
+
+                      return (
+                        <div
+                          key={type}
+                          className="flex items-center justify-between rounded-lg bg-gray-50 p-4"
+                        >
+                          <div className="flex items-center space-x-3">
+                            <div
+                              className="h-4 w-4 rounded-full"
+                              style={{
+                                backgroundColor: FRIENDSHIP_TYPE_COLORS[type],
+                              }}
+                            />
+                            <div>
+                              <span className="text-sm font-medium text-gray-700">
+                                {type}
+                              </span>
+                              <div className="text-xs text-gray-500">
+                                {percentage}%
+                              </div>
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <span className="text-lg font-bold text-gray-900">
+                              {count}명
+                            </span>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+            </>
+          )}
         </div>
       )}
 
@@ -114,25 +470,20 @@ const NetworkChartComponent: React.FC<NetworkChartComponentProps> = ({
           </p>
 
           <div className="relative">
-            <NetworkVisualization data={getNetworkData(secondGraphData)} />
+            <NetworkVisualization
+              data={getNetworkData(secondGraphData)}
+              onNodeClick={onNodeClick}
+            />
           </div>
 
-          {/* 통계 정보 */}
-          <div className="mt-6 grid grid-cols-1 gap-4 md:grid-cols-3">
+          {/* 기본 통계 정보 */}
+          <div className="mt-6 grid grid-cols-1 gap-4 md:grid-cols-4">
             <div className="flex flex-col items-center rounded-lg bg-gray-50 p-4">
               <h4 className="text-sm font-medium text-blue-400">총 학생 수</h4>
               <p className="text-2xl font-bold text-blue-400">
                 {secondGraphData.metrics.total_students}
               </p>
             </div>
-            {/* <div className="rounded-lg bg-green-50 p-4">
-              <h4 className="text-sm font-medium text-green-800">
-                총 친구 관계
-              </h4>
-              <p className="text-2xl font-bold text-green-900">
-                {secondGraphData.metrics.total_relationships}
-              </p>
-            </div> */}
             <div className="flex flex-col items-center rounded-lg bg-gray-50 p-4">
               <h4 className="text-sm font-medium text-blue-500">
                 친구 관계 밀도
@@ -141,12 +492,32 @@ const NetworkChartComponent: React.FC<NetworkChartComponentProps> = ({
                 {(secondGraphData.metrics.network_density * 100).toFixed(1)}%
               </p>
             </div>
+            <div className="flex flex-col items-center rounded-lg bg-gradient-to-br from-blue-50 to-blue-100 p-4 shadow-sm">
+              <h4 className="text-sm font-medium text-blue-700">
+                🎯 친구 그룹 수
+              </h4>
+              <p className="text-3xl font-bold text-blue-600">
+                {getClusterCount(secondGraphData)}개
+              </p>
+              <p className="mt-1 text-xs text-blue-600">
+                {(() => {
+                  const clusterCount = getClusterCount(secondGraphData);
+                  return clusterCount <= 2
+                    ? "매우 통합됨"
+                    : clusterCount <= 4
+                      ? "적절함"
+                      : clusterCount <= 6
+                        ? "다소 분산됨"
+                        : "주의 필요";
+                })()}
+              </p>
+            </div>
             <div className="flex flex-col items-center rounded-lg bg-gray-50 p-4">
               <h4 className="text-sm font-medium text-blue-600">
-                친구 그룹 수
+                평균 친구 수
               </h4>
               <p className="text-2xl font-bold text-blue-600">
-                {secondGraphData.metrics.connected_components}
+                {secondGraphData.metrics.average_degree.toFixed(1)}명
               </p>
             </div>
           </div>
@@ -165,15 +536,80 @@ const NetworkChartComponent: React.FC<NetworkChartComponentProps> = ({
           </p>
 
           <div className="grid grid-cols-1 gap-8 lg:grid-cols-2">
-            {/* 주요 지표 비교 - 안정성 지표 형태 */}
+            {/* 주요 지표 비교 - 안정성 지표 변화 형태 */}
             <div className="space-y-6">
               <h4 className="text-lg font-medium text-gray-900">
-                🔍 학급 친구 관계 안정성 지표
+                🔍 학급 친구 관계 안정성 지표의 변화
               </h4>
               <p className="text-sm text-gray-600">
-                각 지표의 수치가 높을수록 학급 내 친구 관계가 더 활발하고
-                안정적임을 의미합니다.
+                두 시기 간의 지표 변화를 통해 학급 내 친구 관계가 어떻게
+                발전했는지 확인할 수 있습니다.
               </p>
+
+              {/* 친구 그룹 수 변화 */}
+              <div className="rounded-lg bg-gradient-to-br from-blue-50 to-blue-100 p-4">
+                <div className="mb-3 flex items-center justify-between">
+                  <span className="text-sm font-medium text-blue-800">
+                    🎯 친구 그룹 수 변화
+                  </span>
+                  {(() => {
+                    const firstClusterCount = getClusterCount(firstGraphData);
+                    const secondClusterCount = getClusterCount(secondGraphData);
+                    const change = secondClusterCount - firstClusterCount;
+                    const isPositive = change < 0; // 그룹 수가 줄어든 것이 긍정적
+                    return (
+                      <span
+                        className={`text-xs font-bold ${
+                          isPositive
+                            ? "text-green-700"
+                            : change === 0
+                              ? "text-gray-700"
+                              : "text-red-700"
+                        }`}
+                      >
+                        {change > 0 ? "+" : ""}
+                        {change}개
+                      </span>
+                    );
+                  })()}
+                </div>
+                <div className="flex items-center justify-center gap-4">
+                  <div className="text-center">
+                    <div className="text-2xl font-bold text-blue-700">
+                      {getClusterCount(firstGraphData)}개
+                    </div>
+                    <div className="text-xs text-blue-600">첫 번째 설문</div>
+                  </div>
+                  <div className="text-2xl">
+                    {(() => {
+                      const firstCount = getClusterCount(firstGraphData);
+                      const secondCount = getClusterCount(secondGraphData);
+                      return secondCount < firstCount
+                        ? "✅"
+                        : secondCount > firstCount
+                          ? "⚠️"
+                          : "→";
+                    })()}
+                  </div>
+                  <div className="text-center">
+                    <div className="text-2xl font-bold text-blue-700">
+                      {getClusterCount(secondGraphData)}개
+                    </div>
+                    <div className="text-xs text-blue-600">두 번째 설문</div>
+                  </div>
+                </div>
+                <p className="mt-2 text-center text-xs text-blue-700">
+                  {(() => {
+                    const firstCount = getClusterCount(firstGraphData);
+                    const secondCount = getClusterCount(secondGraphData);
+                    return secondCount < firstCount
+                      ? "✨ 그룹이 통합되어 학급 응집력이 향상되었습니다"
+                      : secondCount > firstCount
+                        ? "⚠️ 그룹이 분산되어 학급 통합에 관심이 필요합니다"
+                        : "그룹 수는 동일하게 유지되고 있습니다";
+                  })()}
+                </p>
+              </div>
 
               {/* 네트워크 밀도 */}
               <div className="space-y-2">
@@ -181,9 +617,31 @@ const NetworkChartComponent: React.FC<NetworkChartComponentProps> = ({
                   <span className="text-sm font-medium text-gray-700">
                     친구 관계 밀도
                   </span>
-                  <span className="text-xs text-gray-500">
-                    학급 내 친구 관계의 활발함
-                  </span>
+                  <div className="flex items-center space-x-2">
+                    <span className="text-xs text-gray-500">
+                      학급 내 친구 관계의 활발함
+                    </span>
+                    {(() => {
+                      const change =
+                        secondGraphData.metrics.network_density -
+                        firstGraphData.metrics.network_density;
+                      const changePercent = (change * 100).toFixed(1);
+                      return (
+                        <span
+                          className={`text-xs font-medium ${
+                            change > 0
+                              ? "text-green-600"
+                              : change < 0
+                                ? "text-red-600"
+                                : "text-gray-600"
+                          }`}
+                        >
+                          {change > 0 ? "+" : ""}
+                          {changePercent}%
+                        </span>
+                      );
+                    })()}
+                  </div>
                 </div>
                 <div className="relative h-6 rounded-full bg-gray-200">
                   <div
@@ -210,9 +668,31 @@ const NetworkChartComponent: React.FC<NetworkChartComponentProps> = ({
                   <span className="text-sm font-medium text-gray-700">
                     친구 연결 효율성
                   </span>
-                  <span className="text-xs text-gray-500">
-                    친구를 통해 다른 친구를 만나는 용이함
-                  </span>
+                  <div className="flex items-center space-x-2">
+                    <span className="text-xs text-gray-500">
+                      친구를 통해 다른 친구를 만나는 용이함
+                    </span>
+                    {(() => {
+                      const change =
+                        firstGraphData.metrics.average_path_length -
+                        secondGraphData.metrics.average_path_length;
+                      const changePercent = (change * 100).toFixed(1);
+                      return (
+                        <span
+                          className={`text-xs font-medium ${
+                            change > 0
+                              ? "text-green-600"
+                              : change < 0
+                                ? "text-red-600"
+                                : "text-gray-600"
+                          }`}
+                        >
+                          {change > 0 ? "+" : ""}
+                          {changePercent}%
+                        </span>
+                      );
+                    })()}
+                  </div>
                 </div>
                 <div className="relative h-6 rounded-full bg-gray-200">
                   <div
@@ -239,9 +719,31 @@ const NetworkChartComponent: React.FC<NetworkChartComponentProps> = ({
                   <span className="text-sm font-medium text-gray-700">
                     소그룹 형성도
                   </span>
-                  <span className="text-xs text-gray-500">
-                    작은 친구 그룹이 얼마나 잘 형성되는지
-                  </span>
+                  <div className="flex items-center space-x-2">
+                    <span className="text-xs text-gray-500">
+                      작은 친구 그룹이 얼마나 잘 형성되는지
+                    </span>
+                    {(() => {
+                      const change =
+                        secondGraphData.metrics.clustering_coefficient -
+                        firstGraphData.metrics.clustering_coefficient;
+                      const changePercent = (change * 100).toFixed(1);
+                      return (
+                        <span
+                          className={`text-xs font-medium ${
+                            change > 0
+                              ? "text-green-600"
+                              : change < 0
+                                ? "text-red-600"
+                                : "text-gray-600"
+                          }`}
+                        >
+                          {change > 0 ? "+" : ""}
+                          {changePercent}%
+                        </span>
+                      );
+                    })()}
+                  </div>
                 </div>
                 <div className="relative h-6 rounded-full bg-gray-200">
                   <div
@@ -261,6 +763,57 @@ const NetworkChartComponent: React.FC<NetworkChartComponentProps> = ({
                   <span>낮음 (0.0)</span>
                   <span>보통 (0.5)</span>
                   <span>높음 (1.0)</span>
+                </div>
+              </div>
+
+              {/* 모듈성 */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium text-gray-700">
+                    커뮤니티 구조성
+                  </span>
+                  <div className="flex items-center space-x-2">
+                    <span className="text-xs text-gray-500">
+                      명확한 친구 그룹이 얼마나 잘 형성되는지
+                    </span>
+                    {(() => {
+                      const change =
+                        secondGraphData.metrics.modularity -
+                        firstGraphData.metrics.modularity;
+                      const changePercent = (change * 100).toFixed(1);
+                      return (
+                        <span
+                          className={`text-xs font-medium ${
+                            change > 0
+                              ? "text-green-600"
+                              : change < 0
+                                ? "text-red-600"
+                                : "text-gray-600"
+                          }`}
+                        >
+                          {change > 0 ? "+" : ""}
+                          {changePercent}%
+                        </span>
+                      );
+                    })()}
+                  </div>
+                </div>
+                <div className="relative h-6 rounded-full bg-gray-200">
+                  <div
+                    className="flex h-6 items-center justify-center rounded-full bg-gradient-to-r from-red-400 via-yellow-400 to-green-400"
+                    style={{
+                      width: `${Math.min(100, Math.max(0, secondGraphData.metrics.modularity * 100))}%`,
+                    }}
+                  >
+                    <span className="text-xs font-bold text-white">
+                      {secondGraphData.metrics.modularity.toFixed(3)}
+                    </span>
+                  </div>
+                </div>
+                <div className="flex justify-between text-xs text-gray-500">
+                  <span>낮음 (0.0)</span>
+                  <span>보통 (0.3)</span>
+                  <span>높음 (0.7)</span>
                 </div>
               </div>
             </div>

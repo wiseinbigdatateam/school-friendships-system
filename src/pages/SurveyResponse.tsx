@@ -42,7 +42,7 @@ const SurveyResponse: React.FC = () => {
 
   // 학생 본인 확인 상태
   const [currentStep, setCurrentStep] = useState<
-    "verify" | "survey" | "complete" | "already_responded"
+    "verify" | "consent" | "survey" | "complete" | "already_responded"
   >("verify");
   const [selectedStudent, setSelectedStudent] = useState<any>(null);
   const [students, setStudents] = useState<any[]>([]);
@@ -53,6 +53,11 @@ const SurveyResponse: React.FC = () => {
   );
   const [existingResponse, setExistingResponse] = useState<any>(null);
   const [schoolName, setSchoolName] = useState<string>("");
+
+  // 개인정보동의 관련 상태
+  const [isUnder14, setIsUnder14] = useState<boolean>(false);
+  const [studentConsent, setStudentConsent] = useState<boolean>(false);
+  const [consentError, setConsentError] = useState<string | null>(null);
 
   // 각 질문별 검색어 상태 추가
   const [questionSearchTerms, setQuestionSearchTerms] = useState<
@@ -130,10 +135,33 @@ const SurveyResponse: React.FC = () => {
 
               if (!templateError && templateDataResult) {
                 templateData = templateDataResult;
+                
+                // 종합조사 설문의 경우 settings에서 카테고리 정보 가져오기
+                let metadata = templateData.metadata as any;
+                if (surveyData.settings && (surveyData.settings as any).surveyType === "comprehensive") {
+                  metadata = {
+                    ...metadata,
+                    category: "종합조사",
+                    questionCategories: ["교우관계", "만족도", "만족도", "만족도", "만족도", "학교폭력", "학교폭력", "학교폭력", "주관식"],
+                    questionTypes: ["multiple_choice", "yes_no", "yes_no", "yes_no", "yes_no", "scale", "scale", "scale", "text"],
+                    questionOptions: [
+                      ["아무도 없다"],
+                      ["예", "아니오"], ["예", "아니오"], ["예", "아니오"], ["예", "아니오"],
+                      ["전혀 없다", "한 두번 당한 적 있다", "자주 있다"],
+                      ["전혀 없다", "한 두번 당한 적 있다", "자주 있다"],
+                      ["전혀 없다", "한 두번 당한 적 있다", "자주 있다"],
+                      []
+                    ]
+                  };
+                }
+                
+                console.log("🔍 템플릿 메타데이터:", metadata);
+                console.log("🔍 설문 설정:", surveyData.settings);
+                
                 setSurveyTemplate({
                   id: templateData.id,
                   name: templateData.name,
-                  metadata: templateData.metadata as any,
+                  metadata: metadata,
                 });
               } else {
                 console.error("템플릿 데이터 로드 실패:", templateError);
@@ -146,12 +174,13 @@ const SurveyResponse: React.FC = () => {
           // 응답 폼 초기화 (카테고리에 따라 다르게)
           const initialResponses: Record<string, any> = {};
           if (surveyData.questions && Array.isArray(surveyData.questions)) {
-            // 템플릿의 max_selections 값을 각 질문에 복사 (교우관계 카테고리만)
+            // 템플릿의 max_selections 값을 각 질문에 복사 (교우관계 및 종합조사 카테고리)
             const questionsWithMaxSelections = surveyData.questions.map(
               (question: any, index: number) => {
-                // 교우관계 카테고리일 때만 템플릿의 max_selections 배열에서 해당 질문의 값 가져오기
+                // 교우관계 또는 종합조사 카테고리일 때 템플릿의 max_selections 배열에서 해당 질문의 값 가져오기
                 if (
-                  templateData?.metadata?.category === "교우관계" &&
+                  (templateData?.metadata?.category === "교우관계" || 
+                   templateData?.metadata?.category === "종합조사") &&
                   (templateData?.metadata as any)?.max_selections &&
                   Array.isArray(
                     (templateData?.metadata as any)?.max_selections,
@@ -167,7 +196,7 @@ const SurveyResponse: React.FC = () => {
                     maxSelections: maxSelections,
                   };
                 } else {
-                  // 교우관계가 아니면 원본 질문 그대로 사용
+                  // 교우관계나 종합조사가 아니면 원본 질문 그대로 사용
                   return question;
                 }
               },
@@ -211,6 +240,25 @@ const SurveyResponse: React.FC = () => {
               );
             }
 
+            // 종합조사 설문의 경우 question.options를 answer_options로 변환
+            if (templateData?.metadata?.category === "종합조사") {
+              surveyData.questions = surveyData.questions.map((question: any, index: number) => {
+                if (question.options && Array.isArray(question.options) && question.options.length > 0) {
+                  // options 배열을 answer_options 객체로 변환
+                  const answerOptions: any = {};
+                  question.options.forEach((option: string, optionIndex: number) => {
+                    answerOptions[`option_${optionIndex + 1}`] = option;
+                  });
+                  
+                  return {
+                    ...question,
+                    answer_options: answerOptions
+                  };
+                }
+                return question;
+              });
+            }
+
             surveyData.questions.forEach((question: any) => {
               if (question.type === "multiple_choice") {
                 // 카테고리에 따라 초기값 설정
@@ -234,7 +282,7 @@ const SurveyResponse: React.FC = () => {
           ) {
             const { data: studentsData, error: studentsError } = await supabase
               .from("students")
-              .select("id, name, grade, class, current_school_id, birth_date")
+              .select("id, name, grade, class, current_school_id, birth_date, parent_consent")
               .eq("current_school_id", surveyData.school_id)
               .in("grade", surveyData.target_grades)
               .in("class", surveyData.target_classes)
@@ -322,11 +370,26 @@ const SurveyResponse: React.FC = () => {
           return;
         }
 
-        // 응답하지 않은 경우에만 설문 단계로 진행
+        // 응답하지 않은 경우에만 동의 단계로 진행
         setSelectedStudent(matchedStudent);
-        setCurrentStep("survey");
+        
+        // 나이 계산 (14세 미만 여부 확인)
+        const today = new Date();
+        const birthDate = new Date(matchedStudent.birth_date);
+        const age = today.getFullYear() - birthDate.getFullYear();
+        const monthDiff = today.getMonth() - birthDate.getMonth();
+        
+        if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+          // 아직 생일이 지나지 않은 경우
+          setIsUnder14(age < 14);
+        } else {
+          setIsUnder14(age < 14);
+        }
+        
+        // 모든 학생 동의 단계로 이동
+        setCurrentStep("consent");
         setVerificationError(null);
-        setSearchTerm(""); // 설문 단계로 이동할 때 검색어 초기화
+        setSearchTerm(""); // 동의 단계로 이동할 때 검색어 초기화
         setQuestionSearchTerms({}); // 질문별 검색어도 초기화
       } catch (error) {
         console.error("응답 확인 중 오류:", error);
@@ -339,6 +402,25 @@ const SurveyResponse: React.FC = () => {
         "일치하는 학생 정보를 찾을 수 없습니다. 이름과 생년월일을 다시 확인해주세요.",
       );
     }
+  };
+
+  // 개인정보동의 처리
+  const handleConsentSubmit = () => {
+    // 14세 미만이고 학부모 동의가 없는 경우
+    if (isUnder14 && !selectedStudent.parent_consent) {
+      alert("14세 미만 학생은 학부모 동의가 필요합니다.\n담임선생님께 학부모 동의서를 제출해주세요.");
+      navigate("/");
+      return;
+    }
+    
+    // 학생 본인 동의 확인
+    if (!studentConsent) {
+      setConsentError("개인정보 수집·이용에 대한 동의가 필요합니다.");
+      return;
+    }
+    
+    setConsentError(null);
+    setCurrentStep("survey");
   };
 
   // 응답 처리
@@ -748,6 +830,197 @@ const SurveyResponse: React.FC = () => {
     );
   }
 
+  // 개인정보동의 단계
+  if (currentStep === "consent") {
+    return (
+      <div className="flex min-h-screen w-full items-center justify-center bg-gray-50 py-8">
+        {/* 배경 이미지 */}
+        <div
+          className="absolute top-0 z-0 h-full w-full bg-cover bg-center bg-no-repeat"
+          style={{
+            backgroundImage: `url('/mask_bg.png')`,
+          }}
+        ></div>
+        {/* 어두운 오버레이로 텍스트 가독성 향상 */}
+        <div className="absolute inset-0 z-10 h-full w-full bg-black/40"></div>
+
+        <div className="z-50">
+          <div className="mb-2 rounded-lg border border-gray-200 bg-white px-6 py-3 text-base font-semibold shadow-sm">
+            {schoolName || "OO 초등학교"}
+          </div>
+          
+          {/* 설문 헤더 */}
+          <div className="mb-6 rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
+            <h1 className="mb-4 text-center text-lg font-bold text-gray-900">
+              {survey.title}
+            </h1>
+            <div className="text-sm text-gray-500">
+              <p>응답자: {selectedStudent.name}</p>
+            </div>
+          </div>
+
+          {/* 개인정보동의 */}
+          <div className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
+            <h2 className="mb-4 text-center text-xl font-semibold text-gray-900">
+              개인정보 수집·이용 동의
+            </h2>
+
+            {/* 나이 안내 */}
+            {/* <div className={`mb-6 rounded-lg border p-4 ${
+              isUnder14 
+                ? "border-orange-200 bg-orange-50" 
+                : "border-blue-200 bg-blue-50"
+            }`}>
+              <div className="flex items-center">
+                <div className="flex-shrink-0">
+                  {isUnder14 ? (
+                    <svg className="h-6 w-6 text-orange-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.732-.833-2.464 0L4.732 15.5c-.77.833.192 2.5 1.732 2.5z" />
+                    </svg>
+                  ) : (
+                    <svg className="h-6 w-6 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                  )}
+                </div>
+                <div className="ml-3">
+                  <p className={`text-sm font-medium ${
+                    isUnder14 ? "text-orange-800" : "text-blue-800"
+                  }`}>
+                    {isUnder14 
+                      ? "14세 미만 학생입니다. 학부모 동의가 필요합니다."
+                      : "14세 이상 학생입니다. 본인 동의로 진행합니다."
+                    }
+                  </p>
+                </div>
+              </div>
+            </div> */}
+
+            {/* 개인정보 수집·이용 안내 */}
+            <div className="mb-6 rounded-lg border border-gray-200 bg-gray-50 p-4">
+              <h3 className="mb-3 text-sm font-semibold text-gray-900">
+                개인정보 수집·이용 안내
+              </h3>
+              <div className="space-y-2 text-xs text-gray-600">
+                <p><strong>수집 목적:</strong> 교우관계 분석 및 학교생활 만족도 조사</p>
+                <p><strong>수집 항목:</strong> 이름, 학년, 반, 설문 응답 내용</p>
+                <p><strong>보유 기간:</strong> 설문 완료 후 1년</p>
+                <p><strong>처리 방법:</strong> 암호화하여 안전하게 보관</p>
+                <p><strong>제3자 제공:</strong> 없음</p>
+              </div>
+            </div>
+
+            {/* 14세 미만인 경우 학부모 동의 상태 안내 */}
+            {isUnder14 && (
+              <div className={`mb-6 rounded-lg border p-4 ${
+                selectedStudent.parent_consent 
+                  ? "border-green-200 bg-green-50" 
+                  : "border-red-200 bg-red-50"
+              }`}>
+                <div className="flex items-start">
+                  <div className="flex-shrink-0">
+                    {selectedStudent.parent_consent ? (
+                      <svg className="h-6 w-6 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                    ) : (
+                      <svg className="h-6 w-6 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.732-.833-2.464 0L4.732 15.5c-.77.833.192 2.5 1.732 2.5z" />
+                      </svg>
+                    )}
+                  </div>
+                  <div className="ml-3">
+                    <h3 className={`text-sm font-semibold ${
+                      selectedStudent.parent_consent ? "text-green-800" : "text-red-800"
+                    }`}>
+                      {selectedStudent.parent_consent 
+                        ? "학부모 동의 완료" 
+                        : "학부모 동의가 필요합니다"
+                      }
+                    </h3>
+                    <p className={`mt-1 text-sm ${
+                      selectedStudent.parent_consent ? "text-green-700" : "text-red-700"
+                    }`}>
+                      {selectedStudent.parent_consent 
+                        ? "학부모 동의가 완료되어 설문에 참여할 수 있습니다."
+                        : "14세 미만 학생은 개인정보 수집·이용에 대한 학부모 동의가 필요합니다."
+                      }
+                    </p>
+                    {!selectedStudent.parent_consent && (
+                      <p className="mt-2 text-sm text-red-700">
+                        담임선생님께 학부모 동의서를 제출해주세요.
+                      </p>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* 학생 본인 동의 - 14세 미만이고 학부모 동의가 없는 경우는 제외 */}
+            {(!isUnder14 || selectedStudent.parent_consent) && (
+              <>
+                <div className="mb-6">
+                  <label className="flex items-start space-x-3">
+                    <input
+                      type="checkbox"
+                      checked={studentConsent}
+                      onChange={(e) => setStudentConsent(e.target.checked)}
+                      className="mt-1 h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                    />
+                    <div className="text-sm">
+                      <span className="font-medium text-gray-900">
+                        개인정보 수집·이용 동의 (필수)
+                      </span>
+                      <p className="mt-1 text-gray-600">
+                        위 개인정보 수집·이용에 동의합니다.
+                      </p>
+                    </div>
+                  </label>
+                </div>
+
+                {/* 에러 메시지 */}
+                {consentError && (
+                  <div className="mb-4 rounded-lg border border-red-200 bg-red-50 p-4">
+                    <div className="flex items-start">
+                      <div className="flex-shrink-0">
+                        <svg className="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
+                          <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                        </svg>
+                      </div>
+                      <div className="ml-3">
+                        <p className="text-sm text-red-600">{consentError}</p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </>
+            )}
+
+            {/* 동의 버튼 */}
+            <button
+              onClick={handleConsentSubmit}
+              className="w-full rounded-lg bg-[#3F80EA] py-3 text-white transition-colors hover:bg-blue-600"
+            >
+              {isUnder14 && !selectedStudent.parent_consent 
+                ? "확인하고 메인으로 돌아가기" 
+                : "동의하고 설문 시작하기"
+              }
+            </button>
+
+            {/* 도움말 - 14세 미만이고 학부모 동의가 없는 경우는 제외 */}
+            {(!isUnder14 || selectedStudent.parent_consent) && (
+              <div className="mt-4 text-left text-xs text-gray-500">
+                <p>• 개인정보는 설문 목적 외에 사용되지 않습니다</p>
+                <p>• 동의하지 않을 경우 설문 참여가 제한될 수 있습니다</p>
+                <p>• 문의사항은 담임선생님께 연락해주세요</p>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   // 설문 응답 단계
   if (currentStep === "survey") {
     return (
@@ -812,66 +1085,23 @@ const SurveyResponse: React.FC = () => {
 
                   {question.type === "multiple_choice" && (
                     <div className="space-y-4">
-                      {/* 카테고리에 따른 답변 방식 결정 */}
-                      {surveyTemplate?.metadata?.category === "교우관계" ? (
-                        // 교우관계: 학생 선택 방식
+                      {/* 첫 번째 질문: 학생 선택 */}
+                      {index === 0 ? (
                         <>
                           <p className="mb-3 text-sm text-gray-600">
-                            질문에 해당하는 친구들을 선택해주세요
+                            최근 한달 동안 가장 많이 함께 한 친구들을 선택해주세요
                             {(() => {
-                              // surveys 테이블의 questions에서 max_selections 값을 우선적으로 가져오기
                               let maxSelections = 1; // 기본값
-
-                              // 먼저 surveyTemplate의 max_selections 배열에서 해당 질문의 값 가져오기 (우선순위 1)
-                              if (
-                                (surveyTemplate?.metadata as any)
-                                  ?.max_selections &&
-                                Array.isArray(
-                                  (surveyTemplate?.metadata as any)
-                                    ?.max_selections,
-                                ) &&
-                                (surveyTemplate?.metadata as any)
-                                  ?.max_selections[index] !== undefined
-                              ) {
-                                maxSelections = (
-                                  surveyTemplate?.metadata as any
-                                )?.max_selections[index];
-                              } else if (
-                                surveyTemplate?.metadata?.maxSelections &&
-                                Array.isArray(
-                                  surveyTemplate.metadata.maxSelections,
-                                ) &&
-                                surveyTemplate.metadata.maxSelections[index] !==
-                                  undefined
-                              ) {
-                                maxSelections =
-                                  surveyTemplate.metadata.maxSelections[index];
-                              } else if (
-                                question.max_selections !== undefined &&
-                                question.max_selections !== null
-                              ) {
-                                // 문자열인 경우 숫자로 변환
-                                if (
-                                  typeof question.max_selections === "string"
-                                ) {
-                                  maxSelections =
-                                    parseInt(question.max_selections) || 1;
-                                } else {
-                                  maxSelections = question.max_selections;
-                                }
-                              } else if (
-                                question.maxSelections !== undefined &&
-                                question.maxSelections !== null
-                              ) {
+                              
+                              // 종합조사 설문의 첫 번째 질문인 경우 3명 선택 가능
+                              if (surveyTemplate?.metadata?.category === "종합조사" && index === 0) {
+                                maxSelections = 3;
+                              } else if (question.maxSelections) {
                                 maxSelections = question.maxSelections;
-                              }
-
-                              // 숫자가 아닌 경우 기본값 사용
-                              if (
-                                typeof maxSelections !== "number" ||
-                                isNaN(maxSelections)
-                              ) {
-                                maxSelections = 1;
+                              } else if (question.max_selections) {
+                                maxSelections = typeof question.max_selections === 'string' 
+                                  ? parseInt(question.max_selections) || 1 
+                                  : question.max_selections;
                               }
 
                               return maxSelections > 1 ? (
@@ -909,11 +1139,24 @@ const SurveyResponse: React.FC = () => {
                             responses[question.id].length > 0 && (
                               <div className="mb-3 rounded-lg border border-blue-200 bg-blue-50 p-2">
                                 <p className="mb-1 text-xs font-medium text-blue-800">
-                                  선택된 친구들:
+                                  {responses[question.id].includes("none") 
+                                    ? "선택된 답변:"
+                                    : "선택된 친구들:"
+                                  }
                                 </p>
                                 <div className="flex flex-wrap gap-1">
                                   {responses[question.id].map(
                                     (studentId: string) => {
+                                      if (studentId === "none") {
+                                        return (
+                                          <span
+                                            key="none"
+                                            className="inline-block rounded bg-red-100 px-2 py-1 text-xs text-red-700"
+                                          >
+                                            아무도 없다
+                                          </span>
+                                        );
+                                      }
                                       const student = students.find(
                                         (s) => s.id === studentId,
                                       );
@@ -933,6 +1176,35 @@ const SurveyResponse: React.FC = () => {
 
                           {/* 학생 선택 목록 */}
                           <div className="grid max-h-80 grid-cols-2 gap-2 overflow-y-auto rounded-lg border border-gray-200 p-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
+                            {/* 아무도 없다 옵션 */}
+                            <label
+                              className={`flex cursor-pointer items-center rounded-lg border p-2 transition-colors ${
+                                responses[question.id] && responses[question.id].includes("none")
+                                  ? "border-red-300 bg-red-50"
+                                  : "border-gray-200 hover:bg-gray-50"
+                              }`}
+                            >
+                              <input
+                                type="checkbox"
+                                checked={responses[question.id] && responses[question.id].includes("none")}
+                                onChange={(e) => {
+                                  if (e.target.checked) {
+                                    // "아무도 없다" 선택 시 다른 선택 모두 해제
+                                    handleResponseChange(question.id, ["none"]);
+                                  } else {
+                                    // "아무도 없다" 해제
+                                    handleResponseChange(question.id, []);
+                                  }
+                                }}
+                                className="mr-2 h-4 w-4 rounded border-gray-300 text-red-600 focus:ring-red-500"
+                              />
+                              <div className="min-w-0 flex-1">
+                                <p className="overflow-hidden truncate whitespace-nowrap text-sm font-medium text-gray-900">
+                                  아무도 없다
+                                </p>
+                              </div>
+                            </label>
+                            
                             {students
                               .filter(
                                 (student) => student.id !== selectedStudent.id,
@@ -954,9 +1226,24 @@ const SurveyResponse: React.FC = () => {
                                   student.id,
                                 );
 
-                                // 질문의 maxSelections 값 사용 (이미 템플릿 값으로 수정됨)
-                                const maxSelections =
-                                  question.maxSelections || 1;
+                                // 질문의 maxSelections 값 사용
+                                let maxSelections = 1; // 기본값
+                                
+                                // 종합조사 설문의 첫 번째 질문인 경우 3명 선택 가능
+                                if (surveyTemplate?.metadata?.category === "종합조사" && index === 0) {
+                                  maxSelections = 3;
+                                  console.log("🔍 종합조사 첫 번째 질문 - maxSelections: 3");
+                                } else if (question.maxSelections) {
+                                  maxSelections = question.maxSelections;
+                                  console.log("🔍 question.maxSelections 사용:", maxSelections);
+                                } else if (question.max_selections) {
+                                  maxSelections = typeof question.max_selections === 'string' 
+                                    ? parseInt(question.max_selections) || 1 
+                                    : question.max_selections;
+                                  console.log("🔍 question.max_selections 사용:", maxSelections);
+                                }
+                                
+                                console.log("🔍 최종 maxSelections:", maxSelections, "현재 선택된 수:", currentValues.length);
 
                                 const isDisabled =
                                   !isSelected &&
@@ -983,8 +1270,12 @@ const SurveyResponse: React.FC = () => {
                                           if (
                                             currentValues.length < maxSelections
                                           ) {
+                                            // "아무도 없다" 옵션이 선택되어 있다면 제거
+                                            const filteredValues = currentValues.filter(
+                                              (id: string) => id !== "none"
+                                            );
                                             handleResponseChange(question.id, [
-                                              ...currentValues,
+                                              ...filteredValues,
                                               student.id,
                                             ]);
                                           }
@@ -1010,17 +1301,24 @@ const SurveyResponse: React.FC = () => {
                           </div>
                         </>
                       ) : (
-                        // 학교폭력, 만족도: answer_options 표시
+                        // 나머지 모든 질문: 답변 옵션
                         <>
                           <p className="mb-3 text-sm text-gray-600">
                             아래 옵션 중 하나를 선택해주세요
                           </p>
-
-                          {/* 답변 옵션 */}
+                          
                           <div className="space-y-1">
-                            {question.answer_options &&
-                              Object.entries(question.answer_options).map(
-                                ([key, value]) => (
+                            {(() => {
+                              console.log(`🔍 질문 ${index + 1} 답변 옵션 렌더링:`, {
+                                questionId: question.id,
+                                answerOptions: question.answer_options,
+                                options: question.options
+                              });
+                              
+                              // answer_options가 있는 경우 사용
+                              if (question.answer_options && typeof question.answer_options === 'object') {
+                                console.log(`🔍 질문 ${index + 1} answer_options 사용:`, question.answer_options);
+                                return Object.entries(question.answer_options).map(([key, value]) => (
                                   <label
                                     key={key}
                                     className="flex cursor-pointer items-center rounded-lg p-3 transition-colors hover:bg-gray-50"
@@ -1028,8 +1326,8 @@ const SurveyResponse: React.FC = () => {
                                     <input
                                       type="radio"
                                       name={question.id}
-                                      value={key}
-                                      checked={responses[question.id] === key}
+                                      value={String(value)}
+                                      checked={responses[question.id] === String(value)}
                                       onChange={(e) =>
                                         handleResponseChange(
                                           question.id,
@@ -1043,11 +1341,134 @@ const SurveyResponse: React.FC = () => {
                                       {String(value)}
                                     </span>
                                   </label>
-                                ),
-                              )}
+                                ));
+                              }
+                              
+                              // answer_options가 없는 경우 하드코딩된 옵션 사용
+                              let options: string[] = [];
+                              if (index >= 1 && index <= 4) {
+                                // 2~5번 질문 (만족도)
+                                options = ["예", "아니오"];
+                              } else if (index >= 5 && index <= 7) {
+                                // 6~8번 질문 (학교폭력)
+                                options = ["전혀 없다", "한 두번 당한 적 있다", "자주 있다"];
+                              } else {
+                                // 기본 선택지
+                                options = ["예", "아니오"];
+                              }
+                              
+                              console.log(`🔍 질문 ${index + 1} 하드코딩된 선택지 사용:`, options);
+                              
+                              return options.map((option: string) => (
+                                <label
+                                  key={option}
+                                  className="flex cursor-pointer items-center rounded-lg p-3 transition-colors hover:bg-gray-50"
+                                >
+                                  <input
+                                    type="radio"
+                                    name={question.id}
+                                    value={option}
+                                    checked={responses[question.id] === option}
+                                    onChange={(e) =>
+                                      handleResponseChange(
+                                        question.id,
+                                        e.target.value,
+                                      )
+                                    }
+                                    className="mr-3 h-4 w-4 border-gray-300 text-[#3F80EA] focus:ring-blue-500"
+                                    required={question.required}
+                                  />
+                                  <span className="text-gray-900">
+                                    {option}
+                                  </span>
+                                </label>
+                              ));
+                            })()}
                           </div>
                         </>
                       )}
+                    </div>
+                  )}
+
+                  {(question.type === "yes_no" || question.type === "scale") && (
+                    <div className="space-y-4">
+                      <p className="mb-3 text-sm text-gray-600">
+                        아래 옵션 중 하나를 선택해주세요
+                      </p>
+                      
+                      <div className="space-y-1">
+                        {(() => {
+                          console.log(`🔍 질문 ${index + 1} (${question.type}) 답변 옵션 렌더링:`, {
+                            questionId: question.id,
+                            answerOptions: question.answer_options,
+                            options: question.options
+                          });
+                          
+                          // answer_options가 있는 경우 사용
+                          if (question.answer_options && typeof question.answer_options === 'object') {
+                            console.log(`🔍 질문 ${index + 1} answer_options 사용:`, question.answer_options);
+                            return Object.entries(question.answer_options).map(([key, value]) => (
+                              <label
+                                key={key}
+                                className="flex cursor-pointer items-center rounded-lg p-3 transition-colors hover:bg-gray-50"
+                              >
+                                <input
+                                  type="radio"
+                                  name={question.id}
+                                  value={String(value)}
+                                  checked={responses[question.id] === String(value)}
+                                  onChange={(e) =>
+                                    handleResponseChange(
+                                      question.id,
+                                      e.target.value,
+                                    )
+                                  }
+                                  className="mr-3 h-4 w-4 border-gray-300 text-[#3F80EA] focus:ring-blue-500"
+                                  required={question.required}
+                                />
+                                <span className="text-gray-900">
+                                  {String(value)}
+                                </span>
+                              </label>
+                            ));
+                          }
+                          
+                          // answer_options가 없는 경우 하드코딩된 옵션 사용
+                          let options: string[] = [];
+                          if (question.type === "yes_no") {
+                            options = ["예", "아니오"];
+                          } else if (question.type === "scale") {
+                            options = ["전혀 없다", "한 두번 당한 적 있다", "자주 있다"];
+                          }
+                          
+                          console.log(`🔍 질문 ${index + 1} 하드코딩된 선택지 사용:`, options);
+                          
+                          return options.map((option: string) => (
+                            <label
+                              key={option}
+                              className="flex cursor-pointer items-center rounded-lg p-3 transition-colors hover:bg-gray-50"
+                            >
+                              <input
+                                type="radio"
+                                name={question.id}
+                                value={option}
+                                checked={responses[question.id] === option}
+                                onChange={(e) =>
+                                  handleResponseChange(
+                                    question.id,
+                                    e.target.value,
+                                  )
+                                }
+                                className="mr-3 h-4 w-4 border-gray-300 text-[#3F80EA] focus:ring-blue-500"
+                                required={question.required}
+                              />
+                              <span className="text-gray-900">
+                                {option}
+                              </span>
+                            </label>
+                          ));
+                        })()}
+                      </div>
                     </div>
                   )}
 

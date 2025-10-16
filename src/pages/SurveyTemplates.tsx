@@ -7,7 +7,13 @@ interface SurveyTemplate {
   id: string;
   title: string;
   description: string;
-  purpose: "friendship" | "group" | "adaptation" | "conflict" | "custom";
+  purpose:
+    | "friendship"
+    | "group"
+    | "adaptation"
+    | "conflict"
+    | "custom"
+    | "comprehensive";
   category: string;
   questions: string[];
   maxSelections: number[]; // 각 질문별 최대 선택 가능한 친구 수
@@ -16,6 +22,10 @@ interface SurveyTemplate {
   useCount: number;
   createdAt: string;
   isDefault: boolean;
+  // 추가 메타데이터 필드들
+  questionCategories?: string[];
+  questionTypes?: string[];
+  questionOptions?: string[][];
 }
 
 const SurveyTemplates: React.FC = () => {
@@ -75,6 +85,8 @@ const SurveyTemplates: React.FC = () => {
     const fetchTemplates = async () => {
       try {
         setIsLoadingTemplates(true);
+
+        // 데이터베이스에서 템플릿 조회
         const { data: templatesData, error } = await supabase
           .from("survey_templates")
           .select("*")
@@ -89,25 +101,30 @@ const SurveyTemplates: React.FC = () => {
         // 데이터베이스 데이터를 SurveyTemplate 인터페이스에 맞게 변환
         const convertedTemplates: SurveyTemplate[] =
           templatesData?.map((template) => {
-            const maxSelections = (template.metadata as any)?.maxSelections || [
-              1,
-            ];
-            console.log(
-              `템플릿 "${template.name}" maxSelections:`,
-              maxSelections,
-            );
+            const metadata = template.metadata as any;
+            const maxSelections = metadata?.maxSelections || [1];
+
+            console.log(`템플릿 "${template.name}" 로드:`, {
+              id: template.id,
+              category: metadata?.category,
+              questionCount: Array.isArray(template.questions)
+                ? template.questions.length
+                : 0,
+              hasCategories: !!metadata?.questionCategories,
+            });
+
             return {
               id: template.id,
               title: template.name,
               description: template.description || "",
-              purpose: (template.metadata as any)?.purpose || "custom",
-              category: (template.metadata as any)?.category || "기타",
+              purpose: metadata?.purpose || "custom",
+              category: metadata?.category || "기타",
               questions: Array.isArray(template.questions)
                 ? (template.questions as string[])
                 : [],
               maxSelections: maxSelections,
-              estimatedTime: (template.metadata as any)?.estimatedTime || 5,
-              targetGrades: (template.metadata as any)?.targetGrades || [
+              estimatedTime: metadata?.estimatedTime || 5,
+              targetGrades: metadata?.targetGrades || [
                 "1",
                 "2",
                 "3",
@@ -115,16 +132,26 @@ const SurveyTemplates: React.FC = () => {
                 "5",
                 "6",
               ],
-              useCount: (template.metadata as any)?.useCount || 0,
+              useCount: metadata?.useCount || 0,
               createdAt: template.created_at || new Date().toISOString(),
-              isDefault: (template.metadata as any)?.isDefault || false,
+              isDefault: metadata?.isDefault || false,
+              // 추가 메타데이터 정보
+              questionCategories: metadata?.questionCategories || [],
+              questionTypes: metadata?.questionTypes || [],
+              questionOptions: metadata?.questionOptions || [],
             };
           }) || [];
 
-        // 교우관계 조사를 먼저 오도록 정렬
-        const sortedTemplates = convertedTemplates.sort((a, b) => {
-          if (a.category === "교우관계") return -1;
-          if (b.category === "교우관계") return 1;
+        // 교우관계조사, 학교생활 만족도 조사, 학교 폭력 조사 템플릿 제외
+        const filteredTemplates = convertedTemplates.filter((template) => {
+          const excludeCategories = ["교우관계", "만족도", "학교폭력"];
+          return !excludeCategories.includes(template.category);
+        });
+
+        // 종합조사를 먼저 오도록 정렬
+        const sortedTemplates = filteredTemplates.sort((a, b) => {
+          if (a.category === "종합조사") return -1;
+          if (b.category === "종합조사") return 1;
           return 0;
         });
 
@@ -225,7 +252,7 @@ const SurveyTemplates: React.FC = () => {
         title: surveyConfig.title,
         description: surveyConfig.description,
         school_id: schoolId,
-        template_id: selectedTemplate.id, // 템플릿 ID
+        template_id: selectedTemplate.id, // 실제 데이터베이스의 템플릿 ID 사용
         target_grades: [teacherInfo.grade_level], // 대상 학년
         target_classes: [teacherInfo.class_number], // 대상 반
         start_date: surveyConfig.startDate,
@@ -233,15 +260,44 @@ const SurveyTemplates: React.FC = () => {
         status: getSurveyStatus(surveyConfig.startDate, surveyConfig.endDate), // 기간에 따른 상태 설정
         questions: selectedTemplate.questions.map((question, index) => {
           const maxSelections = selectedTemplate.maxSelections[index] || 1;
-          console.log(`질문 ${index + 1} maxSelections:`, maxSelections);
+          const category =
+            (selectedTemplate as any).questionCategories?.[index] || "기타";
+          const questionType =
+            (selectedTemplate as any).questionTypes?.[index] ||
+            "multiple_choice";
+          const options =
+            (selectedTemplate as any).questionOptions?.[index] || [];
+
+          console.log(`질문 ${index + 1} 정보:`, {
+            text: question,
+            category,
+            type: questionType,
+            maxSelections,
+            options,
+          });
+
           return {
             id: `q${index + 1}`,
             text: question,
-            type: "multiple_choice",
+            type: questionType,
+            category: category, // 카테고리 추가
             required: true,
             max_selections: maxSelections,
+            options: options, // 선택지 추가
           };
         }),
+        // 설문 설정에 카테고리 정보 추가
+        settings: {
+          surveyType: "comprehensive",
+          categories: {
+            friendship: "교우관계",
+            satisfaction: "만족도",
+            violence: "학교폭력",
+            subjective: "주관식",
+          },
+          questionCount: selectedTemplate.questions.length,
+          estimatedTime: selectedTemplate.estimatedTime,
+        },
       };
 
       console.log("생성할 설문 데이터:", newSurvey);
@@ -315,7 +371,7 @@ const SurveyTemplates: React.FC = () => {
       setShowSurveyConfigModal(false);
       setSelectedTemplate(null);
 
-      // 템플릿 목록 새로고침
+      // 템플릿 목록 새로고침 (데이터베이스에서 다시 조회)
       const fetchTemplates = async () => {
         try {
           const { data: templatesData, error } = await supabase
@@ -331,34 +387,49 @@ const SurveyTemplates: React.FC = () => {
 
           // 데이터베이스 데이터를 SurveyTemplate 인터페이스에 맞게 변환
           const convertedTemplates: SurveyTemplate[] =
-            templatesData?.map((template) => ({
-              id: template.id,
-              title: template.name,
-              description: template.description || "",
-              purpose: (template.metadata as any)?.purpose || "custom",
-              category: (template.metadata as any)?.category || "기타",
-              questions: Array.isArray(template.questions)
-                ? (template.questions as string[])
-                : [],
-              maxSelections: (template.metadata as any)?.maxSelections || [1],
-              estimatedTime: (template.metadata as any)?.estimatedTime || 5,
-              targetGrades: (template.metadata as any)?.targetGrades || [
-                "1",
-                "2",
-                "3",
-                "4",
-                "5",
-                "6",
-              ],
-              useCount: (template.metadata as any)?.useCount || 0,
-              createdAt: template.created_at || new Date().toISOString(),
-              isDefault: (template.metadata as any)?.isDefault || false,
-            })) || [];
+            templatesData?.map((template) => {
+              const metadata = template.metadata as any;
+              const maxSelections = metadata?.maxSelections || [1];
 
-          // 교우관계 조사를 먼저 오도록 정렬
-          const sortedTemplates = convertedTemplates.sort((a, b) => {
-            if (a.category === "교우관계") return -1;
-            if (b.category === "교우관계") return 1;
+              return {
+                id: template.id,
+                title: template.name,
+                description: template.description || "",
+                purpose: metadata?.purpose || "custom",
+                category: metadata?.category || "기타",
+                questions: Array.isArray(template.questions)
+                  ? (template.questions as string[])
+                  : [],
+                maxSelections: maxSelections,
+                estimatedTime: metadata?.estimatedTime || 5,
+                targetGrades: metadata?.targetGrades || [
+                  "1",
+                  "2",
+                  "3",
+                  "4",
+                  "5",
+                  "6",
+                ],
+                useCount: metadata?.useCount || 0,
+                createdAt: template.created_at || new Date().toISOString(),
+                isDefault: metadata?.isDefault || false,
+                // 추가 메타데이터 정보
+                questionCategories: metadata?.questionCategories || [],
+                questionTypes: metadata?.questionTypes || [],
+                questionOptions: metadata?.questionOptions || [],
+              };
+            }) || [];
+
+          // 교우관계조사, 학교생활 만족도 조사, 학교 폭력 조사 템플릿 제외
+          const filteredTemplates = convertedTemplates.filter((template) => {
+            const excludeCategories = ["교우관계", "만족도", "학교폭력"];
+            return !excludeCategories.includes(template.category);
+          });
+
+          // 종합조사를 먼저 오도록 정렬
+          const sortedTemplates = filteredTemplates.sort((a, b) => {
+            if (a.category === "종합조사") return -1;
+            if (b.category === "종합조사") return 1;
             return 0;
           });
 
@@ -383,88 +454,146 @@ const SurveyTemplates: React.FC = () => {
   const TemplateCard: React.FC<{ template: SurveyTemplate }> = ({
     template,
   }) => (
-    <div className="flex h-full w-full flex-col rounded-lg border border-gray-200 bg-white p-6 transition-shadow hover:shadow-md">
+    <div className="flex h-full w-full flex-col rounded-lg border border-gray-200 bg-white p-7 transition-shadow hover:shadow-md">
       <div className="flex-1">
-        <div className="mb-4 flex items-start justify-between">
-          <div className="flex-1">
-            <div className="mb-2 flex items-center space-x-2">
-              <h3 className="text-lg font-semibold text-gray-900">
-                {template.title}
-              </h3>
-              <span className="inline-block rounded-full bg-gray-100 px-3 py-1 text-xs font-medium text-gray-700">
-                {template.category}
-              </span>
-              {template.isDefault && (
-                <span className="rounded-full bg-blue-100 px-2 py-1 text-xs text-blue-800">
-                  기본
+        <div className="flex items-start justify-between gap-7">
+          {/* 카드 왼쪽 섹션 */}
+          <div className="flex w-1/2 flex-col gap-10">
+            <div className="flex flex-col gap-2">
+              <div className="flex items-center space-x-2">
+                <h3 className="text-lg font-semibold text-gray-900">
+                  {template.title}
+                </h3>
+                <span className="inline-block rounded-[20px] bg-gray-100 px-3 py-1 text-[13px] text-gray-600">
+                  {template.category}
                 </span>
-              )}
-            </div>
-            <p className="mb-3 text-sm text-gray-600">{template.description}</p>
-
-            <div className="flex items-center space-x-4 text-xs text-gray-500">
-              <span>📊 {template.questions.length}개 질문</span>
-              <span className="hidden">⏱️ 약 {template.estimatedTime}분</span>
-              <span className="hidden">
-                🎯 {template.targetGrades.join(", ")}학년
-              </span>
-              <span>📈 {template.useCount}회 사용</span>
-            </div>
-
-            {/* 교우관계 설문인 경우 maxSelections 정보 표시 */}
-            {template.category === "교우관계" && template.maxSelections && (
-              <div className="mt-2 rounded-lg bg-blue-50 p-2">
-                <p className="mb-1 text-xs font-medium text-blue-800">
-                  📝 질문별 최대 선택 가능 인원:
-                </p>
-                <div className="flex flex-wrap gap-1">
-                  {template.maxSelections.map((max, index) => (
-                    <span
-                      key={index}
-                      className="inline-block rounded bg-blue-100 px-2 py-1 text-xs text-blue-700"
-                    >
-                      {index + 1}번: {max}명
-                    </span>
-                  ))}
-                </div>
+                {template.isDefault && (
+                  <span className="rounded-[20px] bg-blue-100 px-3 py-1 text-[13px] text-blue-600">
+                    기본
+                  </span>
+                )}
               </div>
-            )}
+              <p className="text-sm text-gray-600">{template.description}</p>
 
-            {/* 질문 목록 */}
-            <div className="mt-2 rounded-lg bg-gray-50 p-4">
-              <h4 className="mb-3 text-xs font-medium text-gray-900">
-                포함된 질문 ({template.questions.length}개)
-              </h4>
-              <div className="space-y-2">
-                {template.questions.map((question, index) => (
-                  <div key={index} className="flex items-start space-x-3">
-                    <span className="text-xs font-medium text-gray-600">
-                      Q{index + 1}.
-                    </span>
-                    <p className="flex-1 text-xs text-gray-700">{question}</p>
-                  </div>
-                ))}
+              <div className="flex items-center space-x-4 text-xs text-gray-500">
+                <span>📊 {template.questions.length}개 질문</span>
+                <span className="hidden">⏱️ 약 {template.estimatedTime}분</span>
+                <span className="hidden">
+                  🎯 {template.targetGrades.join(", ")}학년
+                </span>
+                <span>📈 {template.useCount}회 사용</span>
+              </div>
+            </div>
+
+            <div className="flex flex-col gap-2.5 text-gray-600">
+              <p className="text-sm">문항별 관련 내용</p>
+              <div className="flex items-center gap-2.5 text-sm">
+                <span className="rounded-[20px] bg-blue-100 px-3 py-1 text-blue-600">
+                  교우관계
+                </span>
+                1번 문항
+              </div>
+              <div className="flex items-center gap-2.5 text-sm">
+                <span className="rounded-[20px] bg-emerald-50 px-3 py-1 text-emerald-600">
+                  만족도
+                </span>
+                2번 ~ 5번 문항
+              </div>
+              <div className="flex items-center gap-2.5 text-sm">
+                <span className="rounded-[20px] bg-[#FAE1E1] px-3 py-1 text-red-500">
+                  학교폭력
+                </span>
+                6번 ~ 8번 문항
+              </div>
+              <div className="flex items-center gap-2.5 text-sm">
+                <span className="rounded-[20px] bg-indigo-100 px-3 py-1 text-indigo-700">
+                  주관식
+                </span>
+                9번 문항
               </div>
             </div>
           </div>
-        </div>
-      </div>
 
-      <div className="mt-auto pt-4">
-        <button
-          onClick={() => handleUseTemplate(template)}
-          disabled={isCreating}
-          className="w-full rounded-lg bg-[#3F80EA] px-3 py-2 text-sm text-white transition-colors hover:bg-blue-600 disabled:cursor-not-allowed disabled:opacity-50"
-        >
-          {isCreating ? (
-            <div className="flex items-center justify-center">
-              <div className="mr-1 h-3 w-3 animate-spin rounded-full border border-white border-t-transparent"></div>
-              생성 중...
+          {/* 카드 오른쪽 섹션 */}
+          <div className="flex w-1/2 flex-col gap-2">
+            {/* 질문 목록 */}
+            <div className="rounded-lg bg-gray-50 p-5">
+              <div className="space-y-3">
+                {template.questions.map((question, index) => {
+                  const category = (template as any).questionCategories?.[
+                    index
+                  ];
+                  const questionType = (template as any).questionTypes?.[index];
+                  const options = (template as any).questionOptions?.[index];
+
+                  return (
+                    <div key={index} className="flex items-start space-x-3">
+                      <span className="text-gray-9950 text-xs font-medium">
+                        Q{index + 1}.
+                      </span>
+                      <div className="flex-1">
+                        <p className="text-xs text-gray-950">{question}</p>
+                        {/* <div className="mt-1 flex items-center space-x-2">
+                          <span
+                            className={`inline-block rounded px-2 py-1 text-xs ${
+                              category === "교우관계"
+                                ? "bg-blue-100 text-blue-700"
+                                : category === "만족도"
+                                  ? "bg-green-100 text-green-700"
+                                  : category === "학교폭력"
+                                    ? "bg-red-100 text-red-700"
+                                    : category === "주관식"
+                                      ? "bg-purple-100 text-purple-700"
+                                      : "bg-gray-100 text-gray-700"
+                            }`}
+                          >
+                            {category}
+                          </span>
+                          <span className="text-xs text-gray-500">
+                            (
+                            {questionType === "multiple_choice"
+                              ? "다중선택"
+                              : questionType === "yes_no"
+                                ? "예/아니오"
+                                : questionType === "scale"
+                                  ? "척도"
+                                  : questionType === "text"
+                                    ? "주관식"
+                                    : questionType}
+                            )
+                          </span>
+                          {options && options.length > 0 && (
+                            <span className="text-xs text-gray-500">
+                              선택지: {options.join(", ")}
+                            </span>
+                          )}
+                        </div> */}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
             </div>
-          ) : (
-            "사용하기"
-          )}
-        </button>
+
+            {/* 버튼 */}
+            <div className="">
+              <button
+                onClick={() => handleUseTemplate(template)}
+                disabled={isCreating}
+                className="w-full rounded-[4px] bg-[#3F80EA] px-3 py-2 text-sm text-white transition-colors hover:bg-blue-600 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {isCreating ? (
+                  <div className="flex items-center justify-center">
+                    <div className="mr-1 h-3 w-3 animate-spin rounded-full border border-white border-t-transparent"></div>
+                    생성 중...
+                  </div>
+                ) : (
+                  "사용하기"
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );
@@ -491,7 +620,7 @@ const SurveyTemplates: React.FC = () => {
 
       {/* 템플릿 목록 */}
       {!isLoadingTemplates && (
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+        <div className="grid grid-cols-1 gap-4">
           {templates.length > 0 ? (
             templates.map((template) => (
               <TemplateCard key={template.id} template={template} />
@@ -611,22 +740,37 @@ const SurveyConfigModal: React.FC<{
     endDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
       .toISOString()
       .split("T")[0],
+    surveyPeriod: 7, // 설문 기간 (일수)
   });
+
+  // 캘린더 관련 상태
+  const [showCalendar, setShowCalendar] = useState(false);
+  const [currentMonth, setCurrentMonth] = useState(new Date());
+  const [selectedStartDate, setSelectedStartDate] = useState<Date | null>(null);
+  const [selectedEndDate, setSelectedEndDate] = useState<Date | null>(null);
 
   // 템플릿이 선택될 때 초기값 설정
   React.useEffect(() => {
     if (template) {
+      const startDate = new Date().toISOString().split("T")[0];
+      const endDate = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
+        .toISOString()
+        .split("T")[0];
+
       setConfig({
         title: `${template.title} (${new Date().toLocaleDateString()})`,
         description: template.description,
         targetGrades:
           template.targetGrades.length > 0 ? template.targetGrades : ["3"],
         targetClasses: ["1"],
-        startDate: new Date().toISOString().split("T")[0],
-        endDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
-          .toISOString()
-          .split("T")[0],
+        startDate: startDate,
+        endDate: endDate,
+        surveyPeriod: 7,
       });
+
+      // 캘린더 초기값 설정
+      setSelectedStartDate(new Date(startDate));
+      setSelectedEndDate(new Date(endDate));
     }
   }, [template]);
 
@@ -653,6 +797,102 @@ const SurveyConfigModal: React.FC<{
     }
   }, [teacherInfo]);
 
+  // 설문 기간이 변경될 때 종료일 자동 계산
+  React.useEffect(() => {
+    const startDate = new Date(config.startDate);
+    const endDate = new Date(startDate);
+    endDate.setDate(startDate.getDate() + config.surveyPeriod);
+
+    setConfig((prev) => ({
+      ...prev,
+      endDate: endDate.toISOString().split("T")[0],
+    }));
+  }, [config.startDate, config.surveyPeriod]);
+
+  // 캘린더 유틸리티 함수들
+  const formatDate = (date: Date): string => {
+    return date.toLocaleDateString("ko-KR", {
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+      weekday: "long",
+    });
+  };
+
+  const getDaysInMonth = (date: Date): number => {
+    return new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate();
+  };
+
+  const getFirstDayOfMonth = (date: Date): number => {
+    return new Date(date.getFullYear(), date.getMonth(), 1).getDay();
+  };
+
+  const navigateMonth = (direction: "prev" | "next") => {
+    setCurrentMonth((prev) => {
+      const newMonth = new Date(prev);
+      if (direction === "prev") {
+        newMonth.setMonth(prev.getMonth() - 1);
+      } else {
+        newMonth.setMonth(prev.getMonth() + 1);
+      }
+      return newMonth;
+    });
+  };
+
+  const handleDateClick = (day: number, month: Date) => {
+    const clickedDate = new Date(month.getFullYear(), month.getMonth(), day);
+
+    if (!selectedStartDate || (selectedStartDate && selectedEndDate)) {
+      // 시작일 선택 또는 새로운 범위 시작
+      setSelectedStartDate(clickedDate);
+      setSelectedEndDate(null);
+    } else if (selectedStartDate && !selectedEndDate) {
+      // 종료일 선택
+      if (clickedDate >= selectedStartDate) {
+        setSelectedEndDate(clickedDate);
+        // config 업데이트
+        const startDateStr = selectedStartDate.toISOString().split("T")[0];
+        const endDateStr = clickedDate.toISOString().split("T")[0];
+        const diffTime = Math.abs(
+          clickedDate.getTime() - selectedStartDate.getTime(),
+        );
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
+
+        setConfig((prev) => ({
+          ...prev,
+          startDate: startDateStr,
+          endDate: endDateStr,
+          surveyPeriod: diffDays,
+        }));
+
+        // 종료일 선택 후 캘린더 닫기
+        setTimeout(() => {
+          setShowCalendar(false);
+        }, 300); // 약간의 지연을 주어 사용자가 선택을 확인할 수 있도록
+      } else {
+        // 종료일이 시작일보다 이전이면 시작일을 다시 설정
+        setSelectedStartDate(clickedDate);
+        setSelectedEndDate(null);
+      }
+    }
+  };
+
+  const isDateInRange = (day: number, month: Date): boolean => {
+    if (!selectedStartDate || !selectedEndDate) return false;
+
+    const date = new Date(month.getFullYear(), month.getMonth(), day);
+    return date >= selectedStartDate && date <= selectedEndDate;
+  };
+
+  const isDateSelected = (day: number, month: Date): boolean => {
+    const date = new Date(month.getFullYear(), month.getMonth(), day);
+    return (
+      (selectedStartDate !== null &&
+        date.getTime() === selectedStartDate.getTime()) ||
+      (selectedEndDate !== null && date.getTime() === selectedEndDate.getTime())
+    );
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     onCreateSurvey(config);
@@ -664,9 +904,9 @@ const SurveyConfigModal: React.FC<{
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
       <div className="mx-4 max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-lg bg-white shadow-xl">
         <form onSubmit={handleSubmit}>
-          <div className="p-6">
-            <div className="mb-6 flex items-center justify-between">
-              <h3 className="text-xl font-semibold text-gray-900">
+          <div className="p-9">
+            <div className="mb-5 flex items-center justify-between">
+              <h3 className="text-xl font-medium text-gray-950">
                 새 설문 생성
               </h3>
               <button
@@ -691,103 +931,247 @@ const SurveyConfigModal: React.FC<{
             </div>
 
             {/* 템플릿 정보 */}
-            <div className="mb-6 rounded-lg bg-blue-50 p-4">
+            {/* <div className="mb-6 rounded-lg bg-blue-50 p-4">
               <p className="font-medium text-blue-800">
                 대상: {teacherInfo.grade_level}학년 {teacherInfo.class_number}반
               </p>
-            </div>
+            </div> */}
 
-            {/* 질문 목록 */}
-            <div className="mb-6 rounded-lg bg-gray-50 p-4">
-              <h4 className="mb-3 font-medium text-gray-900">
-                질문 ({template.questions.length}개)
-              </h4>
-              <div className="space-y-2">
-                {template.questions.map((question, index) => (
-                  <div key={index} className="flex items-start space-x-3">
-                    <span className="min-w-[40px] text-sm font-medium text-gray-600">
-                      Q{index + 1}.
-                    </span>
-                    <p className="flex-1 text-sm text-gray-700">{question}</p>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            <div className="space-y-4">
+            <div className="space-y-5">
               {/* 설문 제목 */}
-              <div>
-                <label className="mb-2 block text-sm font-medium text-gray-700">
-                  설문 제목
-                </label>
+              <div className="flex flex-col gap-1">
+                <label className="block text-sm text-gray-950">설문 제목</label>
                 <input
                   type="text"
                   value={config.title}
                   onChange={(e) =>
                     setConfig({ ...config, title: e.target.value })
                   }
-                  className="w-full rounded-lg border border-gray-300 p-3 focus:border-blue-500 focus:ring-2 focus:ring-blue-500"
+                  className="w-full rounded-md border border-[#E4E4E7] px-[17px] py-[13px] text-base text-[#09090B] focus:border-blue-500 focus:ring-2 focus:ring-blue-500"
                   required
                 />
               </div>
 
               {/* 설문 설명 */}
-              <div>
-                <label className="mb-2 block text-sm font-medium text-gray-700">
-                  설문 설명
-                </label>
+              <div className="flex flex-col gap-1">
+                <label className="block text-sm text-gray-950">설문 설명</label>
                 <textarea
                   value={config.description}
                   onChange={(e) =>
                     setConfig({ ...config, description: e.target.value })
                   }
                   rows={3}
-                  className="w-full rounded-lg border border-gray-300 p-3 focus:border-blue-500 focus:ring-2 focus:ring-blue-500"
+                  className="w-full rounded-md border border-[#E4E4E7] px-[17px] py-[13px] text-base text-[#09090B] focus:border-blue-500 focus:ring-2 focus:ring-blue-500"
                 />
               </div>
 
-              {/* 설문 기간 */}
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="mb-2 block text-sm font-medium text-gray-700">
-                    시작일
-                  </label>
-                  <input
-                    type="date"
-                    value={config.startDate}
-                    onChange={(e) =>
-                      setConfig({ ...config, startDate: e.target.value })
-                    }
-                    className="w-full rounded-lg border border-gray-300 p-3 focus:border-blue-500 focus:ring-2 focus:ring-blue-500"
-                    required
-                  />
+              {/* 설문 기간 설정 */}
+              <div className="flex flex-col gap-1">
+                <label className="block text-sm text-gray-950">
+                  설문 기간 설정
+                </label>
+
+                {/* 선택된 날짜 범위 표시 */}
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="relative">
+                    <button
+                      type="button"
+                      onClick={() => setShowCalendar(!showCalendar)}
+                      className="flex w-full items-center rounded-md border border-[#E4E4E7] bg-white px-[17px] py-[13px] text-left hover:bg-gray-50 focus:border-blue-500 focus:ring-2 focus:ring-blue-500"
+                    >
+                      <svg
+                        className="mr-2 h-5 w-5 text-gray-400"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+                        />
+                      </svg>
+                      <span className="text-sm text-[#09090B]">
+                        {selectedStartDate
+                          ? formatDate(selectedStartDate)
+                          : "시작일 선택"}
+                      </span>
+                    </button>
+                  </div>
+                  <div className="relative">
+                    <button
+                      type="button"
+                      onClick={() => setShowCalendar(!showCalendar)}
+                      className="flex w-full items-center rounded-md border border-[#E4E4E7] bg-white px-[17px] py-[13px] text-left hover:bg-gray-50 focus:border-blue-500 focus:ring-2 focus:ring-blue-500"
+                    >
+                      <svg
+                        className="mr-2 h-5 w-5 text-gray-400"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+                        />
+                      </svg>
+                      <span className="text-sm text-[#09090B]">
+                        {selectedEndDate
+                          ? formatDate(selectedEndDate)
+                          : "종료일 선택"}
+                      </span>
+                    </button>
+                  </div>
                 </div>
-                <div>
-                  <label className="mb-2 block text-sm font-medium text-gray-700">
-                    종료일
-                  </label>
-                  <input
-                    type="date"
-                    value={config.endDate}
-                    onChange={(e) =>
-                      setConfig({ ...config, endDate: e.target.value })
-                    }
-                    className="w-full rounded-lg border border-gray-300 p-3 focus:border-blue-500 focus:ring-2 focus:ring-blue-500"
-                    required
-                  />
-                </div>
+
+                {/* 캘린더 */}
+                {showCalendar && (
+                  <div className="mt-4 rounded-lg border border-gray-200 bg-white p-4">
+                    <div className="mb-4 flex items-center justify-between">
+                      <button
+                        type="button"
+                        onClick={() => navigateMonth("prev")}
+                        className="rounded-lg p-2 hover:bg-gray-100"
+                      >
+                        <svg
+                          className="h-5 w-5 text-gray-600"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M15 19l-7-7 7-7"
+                          />
+                        </svg>
+                      </button>
+                      <h3 className="text-lg font-semibold text-gray-900">
+                        {currentMonth.getFullYear()}년{" "}
+                        {currentMonth.getMonth() + 1}월
+                      </h3>
+                      <div className="flex items-center space-x-2">
+                        <button
+                          type="button"
+                          onClick={() => navigateMonth("next")}
+                          className="rounded-lg p-2 hover:bg-gray-100"
+                        >
+                          <svg
+                            className="h-5 w-5 text-gray-600"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M9 5l7 7-7 7"
+                            />
+                          </svg>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setShowCalendar(false)}
+                          className="rounded-lg p-2 hover:bg-gray-100"
+                        >
+                          <svg
+                            className="h-5 w-5 text-gray-600"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M6 18L18 6M6 6l12 12"
+                            />
+                          </svg>
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* 요일 헤더 */}
+                    <div className="mb-2 grid grid-cols-7 gap-1">
+                      {["일", "월", "화", "수", "목", "금", "토"].map((day) => (
+                        <div
+                          key={day}
+                          className="py-2 text-center text-sm font-medium text-gray-500"
+                        >
+                          {day}
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* 날짜 그리드 */}
+                    <div className="grid grid-cols-7 gap-1">
+                      {Array.from(
+                        { length: getFirstDayOfMonth(currentMonth) },
+                        (_, i) => (
+                          <div key={`empty-${i}`} className="py-2"></div>
+                        ),
+                      )}
+                      {Array.from(
+                        { length: getDaysInMonth(currentMonth) },
+                        (_, i) => {
+                          const day = i + 1;
+                          const isInRange = isDateInRange(day, currentMonth);
+                          const isSelected = isDateSelected(day, currentMonth);
+                          const isToday =
+                            new Date().toDateString() ===
+                            new Date(
+                              currentMonth.getFullYear(),
+                              currentMonth.getMonth(),
+                              day,
+                            ).toDateString();
+
+                          return (
+                            <button
+                              key={day}
+                              type="button"
+                              onClick={() => handleDateClick(day, currentMonth)}
+                              className={`relative py-2 text-sm transition-colors hover:bg-blue-50 ${isToday ? "bg-blue-100 font-semibold text-blue-800" : ""} ${isSelected ? "bg-blue-500 text-white hover:bg-blue-600" : ""} ${isInRange && !isSelected ? "bg-blue-100 text-blue-700" : ""} ${!isInRange && !isSelected && !isToday ? "text-gray-700 hover:bg-gray-100" : ""} `}
+                            >
+                              {day}
+                            </button>
+                          );
+                        },
+                      )}
+                    </div>
+
+                    {/* 선택된 기간 표시 */}
+                    {selectedStartDate && selectedEndDate && (
+                      <div className="mt-4 rounded-lg bg-blue-50 p-3">
+                        <p className="text-sm text-blue-800">
+                          📅 선택된 기간:{" "}
+                          <span className="font-medium">
+                            {config.surveyPeriod}일
+                          </span>
+                          <span className="ml-2 text-blue-600">
+                            ({config.startDate} ~ {config.endDate})
+                          </span>
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
 
             {/* 버튼 */}
-            <div className="mt-8 flex space-x-3">
-              <button
+            <div className="mt-5 flex">
+              {/* <button
                 type="button"
                 onClick={onClose}
                 className="flex-1 rounded-lg border border-gray-300 px-4 py-3 text-gray-700 transition-colors hover:bg-gray-50"
               >
                 취소
-              </button>
+              </button> */}
               <button
                 type="submit"
                 disabled={
@@ -796,7 +1180,7 @@ const SurveyConfigModal: React.FC<{
                   config.targetGrades.length === 0 ||
                   config.targetClasses.length === 0
                 }
-                className="flex-1 rounded-lg bg-[#3F80EA] px-4 py-3 text-white transition-colors hover:bg-blue-600 disabled:cursor-not-allowed disabled:opacity-50"
+                className="h-[50px] flex-1 rounded-[4px] bg-[#3F80EA] px-5 py-2 text-base text-white transition-colors hover:bg-blue-600 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {isCreating ? (
                   <div className="flex items-center justify-center">
