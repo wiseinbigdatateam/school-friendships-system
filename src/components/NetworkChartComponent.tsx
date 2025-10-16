@@ -22,6 +22,29 @@ interface NetworkChartComponentProps {
   } | null;
 }
 
+const friendType = [
+  {
+    type: "외톨이형",
+    color: "#FF6B6B",
+  },
+  {
+    type: "소수 친구 학생",
+    color: "#4ECDC4",
+  },
+  {
+    type: "평균적인 학생",
+    color: "#45B7D1",
+  },
+  {
+    type: "친구 많은 학생",
+    color: "#96CEB4",
+  },
+  {
+    type: "사교 스타",
+    color: "#FFEAA7",
+  },
+];
+
 const NetworkChartComponent: React.FC<NetworkChartComponentProps> = ({
   chartData,
   activeTab,
@@ -89,9 +112,27 @@ const NetworkChartComponent: React.FC<NetworkChartComponentProps> = ({
           <h3 className="mb-4 text-xl font-semibold text-gray-900">
             첫 번째 설문 - 학급 친구 관계 현황
           </h3>
-          <p className="mb-6 text-sm text-gray-600">
-            첫 번째 선택한 설문의 학급 내 학생들의 친구 관계를 시각화합니다.
-          </p>
+
+          <div className="mb-4 flex justify-between">
+            <p className="text-sm text-gray-600">
+              첫 번째 선택한 설문의 학급 내 학생들의 친구 관계를 시각화합니다.
+            </p>
+
+            {/* 친구 유형 범례 */}
+            <div className="flex gap-3">
+              {friendType.map((item) => (
+                <div key={item.type} className="flex items-center gap-1">
+                  <div
+                    className="h-4 w-4 rounded-full"
+                    style={{ backgroundColor: item.color }}
+                  />
+                  <span className="text-xs font-medium text-gray-700">
+                    {item.type}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
 
           <div className="relative">
             <NetworkVisualization
@@ -126,9 +167,13 @@ const NetworkChartComponent: React.FC<NetworkChartComponentProps> = ({
               <p className="mt-1 text-xs text-blue-600">
                 {(() => {
                   const clusterCount = getClusterCount(firstGraphData);
-                  return clusterCount <= 2 ? "매우 통합됨" :
-                         clusterCount <= 4 ? "적절함" :
-                         clusterCount <= 6 ? "다소 분산됨" : "주의 필요";
+                  return clusterCount <= 2
+                    ? "매우 통합됨"
+                    : clusterCount <= 4
+                      ? "적절함"
+                      : clusterCount <= 6
+                        ? "다소 분산됨"
+                        : "주의 필요";
                 })()}
               </p>
             </div>
@@ -457,9 +502,13 @@ const NetworkChartComponent: React.FC<NetworkChartComponentProps> = ({
               <p className="mt-1 text-xs text-blue-600">
                 {(() => {
                   const clusterCount = getClusterCount(secondGraphData);
-                  return clusterCount <= 2 ? "매우 통합됨" :
-                         clusterCount <= 4 ? "적절함" :
-                         clusterCount <= 6 ? "다소 분산됨" : "주의 필요";
+                  return clusterCount <= 2
+                    ? "매우 통합됨"
+                    : clusterCount <= 4
+                      ? "적절함"
+                      : clusterCount <= 6
+                        ? "다소 분산됨"
+                        : "주의 필요";
                 })()}
               </p>
             </div>
@@ -509,10 +558,17 @@ const NetworkChartComponent: React.FC<NetworkChartComponentProps> = ({
                     const change = secondClusterCount - firstClusterCount;
                     const isPositive = change < 0; // 그룹 수가 줄어든 것이 긍정적
                     return (
-                      <span className={`text-xs font-bold ${
-                        isPositive ? 'text-green-700' : change === 0 ? 'text-gray-700' : 'text-red-700'
-                      }`}>
-                        {change > 0 ? '+' : ''}{change}개
+                      <span
+                        className={`text-xs font-bold ${
+                          isPositive
+                            ? "text-green-700"
+                            : change === 0
+                              ? "text-gray-700"
+                              : "text-red-700"
+                        }`}
+                      >
+                        {change > 0 ? "+" : ""}
+                        {change}개
                       </span>
                     );
                   })()}
@@ -528,9 +584,11 @@ const NetworkChartComponent: React.FC<NetworkChartComponentProps> = ({
                     {(() => {
                       const firstCount = getClusterCount(firstGraphData);
                       const secondCount = getClusterCount(secondGraphData);
-                      return secondCount < firstCount 
-                        ? "✅" : secondCount > firstCount
-                        ? "⚠️" : "→";
+                      return secondCount < firstCount
+                        ? "✅"
+                        : secondCount > firstCount
+                          ? "⚠️"
+                          : "→";
                     })()}
                   </div>
                   <div className="text-center">
@@ -540,15 +598,15 @@ const NetworkChartComponent: React.FC<NetworkChartComponentProps> = ({
                     <div className="text-xs text-blue-600">두 번째 설문</div>
                   </div>
                 </div>
-                <p className="mt-2 text-xs text-blue-700 text-center">
+                <p className="mt-2 text-center text-xs text-blue-700">
                   {(() => {
                     const firstCount = getClusterCount(firstGraphData);
                     const secondCount = getClusterCount(secondGraphData);
-                    return secondCount < firstCount 
-                      ? "✨ 그룹이 통합되어 학급 응집력이 향상되었습니다" 
+                    return secondCount < firstCount
+                      ? "✨ 그룹이 통합되어 학급 응집력이 향상되었습니다"
                       : secondCount > firstCount
-                      ? "⚠️ 그룹이 분산되어 학급 통합에 관심이 필요합니다"
-                      : "그룹 수는 동일하게 유지되고 있습니다";
+                        ? "⚠️ 그룹이 분산되어 학급 통합에 관심이 필요합니다"
+                        : "그룹 수는 동일하게 유지되고 있습니다";
                   })()}
                 </p>
               </div>
