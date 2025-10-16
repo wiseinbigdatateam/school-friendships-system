@@ -182,7 +182,6 @@ const App: React.FC = () => {
             element={
               <div className="min-h-screen bg-gray-50">
                 <SurveyResponse />
-                <FloatingActionButton />
               </div>
             }
           />
@@ -237,7 +236,6 @@ const App: React.FC = () => {
             element={
               <div className="min-h-screen bg-gray-50">
                 <SurveyResponse />
-                <FloatingActionButton />
               </div>
             }
           />

@@ -346,6 +346,9 @@ const NetworkAnalysisPage: React.FC = () => {
 
           console.log(`✅ 설문 분석 완료: ${item.name}`, result);
 
+          // 외톨이형 수 계산
+          const isolatedCount = result.nodes.filter((node: any) => node.friendship_type === "외톨이형").length;
+
           analysisResults.push({
             nodes: result.nodes.map((node) => ({
               ...node,
@@ -359,7 +362,7 @@ const NetworkAnalysisPage: React.FC = () => {
               averageCentrality: result.metrics?.average_degree_centrality || 0,
               isolatedIndividuals: 0, // 기본값
               highCentralityIndividuals: 0, // 기본값
-              clusterCount: result.metrics?.connected_components || 0,
+              clusterCount: Math.max(0, (result.metrics?.connected_components || 0) - isolatedCount),
 
               // 추가 속성들
               total_students:
@@ -375,7 +378,7 @@ const NetworkAnalysisPage: React.FC = () => {
               clustering_coefficient:
                 result.metrics?.clustering_coefficient || 0,
               modularity: result.metrics?.modularity || 0,
-              connected_components: result.metrics?.connected_components || 0,
+              connected_components: Math.max(0, (result.metrics?.connected_components || 0) - isolatedCount),
               average_degree_centrality:
                 result.metrics?.average_degree_centrality || 0,
               average_closeness_centrality:
@@ -480,9 +483,12 @@ const NetworkAnalysisPage: React.FC = () => {
               )}
             </h2>
             <div className="flex items-center space-x-4 text-sm text-gray-600">
-              <span>설문프로젝트를 클릭하여 선택해주세요.</span>
+              <span>완료된 설문프로젝트를 클릭하여 선택해주세요.</span>
               <span className="font-medium text-[#3F80EA]">
                 *최대 2개까지 가능
+              </span>
+              <span className="ml-2 text-xs text-gray-500">
+                (응답자가 있는 완료된 설문만 분석 가능)
               </span>
               <span className="ml-auto text-xs text-gray-500">
                 총 {projectsData.length}개 설문
@@ -504,22 +510,32 @@ const NetworkAnalysisPage: React.FC = () => {
                     : "선택할 교우현황 설문이 없습니다."}
                 </p>
               ) : (
-                draggableItems.map((item) => (
-                  <div
-                    key={item.pid}
-                    onClick={() => handleProjectSelect(item)}
-                    className="cursor-pointer rounded-lg border border-gray-300 bg-white p-3 transition-colors duration-200 hover:border-blue-500 hover:bg-blue-50"
-                  >
-                    <div className="text-sm font-medium text-gray-900">{item.name}</div>
-                    <div className="mt-1 flex items-center space-x-2 text-xs text-gray-600">
-                      <span>템플릿: {item.template_category || "분석가능"}</span>
-                      <span>•</span>
-                      <span>응답: {surveyResponseCounts[item.pid] || 0}명</span>
-                      <span>•</span>
-                      <span>{formatDate(item.created_at)}</span>
-                    </div>
-                  </div>
-                ))
+                draggableItems
+                  .filter((item) => {
+                    const isCompleted = item.status === "completed";
+                    const responseCount = surveyResponseCounts[item.pid] || 0;
+                    return isCompleted && responseCount > 0;
+                  })
+                  .map((item) => {
+                    const responseCount = surveyResponseCounts[item.pid] || 0;
+                    
+                    return (
+                      <div
+                        key={item.pid}
+                        onClick={() => handleProjectSelect(item)}
+                        className="cursor-pointer rounded-lg border border-gray-300 bg-white p-3 transition-colors duration-200 hover:border-blue-500 hover:bg-blue-50"
+                      >
+                        <div className="text-sm font-medium text-gray-900">{item.name}</div>
+                        <div className="mt-1 flex items-center space-x-2 text-xs text-gray-600">
+                          <span>템플릿: {item.template_category || "분석가능"}</span>
+                          <span>•</span>
+                          <span>응답: {responseCount}명</span>
+                          <span>•</span>
+                          <span>{formatDate(item.created_at)}</span>
+                        </div>
+                      </div>
+                    );
+                  })
               )}
             </div>
           </div>
