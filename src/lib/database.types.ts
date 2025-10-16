@@ -683,9 +683,10 @@ export type Database = {
           grade: string
           id: string
           is_active: boolean | null
-          lifelong_education_id: string
           name: string
+          parent_consent: boolean | null
           parent_contact: Json | null
+          phone: string | null
           student_number: string
           updated_at: string | null
         }
@@ -700,9 +701,10 @@ export type Database = {
           grade: string
           id?: string
           is_active?: boolean | null
-          lifelong_education_id: string
           name: string
+          parent_consent?: boolean | null
           parent_contact?: Json | null
+          phone?: string | null
           student_number: string
           updated_at?: string | null
         }
@@ -717,9 +719,10 @@ export type Database = {
           grade?: string
           id?: string
           is_active?: boolean | null
-          lifelong_education_id?: string
           name?: string
+          parent_consent?: boolean | null
           parent_contact?: Json | null
+          phone?: string | null
           student_number?: string
           updated_at?: string | null
         }

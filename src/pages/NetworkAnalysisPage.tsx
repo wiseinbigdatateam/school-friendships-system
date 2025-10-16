@@ -346,6 +346,9 @@ const NetworkAnalysisPage: React.FC = () => {
 
           console.log(`✅ 설문 분석 완료: ${item.name}`, result);
 
+          // 외톨이형 수 계산
+          const isolatedCount = result.nodes.filter((node: any) => node.friendship_type === "외톨이형").length;
+
           analysisResults.push({
             nodes: result.nodes.map((node) => ({
               ...node,
@@ -359,7 +362,7 @@ const NetworkAnalysisPage: React.FC = () => {
               averageCentrality: result.metrics?.average_degree_centrality || 0,
               isolatedIndividuals: 0, // 기본값
               highCentralityIndividuals: 0, // 기본값
-              clusterCount: result.metrics?.connected_components || 0,
+              clusterCount: Math.max(0, (result.metrics?.connected_components || 0) - isolatedCount),
 
               // 추가 속성들
               total_students:
@@ -375,7 +378,7 @@ const NetworkAnalysisPage: React.FC = () => {
               clustering_coefficient:
                 result.metrics?.clustering_coefficient || 0,
               modularity: result.metrics?.modularity || 0,
-              connected_components: result.metrics?.connected_components || 0,
+              connected_components: Math.max(0, (result.metrics?.connected_components || 0) - isolatedCount),
               average_degree_centrality:
                 result.metrics?.average_degree_centrality || 0,
               average_closeness_centrality:

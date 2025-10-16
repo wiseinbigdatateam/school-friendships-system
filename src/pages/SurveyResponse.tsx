@@ -42,7 +42,7 @@ const SurveyResponse: React.FC = () => {
 
   // 학생 본인 확인 상태
   const [currentStep, setCurrentStep] = useState<
-    "verify" | "survey" | "complete" | "already_responded"
+    "verify" | "consent" | "survey" | "complete" | "already_responded"
   >("verify");
   const [selectedStudent, setSelectedStudent] = useState<any>(null);
   const [students, setStudents] = useState<any[]>([]);
@@ -53,6 +53,12 @@ const SurveyResponse: React.FC = () => {
   );
   const [existingResponse, setExistingResponse] = useState<any>(null);
   const [schoolName, setSchoolName] = useState<string>("");
+
+  // 개인정보동의 관련 상태
+  const [isUnder14, setIsUnder14] = useState<boolean>(false);
+  const [parentConsent, setParentConsent] = useState<boolean>(false);
+  const [studentConsent, setStudentConsent] = useState<boolean>(false);
+  const [consentError, setConsentError] = useState<string | null>(null);
 
   // 각 질문별 검색어 상태 추가
   const [questionSearchTerms, setQuestionSearchTerms] = useState<
@@ -277,7 +283,7 @@ const SurveyResponse: React.FC = () => {
           ) {
             const { data: studentsData, error: studentsError } = await supabase
               .from("students")
-              .select("id, name, grade, class, current_school_id, birth_date")
+              .select("id, name, grade, class, current_school_id, birth_date, parent_consent")
               .eq("current_school_id", surveyData.school_id)
               .in("grade", surveyData.target_grades)
               .in("class", surveyData.target_classes)
@@ -365,11 +371,26 @@ const SurveyResponse: React.FC = () => {
           return;
         }
 
-        // 응답하지 않은 경우에만 설문 단계로 진행
+        // 응답하지 않은 경우에만 동의 단계로 진행
         setSelectedStudent(matchedStudent);
-        setCurrentStep("survey");
+        
+        // 나이 계산 (14세 미만 여부 확인)
+        const today = new Date();
+        const birthDate = new Date(matchedStudent.birth_date);
+        const age = today.getFullYear() - birthDate.getFullYear();
+        const monthDiff = today.getMonth() - birthDate.getMonth();
+        
+        if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+          // 아직 생일이 지나지 않은 경우
+          setIsUnder14(age < 14);
+        } else {
+          setIsUnder14(age < 14);
+        }
+        
+        // 모든 학생 동의 단계로 이동
+        setCurrentStep("consent");
         setVerificationError(null);
-        setSearchTerm(""); // 설문 단계로 이동할 때 검색어 초기화
+        setSearchTerm(""); // 동의 단계로 이동할 때 검색어 초기화
         setQuestionSearchTerms({}); // 질문별 검색어도 초기화
       } catch (error) {
         console.error("응답 확인 중 오류:", error);
@@ -382,6 +403,25 @@ const SurveyResponse: React.FC = () => {
         "일치하는 학생 정보를 찾을 수 없습니다. 이름과 생년월일을 다시 확인해주세요.",
       );
     }
+  };
+
+  // 개인정보동의 처리
+  const handleConsentSubmit = () => {
+    // 14세 미만이고 학부모 동의가 없는 경우
+    if (isUnder14 && !selectedStudent.parent_consent) {
+      alert("14세 미만 학생은 학부모 동의가 필요합니다.\n담임선생님께 학부모 동의서를 제출해주세요.");
+      navigate("/");
+      return;
+    }
+    
+    // 학생 본인 동의 확인
+    if (!studentConsent) {
+      setConsentError("개인정보 수집·이용에 대한 동의가 필요합니다.");
+      return;
+    }
+    
+    setConsentError(null);
+    setCurrentStep("survey");
   };
 
   // 응답 처리
@@ -785,6 +825,197 @@ const SurveyResponse: React.FC = () => {
               <p>• 입력 형식: YYYY-MM-DD (예: 2005-03-15)</p>
               <p>• 숫자만 입력하면 자동으로 하이픈이 추가됩니다</p>
             </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // 개인정보동의 단계
+  if (currentStep === "consent") {
+    return (
+      <div className="flex min-h-screen w-full items-center justify-center bg-gray-50 py-8">
+        {/* 배경 이미지 */}
+        <div
+          className="absolute top-0 z-0 h-full w-full bg-cover bg-center bg-no-repeat"
+          style={{
+            backgroundImage: `url('/mask_bg.png')`,
+          }}
+        ></div>
+        {/* 어두운 오버레이로 텍스트 가독성 향상 */}
+        <div className="absolute inset-0 z-10 h-full w-full bg-black/40"></div>
+
+        <div className="z-50">
+          <div className="mb-2 rounded-lg border border-gray-200 bg-white px-6 py-3 text-base font-semibold shadow-sm">
+            {schoolName || "OO 초등학교"}
+          </div>
+          
+          {/* 설문 헤더 */}
+          <div className="mb-6 rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
+            <h1 className="mb-4 text-center text-lg font-bold text-gray-900">
+              {survey.title}
+            </h1>
+            <div className="text-sm text-gray-500">
+              <p>응답자: {selectedStudent.name}</p>
+            </div>
+          </div>
+
+          {/* 개인정보동의 */}
+          <div className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
+            <h2 className="mb-4 text-center text-xl font-semibold text-gray-900">
+              개인정보 수집·이용 동의
+            </h2>
+
+            {/* 나이 안내 */}
+            {/* <div className={`mb-6 rounded-lg border p-4 ${
+              isUnder14 
+                ? "border-orange-200 bg-orange-50" 
+                : "border-blue-200 bg-blue-50"
+            }`}>
+              <div className="flex items-center">
+                <div className="flex-shrink-0">
+                  {isUnder14 ? (
+                    <svg className="h-6 w-6 text-orange-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.732-.833-2.464 0L4.732 15.5c-.77.833.192 2.5 1.732 2.5z" />
+                    </svg>
+                  ) : (
+                    <svg className="h-6 w-6 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                  )}
+                </div>
+                <div className="ml-3">
+                  <p className={`text-sm font-medium ${
+                    isUnder14 ? "text-orange-800" : "text-blue-800"
+                  }`}>
+                    {isUnder14 
+                      ? "14세 미만 학생입니다. 학부모 동의가 필요합니다."
+                      : "14세 이상 학생입니다. 본인 동의로 진행합니다."
+                    }
+                  </p>
+                </div>
+              </div>
+            </div> */}
+
+            {/* 개인정보 수집·이용 안내 */}
+            <div className="mb-6 rounded-lg border border-gray-200 bg-gray-50 p-4">
+              <h3 className="mb-3 text-sm font-semibold text-gray-900">
+                개인정보 수집·이용 안내
+              </h3>
+              <div className="space-y-2 text-xs text-gray-600">
+                <p><strong>수집 목적:</strong> 교우관계 분석 및 학교생활 만족도 조사</p>
+                <p><strong>수집 항목:</strong> 이름, 학년, 반, 설문 응답 내용</p>
+                <p><strong>보유 기간:</strong> 설문 완료 후 1년</p>
+                <p><strong>처리 방법:</strong> 암호화하여 안전하게 보관</p>
+                <p><strong>제3자 제공:</strong> 없음</p>
+              </div>
+            </div>
+
+            {/* 14세 미만인 경우 학부모 동의 상태 안내 */}
+            {isUnder14 && (
+              <div className={`mb-6 rounded-lg border p-4 ${
+                selectedStudent.parent_consent 
+                  ? "border-green-200 bg-green-50" 
+                  : "border-red-200 bg-red-50"
+              }`}>
+                <div className="flex items-start">
+                  <div className="flex-shrink-0">
+                    {selectedStudent.parent_consent ? (
+                      <svg className="h-6 w-6 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                    ) : (
+                      <svg className="h-6 w-6 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.732-.833-2.464 0L4.732 15.5c-.77.833.192 2.5 1.732 2.5z" />
+                      </svg>
+                    )}
+                  </div>
+                  <div className="ml-3">
+                    <h3 className={`text-sm font-semibold ${
+                      selectedStudent.parent_consent ? "text-green-800" : "text-red-800"
+                    }`}>
+                      {selectedStudent.parent_consent 
+                        ? "학부모 동의 완료" 
+                        : "학부모 동의가 필요합니다"
+                      }
+                    </h3>
+                    <p className={`mt-1 text-sm ${
+                      selectedStudent.parent_consent ? "text-green-700" : "text-red-700"
+                    }`}>
+                      {selectedStudent.parent_consent 
+                        ? "학부모 동의가 완료되어 설문에 참여할 수 있습니다."
+                        : "14세 미만 학생은 개인정보 수집·이용에 대한 학부모 동의가 필요합니다."
+                      }
+                    </p>
+                    {!selectedStudent.parent_consent && (
+                      <p className="mt-2 text-sm text-red-700">
+                        담임선생님께 학부모 동의서를 제출해주세요.
+                      </p>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* 학생 본인 동의 - 14세 미만이고 학부모 동의가 없는 경우는 제외 */}
+            {(!isUnder14 || selectedStudent.parent_consent) && (
+              <>
+                <div className="mb-6">
+                  <label className="flex items-start space-x-3">
+                    <input
+                      type="checkbox"
+                      checked={studentConsent}
+                      onChange={(e) => setStudentConsent(e.target.checked)}
+                      className="mt-1 h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                    />
+                    <div className="text-sm">
+                      <span className="font-medium text-gray-900">
+                        개인정보 수집·이용 동의 (필수)
+                      </span>
+                      <p className="mt-1 text-gray-600">
+                        위 개인정보 수집·이용에 동의합니다.
+                      </p>
+                    </div>
+                  </label>
+                </div>
+
+                {/* 에러 메시지 */}
+                {consentError && (
+                  <div className="mb-4 rounded-lg border border-red-200 bg-red-50 p-4">
+                    <div className="flex items-start">
+                      <div className="flex-shrink-0">
+                        <svg className="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
+                          <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                        </svg>
+                      </div>
+                      <div className="ml-3">
+                        <p className="text-sm text-red-600">{consentError}</p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </>
+            )}
+
+            {/* 동의 버튼 */}
+            <button
+              onClick={handleConsentSubmit}
+              className="w-full rounded-lg bg-[#3F80EA] py-3 text-white transition-colors hover:bg-blue-600"
+            >
+              {isUnder14 && !selectedStudent.parent_consent 
+                ? "확인하고 메인으로 돌아가기" 
+                : "동의하고 설문 시작하기"
+              }
+            </button>
+
+            {/* 도움말 - 14세 미만이고 학부모 동의가 없는 경우는 제외 */}
+            {(!isUnder14 || selectedStudent.parent_consent) && (
+              <div className="mt-4 text-left text-xs text-gray-500">
+                <p>• 개인정보는 설문 목적 외에 사용되지 않습니다</p>
+                <p>• 동의하지 않을 경우 설문 참여가 제한될 수 있습니다</p>
+                <p>• 문의사항은 담임선생님께 연락해주세요</p>
+              </div>
+            )}
           </div>
         </div>
       </div>

@@ -58,7 +58,7 @@ interface Student {
   class: string;
   student_number: string;
   current_school_id?: string | null;
-  lifelong_education_id?: string;
+  phone?: string | null;
   birth_date?: string;
   gender?: string;
   enrolled_at?: string;
