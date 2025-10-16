@@ -33,10 +33,14 @@ const NetworkChartComponent: React.FC<NetworkChartComponentProps> = ({
   const [secondGraphData, setSecondGraphData] =
     useState<NetworkAnalysisData | null>(null);
 
-  // 클러스터 수 계산 유틸리티 함수
+  // 클러스터 수 계산 유틸리티 함수 (외톨이형 제외)
   const getClusterCount = (graphData: NetworkAnalysisData): number => {
     const clusters = new Map<number, any>();
     graphData.nodes.forEach((node) => {
+      // 외톨이형은 그룹 수에서 제외
+      if (node.friendship_type === "외톨이형") {
+        return;
+      }
       const clusterId = node.community ?? 0;
       if (!clusters.has(clusterId)) {
         clusters.set(clusterId, []);

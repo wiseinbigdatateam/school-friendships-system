@@ -39,7 +39,7 @@ interface DataTransferRequest {
 
 interface Student {
   id: string;
-  lifelong_education_id: string;
+  phone: string | null;
   name: string;
   grade: string;
   class: string;
@@ -94,7 +94,7 @@ const DataTransfer: React.FC = () => {
       // 학생 목록 조회
       const { data: studentsData, error: studentsError } = await supabase
         .from('students')
-        .select('id, lifelong_education_id, name, grade, class, current_school_id')
+        .select('id, phone, name, grade, class, current_school_id')
         .eq('is_active', true);
 
       if (studentsError) throw studentsError;
