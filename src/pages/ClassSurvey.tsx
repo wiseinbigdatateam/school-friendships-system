@@ -217,7 +217,7 @@ const ClassSurvey: React.FC = () => {
           {
             label: "응답자 수",
             data: [data.yes_count, data.no_count],
-            backgroundColor: ["#094185", "#3b82f6"],
+            backgroundColor: ["#3b82f6", "#094185"],
             borderSkipped: false,
             barThickness: 28,
           },
@@ -257,9 +257,9 @@ const ClassSurvey: React.FC = () => {
             label: "전혀 없다",
             data: chartData.map((data) => data.never_count || 0),
             borderColor: "#93c5fd",
-            backgroundColor: "rgba(64, 134, 247, 0.1)",
+            backgroundColor: "rgba(147,197,253,0.25)",
             borderWidth: 2,
-            fill: false,
+            fill: true,
             tension: 0.4,
             pointBackgroundColor: "#93c5fd",
             pointBorderColor: "#fff",
@@ -270,9 +270,9 @@ const ClassSurvey: React.FC = () => {
             label: "한 두번 당한 적 있다",
             data: chartData.map((data) => data.sometimes_count || 0),
             borderColor: "#3b82f6",
-            backgroundColor: "rgba(31, 65, 179, 0.1)",
+            backgroundColor: "rgba(59,130,246,0.20)",
             borderWidth: 2,
-            fill: false,
+            fill: true,
             tension: 0.4,
             pointBackgroundColor: "#3b82f6",
             pointBorderColor: "#fff",
@@ -283,9 +283,9 @@ const ClassSurvey: React.FC = () => {
             label: "자주 있다",
             data: chartData.map((data) => data.often_count || 0),
             borderColor: "#094185",
-            backgroundColor: "rgba(15, 7, 54, 0.1)",
+            backgroundColor: "rgba(30,58,138,0.25)",
             borderWidth: 2,
-            fill: false,
+            fill: true,
             tension: 0.4,
             pointBackgroundColor: "#094185",
             pointBorderColor: "#fff",
@@ -304,7 +304,7 @@ const ClassSurvey: React.FC = () => {
               label: "예",
               data: chartData.slice(0, 4).map((data) => data.yes_count || 0),
               borderColor: "#3b82f6",
-              backgroundColor: "rgba(59, 130, 246, 0.1)",
+              backgroundColor: "rgba(147,197,253,0.25)",
               borderWidth: 2,
               fill: true,
               tension: 0.4,
@@ -317,7 +317,7 @@ const ClassSurvey: React.FC = () => {
               label: "아니오",
               data: chartData.slice(0, 4).map((data) => data.no_count || 0),
               borderColor: "#094185",
-              backgroundColor: "rgba(30, 64, 175, 0.1)",
+              backgroundColor: "rgba(30,58,138,0.25)",
               borderWidth: 2,
               fill: true,
               tension: 0.4,
@@ -335,9 +335,9 @@ const ClassSurvey: React.FC = () => {
               label: "전혀 없다",
               data: chartData.slice(4, 7).map((data) => data.never_count || 0),
               borderColor: "#93c5fd",
-              backgroundColor: "rgba(64, 134, 247, 0.1)",
+              backgroundColor: "rgba(147,197,253,0.25)",
               borderWidth: 2,
-              fill: false,
+              fill: true,
               tension: 0.4,
               pointBackgroundColor: "#93c5fd",
               pointBorderColor: "#fff",
@@ -350,9 +350,9 @@ const ClassSurvey: React.FC = () => {
                 .slice(4, 7)
                 .map((data) => data.sometimes_count || 0),
               borderColor: "#3b82f6",
-              backgroundColor: "rgba(31, 65, 179, 0.1)",
+              backgroundColor: "rgba(59,130,246,0.20)",
               borderWidth: 2,
-              fill: false,
+              fill: true,
               tension: 0.4,
               pointBackgroundColor: "#3b82f6",
               pointBorderColor: "#fff",
@@ -363,9 +363,9 @@ const ClassSurvey: React.FC = () => {
               label: "자주 있다",
               data: chartData.slice(4, 7).map((data) => data.often_count || 0),
               borderColor: "#094185",
-              backgroundColor: "rgba(15, 7, 54, 0.1)",
+              backgroundColor: "rgba(30,58,138,0.25)",
               borderWidth: 2,
-              fill: false,
+              fill: true,
               tension: 0.4,
               pointBackgroundColor: "#094185",
               pointBorderColor: "#fff",
@@ -440,9 +440,9 @@ const ClassSurvey: React.FC = () => {
           {
             data: [totalNever, totalSometimes, totalOften],
             backgroundColor: [
-              "rgba(34, 197, 94, 0.8)", // 초록색 (전혀 없다)
-              "rgba(251, 146, 60, 0.8)", // 주황색 (한 두번)
-              "rgba(220, 38, 38, 0.8)", // 빨간색 (자주)
+              "#93c5fd", // tailwind color: blue-300
+              "#3b82f6", // tailwind color: blue-500
+              "#094185",
             ],
             hoverOffset: 4,
           },
@@ -483,8 +483,8 @@ const ClassSurvey: React.FC = () => {
             {
               data: [totalSatisfactionYes, totalSatisfactionNo],
               backgroundColor: [
-                "rgba(34, 197, 94, 0.8)",
-                "rgba(239, 68, 68, 0.8)",
+                "#3b82f6", // tailwind color: blue-500
+                "#094185",
               ],
               hoverOffset: 4,
             },
@@ -500,9 +500,9 @@ const ClassSurvey: React.FC = () => {
                 totalViolenceOften,
               ],
               backgroundColor: [
-                "rgba(34, 197, 94, 0.8)", // 초록색 (전혀 없다)
-                "rgba(251, 146, 60, 0.8)", // 주황색 (한 두번)
-                "rgba(220, 38, 38, 0.8)", // 빨간색 (자주)
+                "#93c5fd", // tailwind color: blue-300
+                "#3b82f6", // tailwind color: blue-500
+                "#094185",
               ],
               hoverOffset: 4,
             },

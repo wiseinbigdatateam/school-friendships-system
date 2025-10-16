@@ -1511,7 +1511,7 @@ const IndividualAnalysis: React.FC = () => {
   return (
     <div className="mx-auto min-h-screen max-w-7xl bg-gray-50 px-4 pb-16 sm:px-6 lg:px-8">
       <div className="flex-col">
-        {/* 상단 바 */}
+        {/* 상단 분석 대상 리스트 카드 */}
         <div className="mb-6 w-full rounded-lg border border-gray-200 bg-white">
           <div className="p-6">
             <h2 className="mb-4 text-lg font-semibold text-gray-900">
@@ -1530,7 +1530,7 @@ const IndividualAnalysis: React.FC = () => {
               {surveys.map((survey) => (
                 <div
                   key={survey.id}
-                  className={`h-36 min-w-72 cursor-pointer rounded-lg border p-4 transition-colors ${
+                  className={`min-h-36 min-w-72 cursor-pointer rounded-lg border p-4 transition-colors ${
                     selectedSurvey?.id === survey.id
                       ? "border-blue-500 bg-blue-50"
                       : "border-gray-200 hover:border-gray-300"
@@ -1592,12 +1592,13 @@ const IndividualAnalysis: React.FC = () => {
                     onClick={() => setSelectedStudent(student.id)}
                   >
                     <div className="flex items-center justify-between">
-                      <div className="flex items-center space-x-2">
-                        <span className="truncate text-sm font-medium">
-                          {index + 1}번) {student.name}
-                        </span>
+                      <span className="inline-flex truncate text-sm font-medium">
+                        {index + 1}번) {student.name}
+                      </span>
+
+                      <div className="flex items-center gap-2">
                         <span
-                          className={`rounded-full px-2 py-1 text-xs font-medium ${getStudentTypeColor(
+                          className={`inline-flex rounded-full px-2 py-1 text-xs font-medium ${getStudentTypeColor(
                             getStudentType(student),
                           )}`}
                           style={{
@@ -1608,10 +1609,11 @@ const IndividualAnalysis: React.FC = () => {
                         >
                           {getStudentTypeLabel(getStudentType(student))}
                         </span>
+
+                        {selectedStudent === student.id && (
+                          <ChevronRightIcon className="h-4 w-4 flex-shrink-0 text-blue-600" />
+                        )}
                       </div>
-                      {selectedStudent === student.id && (
-                        <ChevronRightIcon className="h-4 w-4 flex-shrink-0 text-blue-600" />
-                      )}
                     </div>
                   </div>
                 ))}
