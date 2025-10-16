@@ -357,7 +357,7 @@ const StudentManagement: React.FC = () => {
         // parent_consent 필드 추가 (기본값: false)
         const studentWithConsent = {
           ...student,
-          parent_consent: student.parent_consent || false
+          parent_consent: student.parent_consent || false,
         };
         // complete_network_analysis에서 해당 학생의 데이터 추출
         let metrics = null;
@@ -814,7 +814,7 @@ const StudentManagement: React.FC = () => {
       "1",
       "홍길동",
       "3",
-      "2",  
+      "2",
       "남자",
       "2017-01-01",
       "2024-03-01",
@@ -1098,11 +1098,7 @@ const StudentManagement: React.FC = () => {
             typeof studentData.is_active,
             studentData.is_active,
           );
-          console.log(
-            "- phone:",
-            typeof studentData.phone,
-            studentData.phone,
-          );
+          console.log("- phone:", typeof studentData.phone, studentData.phone);
           console.log(
             "- parent_contact:",
             typeof studentData.parent_contact,
@@ -1410,7 +1406,10 @@ const StudentManagement: React.FC = () => {
   };
 
   // 학부모 동의 상태 업데이트
-  const handleParentConsentChange = async (studentId: string, consent: boolean) => {
+  const handleParentConsentChange = async (
+    studentId: string,
+    consent: boolean,
+  ) => {
     try {
       // Supabase에서 학부모 동의 상태 업데이트
       const { error } = await supabase
@@ -1424,7 +1423,7 @@ const StudentManagement: React.FC = () => {
       const updatedStudents = students.map((student) =>
         student.id === studentId
           ? { ...student, parent_consent: consent }
-          : student
+          : student,
       );
       setStudents(updatedStudents);
 
@@ -1433,7 +1432,9 @@ const StudentManagement: React.FC = () => {
         setSelectedStudent({ ...selectedStudent, parent_consent: consent });
       }
 
-      toast.success(`학부모 동의 상태가 ${consent ? '동의' : '미동의'}로 변경되었습니다.`);
+      toast.success(
+        `학부모 동의 상태가 ${consent ? "동의" : "미동의"}로 변경되었습니다.`,
+      );
     } catch (error) {
       console.error("학부모 동의 상태 업데이트 오류:", error);
       toast.error("학부모 동의 상태 변경 중 오류가 발생했습니다.");
@@ -1509,68 +1510,151 @@ const StudentManagement: React.FC = () => {
   return (
     <div className="mx-auto min-h-screen max-w-7xl bg-gray-50 px-4 pb-16 sm:px-6 lg:px-8">
       {/* 헤더 */}
-      <div className="mb-4">
+      <div className="flex flex-col gap-5">
         <div className="flex items-center justify-between">
-          <div>
-            <h1 className="mb-2 text-2xl font-bold text-gray-900">학생 등록/관리</h1>
-            
+          <h1 className="mb-2 text-2xl font-bold text-gray-900">
+            학생 등록/관리
+          </h1>
+
+          {/* 학급과 담임 정보 표시 */}
+          {teacherInfo &&
+            (teacherInfo.role === "homeroom_teacher" ||
+              teacherInfo.role === "grade_teacher") && (
+              <div className="flex gap-2 text-xl text-gray-950">
+                <p>
+                  {teacherInfo.grade_level}학년 {teacherInfo.class_number}반(
+                  {students.length}명)
+                </p>
+                <p>/</p>
+                <p>
+                  {teacherInfo.name || currentUser?.email}{" "}
+                  {getRoleDisplayName(teacherInfo.role)}
+                </p>
+              </div>
+            )}
+        </div>
+
+        {/* 파일, 양식 다운로드 */}
+        <div className="flex justify-between rounded-lg border border-gray-200 bg-white px-5 py-7">
+          <button
+            onClick={() => {
+              // 개인정보동의서_가정통신문 파일 다운로드
+              const link = document.createElement("a");
+              link.href = "/개인정보동의서_가정통신문.hwp";
+              link.download = "개인정보동의서_가정통신문.hwp";
+              document.body.appendChild(link);
+              link.click();
+              document.body.removeChild(link);
+            }}
+            className="flex items-center gap-2 rounded-md bg-gray-400 px-5 py-2 font-semibold text-[#fafafa] hover:bg-gray-500"
+          >
+            <ArrowDownTrayIcon className="w-[18px]" />
+            개인정보동의서_가정통신문
+          </button>
+
+          <div className="flex gap-2">
+            <button
+              onClick={handleDownloadTemplate}
+              className="flex items-center gap-2 rounded-lg bg-gray-500 px-5 py-2 font-semibold text-[#fafafa] transition-colors hover:bg-[#3F80EA]"
+            >
+              <ArrowDownTrayIcon className="w-[18px]" />
+              엑셀 템플릿 다운로드
+            </button>
+            <button
+              onClick={handleUploadStudents}
+              className="flex items-center gap-2 rounded-lg bg-gray-500 px-5 py-2 font-semibold text-[#fafafa] transition-colors hover:bg-[#3F80EA]"
+              title={
+                teacherInfo?.school_id
+                  ? `${schoolName || "현재 학교"}에 학생 등록`
+                  : "학교 정보가 없습니다"
+              }
+            >
+              <ArrowUpTrayIcon className="w-[18px]" />
+              {teacherInfo?.school_id && (
+                <span>({schoolName || "현재 학교"})</span>
+              )}
+              학생 명단 업로드
+            </button>
           </div>
-            <div className="text-right">
-              <p className="text-base text-gray-800">
-                {teacherInfo?.grade_level}학년 {teacherInfo?.class_number}반({students.length}명) / {teacherInfo?.name || currentUser?.email} 담임교사
-              </p>
-              
-            </div>
         </div>
       </div>
-
-      {/* 파일 관리 섹션 */}
-      <div className="mb-4 flex items-center justify-between">
-        <button
-          onClick={() => {
-            // 개인정보동의서_가정통신문 파일 다운로드
-            const link = document.createElement('a');
-            link.href = '/개인정보동의서_가정통신문.hwp';
-            link.download = '개인정보동의서_가정통신문.hwp';
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-          }}
-          className="inline-flex items-center rounded-lg bg-gray-400 px-4 py-2 text-white transition-colors hover:bg-gray-500"
-        >
-          <ArrowDownTrayIcon className="mr-2 h-5 w-5" />
-          개인정보동의서_가정통신문
-        </button>
-        
-        <div className="flex space-x-3">
-          <button
-            onClick={handleDownloadTemplate}
-            className="inline-flex items-center rounded-lg bg-gray-400 px-4 py-2 text-white transition-colors hover:bg-gray-500"
-          >
-            <ArrowDownTrayIcon className="mr-2 h-5 w-5" />
-            엑셀 템플릿 다운로드
-          </button>
-          <button
-            onClick={handleUploadStudents}
-            className="inline-flex items-center rounded-lg bg-gray-400 px-4 py-2 text-white transition-colors hover:bg-gray-500"
-            title={
-              teacherInfo?.school_id
-                ? `${schoolName || "현재 학교"}에 학생 등록`
-                : "학교 정보가 없습니다"
-            }
-          >
-            <ArrowUpTrayIcon className="mr-2 h-5 w-5" />
-            (와이즈인컴퍼니) 학생 명단 업로드
-          </button>
-        </div>
-      </div>
-
 
       {/* 검색 및 필터 */}
-      <div className="mb-4 rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
-        <div className="flex items-center gap-3">
-          {/* 검색 */}
-          <div className="relative flex-1">
+      <div className="mb-2 mt-5 flex justify-end gap-2">
+        {/* 검색 */}
+        <input
+          type="text"
+          placeholder="학생 이름 또는 번호로 검색"
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          className="w-[320px] rounded-lg border border-gray-300 px-[13px] py-[11.5px] text-sm text-gray-950 placeholder:text-[#71717A] focus:border-transparent focus:outline-none focus:ring-2 focus:ring-blue-500"
+        />
+
+        {/* 정렬 옵션 */}
+        <div className="flex gap-2">
+          {[
+            { field: "name", label: "이름" },
+            { field: "student_number", label: "번호" },
+          ].map(({ field, label }) => (
+            <button
+              key={field}
+              onClick={() => toggleSort(field)}
+              className={`rounded-md border px-[13px] py-2.5 text-sm transition-colors ${
+                sortField === field
+                  ? "border-blue-400 bg-blue-50 text-blue-600"
+                  : "border-gray-[#e4e4e7] bg-white text-[#09090B]"
+              }`}
+            >
+              <div className="flex items-center gap-2 space-x-1">
+                <span>{label}</span>
+                {getSortIcon(field)}
+              </div>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* 검색 및 필터 - 이전 버전 */}
+      {/* <div className="my-5 rounded-lg border border-gray-200 bg-white p-6 shadow-sm"> */}
+      {/* 필터 및 통계 정보 */}
+      {/* <div className="mb-4 rounded-lg bg-gray-50 p-3 text-sm text-gray-600">
+          <div className="flex flex-wrap gap-4">
+            <div>
+              <strong>학년 옵션:</strong> {getGradeOptions().length}개 (
+              {getGradeOptions().join(", ") || "없음"})
+            </div>
+            <div>
+              <strong>반 옵션:</strong> {getClassOptions().length}개 (
+              {getClassOptions().join(", ") || "없음"})
+            </div>
+            <div>
+              <strong>현재 필터:</strong> {gradeFilter}학년 {classFilter}반
+              {(teacherInfo?.role === "homeroom_teacher" ||
+                teacherInfo?.role === "grade_teacher") &&
+                " (담임 고정)"}
+            </div>
+            <div>
+              <strong>표시 학생:</strong> {filteredStudents.length}명 /{" "}
+              {students.length}명
+            </div>
+          </div> */}
+
+      {/* 담임 정보 표시 */}
+      {/* {(teacherInfo?.role === "homeroom_teacher" ||
+            teacherInfo?.role === "grade_teacher") &&
+            teacherInfo.grade_level &&
+            teacherInfo.class_number && (
+              <div className="mt-3 rounded bg-blue-50 p-2 text-xs text-blue-800">
+                🎯 {getRoleDisplayName(teacherInfo.role)}:{" "}
+                {teacherInfo.grade_level}학년 {teacherInfo.class_number}반 -
+                담당 반 학생만 표시
+              </div>
+            )}
+        </div>
+
+        <div className="grid grid-cols-1 gap-3 md:grid-cols-4"> */}
+      {/* 검색 */}
+      {/* <div className="relative">
             <input
               type="text"
               placeholder="학생이름 또는 번호로 검색"
@@ -1581,36 +1665,99 @@ const StudentManagement: React.FC = () => {
             <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
               <MagnifyingGlassIcon className="h-5 w-5 text-gray-400" />
             </div>
-          </div>
+          </div> */}
 
-          {/* 정렬 옵션 */}
-          <div className="flex gap-2">
-            <button
-              onClick={() => toggleSort("name")}
-              className={`flex items-center gap-1 rounded-lg border border-gray-300 px-3 py-2 text-sm transition-colors ${
-                sortField === "name"
-                  ? "border-blue-500 bg-blue-50 text-blue-700"
-                  : "text-gray-600 hover:border-gray-400"
-              }`}
-            >
-              이름
-              {getSortIcon("name")}
-            </button>
-            <button
-              onClick={() => toggleSort("student_number")}
-              className={`flex items-center gap-1 rounded-lg border border-gray-300 px-3 py-2 text-sm transition-colors ${
-                sortField === "student_number"
-                  ? "border-blue-500 bg-blue-50 text-blue-700"
-                  : "text-gray-600 hover:border-gray-400"
-              }`}
-            >
-              번호
-              {getSortIcon("student_number")}
-            </button>
+      {/* 학년 필터 */}
+      {/* <select
+            value={gradeFilter}
+            onChange={(e) => setGradeFilter(e.target.value)}
+            disabled={teacherInfo?.role === "homeroom_teacher"}
+            className={`rounded-lg border border-gray-300 px-4 py-2 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+              teacherInfo?.role === "homeroom_teacher"
+                ? "cursor-not-allowed bg-gray-100"
+                : ""
+            }`}
+          >
+            <option value="all">모든 학년</option>
+            {getGradeOptions().map((grade) => (
+              <option key={grade} value={grade}>
+                {grade}학년
+              </option>
+            ))}*/}
+      {/* 디버깅용: 실제 옵션 개수 표시 */}
+      {/* {getGradeOptions().length === 0 && (
+              <option disabled>학년 데이터 없음</option>
+            )}
+          </select>  */}
+
+      {/* 반 필터 */}
+      {/* <select
+             value={classFilter}
+             onChange={(e) => setClassFilter(e.target.value)}
+             disabled={teacherInfo?.role === "homeroom_teacher"}
+             className={`rounded-lg border border-gray-300 px-4 py-2 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+               teacherInfo?.role === "homeroom_teacher"
+                 ? "cursor-not-allowed bg-gray-100"
+                 : ""
+             }`}
+           >
+             <option value="all">모든 반</option>
+             {getClassOptions().map((cls) => (
+               <option key={cls} value={cls}>
+                 {cls}반
+               </option>
+             ))} */}
+      {/* 디버깅용: 실제 옵션 개수 표시 */}
+      {/* {getClassOptions().length === 0 && (
+               <option disabled>반 데이터 없음</option>
+             )}
+           </select> */}
+
+      {/* 위험도 필터 */}
+      {/* <select
+             value={riskFilter}
+             onChange={(e) => setRiskFilter(e.target.value)}
+             className="rounded-lg border border-gray-300 px-4 py-2 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-blue-500"
+           >
+             <option value="all">전체</option>
+             <option value="high">주의 필요</option>
+             <option value="medium">관찰 중</option>
+             <option value="low">안정</option>
+           </select>
+         </div>
+       </div> */}
+
+      {/* 정렬 옵션 - 기존에 사용 */}
+      {/* <div className="mb-4 rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
+        <div className="flex items-center justify-between">
+          <h3 className="text-sm font-medium text-gray-700">정렬 기준</h3>
+          <div className="flex space-x-2">
+            {[
+              { field: "name", label: "이름" },
+              // { field: 'grade', label: '학년' },
+              // { field: 'class', label: '반' },
+              { field: "student_number", label: "번호" },
+              // { field: "risk_level", label: "위험도" },
+              { field: "network_centrality", label: "교우관계 중심성" },
+            ].map(({ field, label }) => (
+              <button
+                key={field}
+                onClick={() => toggleSort(field)}
+                className={`rounded-md border px-3 py-1 text-sm transition-colors ${
+                  sortField === field
+                    ? "border-blue-500 bg-blue-50 text-blue-700"
+                    : "border-gray-300 text-gray-600 hover:border-gray-400"
+                }`}
+              >
+                <div className="flex items-center space-x-1">
+                  <span>{label}</span>
+                  {getSortIcon(field)}
+                </div>
+              </button>
+            ))}
           </div>
         </div>
-      </div>
-
+      </div> */}
 
       {/* 업로드 진행 상황 */}
       {isUploading && (
@@ -1690,14 +1837,16 @@ const StudentManagement: React.FC = () => {
                     {student.name}
                   </p>
                 </div>
-                
+
                 {/* 학부모 동의 상태 */}
                 <div className="flex items-center gap-1">
-                  <div className={`h-2 w-2 rounded-full ${
-                    student.parent_consent ? 'bg-green-500' : 'bg-red-500'
-                  }`}></div>
+                  <div
+                    className={`h-2 w-2 rounded-full ${
+                      student.parent_consent ? "bg-green-500" : "bg-red-500"
+                    }`}
+                  ></div>
                   <span className="text-xs text-gray-500">
-                    {student.parent_consent ? '동의' : '미동의'}
+                    {student.parent_consent ? "동의" : "미동의"}
                   </span>
                 </div>
               </div>
@@ -1833,9 +1982,12 @@ const StudentManagement: React.FC = () => {
                           type="checkbox"
                           checked={selectedStudent.parent_consent || false}
                           onChange={(e) => {
-                            handleParentConsentChange(selectedStudent.id, e.target.checked);
+                            handleParentConsentChange(
+                              selectedStudent.id,
+                              e.target.checked,
+                            );
                           }}
-                          className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                          className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                         />
                         <span className="text-sm text-gray-700">
                           개인정보 수집·이용에 대한 학부모 동의
@@ -1852,7 +2004,8 @@ const StudentManagement: React.FC = () => {
                       <div>
                         <span className="text-gray-600">학급:</span>
                         <span className="ml-2 text-gray-900">
-                          {selectedStudent.grade}학년 {selectedStudent.class}반 {parseInt(selectedStudent.student_number)}번
+                          {selectedStudent.grade}학년 {selectedStudent.class}반{" "}
+                          {parseInt(selectedStudent.student_number)}번
                         </span>
                       </div>
                       <div>
