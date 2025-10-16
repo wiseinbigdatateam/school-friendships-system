@@ -23,17 +23,23 @@ export const emailService = {
       console.log('🔑 액세스 토큰 획득 시작');
       
       // 운영 환경에서는 HTTPS를 통해 Nginx 프록시 사용, 개발 환경에서는 환경 변수 사용
-      const proxyUrl = window.location.hostname === 'edu.wiseon.io' 
+      const isProduction = window.location.hostname === 'edu.wiseon.io';
+      const baseUrl = isProduction 
         ? 'https://edu.wiseon.io/api' 
         : (process.env.REACT_APP_PROXY_SERVER_URL || 'http://localhost:3001');
+      
+      // 운영환경에서는 /api가 이미 포함되어 있으므로 추가하지 않음, 로컬환경에서는 /api 추가
+      const tokenUrl = isProduction 
+        ? `${baseUrl}/naver-works/token`
+        : `${baseUrl}/api/naver-works/token`;
         
-      console.log('🌐 프록시 서버 URL (토큰):', proxyUrl);
+      console.log('🌐 프록시 서버 URL (토큰):', tokenUrl);
       console.log('🔧 클라이언트 설정:', {
         clientId: NAVER_WORKS_CONFIG.clientId ? '설정됨' : '미설정',
         clientSecret: NAVER_WORKS_CONFIG.clientSecret ? '설정됨' : '미설정'
       });
         
-      const response = await axios.post(`${proxyUrl}/api/naver-works/token`, {
+      const response = await axios.post(tokenUrl, {
         clientId: NAVER_WORKS_CONFIG.clientId,
         clientSecret: NAVER_WORKS_CONFIG.clientSecret
       });
@@ -89,11 +95,17 @@ export const emailService = {
       console.log('✅ 액세스 토큰 획득 완료');
 
       // 운영 환경에서는 HTTPS를 통해 Nginx 프록시 사용, 개발 환경에서는 환경 변수 사용
-      const proxyUrl = window.location.hostname === 'edu.wiseon.io' 
+      const isProduction = window.location.hostname === 'edu.wiseon.io';
+      const baseUrl = isProduction 
         ? 'https://edu.wiseon.io/api' 
         : (process.env.REACT_APP_PROXY_SERVER_URL || 'http://localhost:3001');
+      
+      // 운영환경에서는 /api가 이미 포함되어 있으므로 추가하지 않음, 로컬환경에서는 /api 추가
+      const sendEmailUrl = isProduction 
+        ? `${baseUrl}/naver-works/send-email`
+        : `${baseUrl}/api/naver-works/send-email`;
 
-      console.log('🌐 프록시 서버 URL:', proxyUrl);
+      console.log('🌐 프록시 서버 URL:', sendEmailUrl);
 
       const requestData = {
         accessToken,
@@ -103,7 +115,7 @@ export const emailService = {
 
       console.log('📤 이메일 발송 요청 데이터:', requestData);
 
-      const response = await axios.post(`${proxyUrl}/api/naver-works/send-email`, requestData);
+      const response = await axios.post(sendEmailUrl, requestData);
 
       console.log('✅ 이메일 발송 성공:', response.data);
       return true;
