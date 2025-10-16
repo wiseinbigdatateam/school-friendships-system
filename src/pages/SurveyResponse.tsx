@@ -56,7 +56,6 @@ const SurveyResponse: React.FC = () => {
 
   // 개인정보동의 관련 상태
   const [isUnder14, setIsUnder14] = useState<boolean>(false);
-  const [parentConsent, setParentConsent] = useState<boolean>(false);
   const [studentConsent, setStudentConsent] = useState<boolean>(false);
   const [consentError, setConsentError] = useState<string | null>(null);
 
