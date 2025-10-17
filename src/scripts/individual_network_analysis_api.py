@@ -115,5 +115,7 @@ def test_analysis():
         }), 500
 
 if __name__ == '__main__':
-    # 개발 환경에서 실행
-    app.run(host='0.0.0.0', port=3000, debug=True)
+    # 개발 환경에서 실행 (로컬환경에서는 5001 포트 사용)
+    import os
+    port = int(os.environ.get('PORT', 5001))  # 기본값 5001, 환경변수로 포트 설정 가능
+    app.run(host='0.0.0.0', port=port, debug=True)

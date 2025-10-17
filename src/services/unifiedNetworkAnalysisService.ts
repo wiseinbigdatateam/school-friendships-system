@@ -26,7 +26,7 @@ class UnifiedNetworkAnalysisService {
   private readonly CACHE_DURATION = 30 * 60 * 1000; // 30분
   private readonly API_BASE_URL = window.location.hostname === 'edu.wiseon.io' 
     ? 'https://edu.wiseon.io' 
-    : 'http://localhost:3001';
+    : 'http://localhost:5001';
 
   /**
    * 전체 네트워크 분석 수행 (최상위 레벨)
