@@ -62,6 +62,13 @@ export const useNotifications = () => {
             const updatedNotification = payload.new as Notification;
             const oldNotification = payload.old as Notification;
             
+            console.log('🔔 알림 업데이트 실시간 감지:', {
+              id: updatedNotification.id,
+              title: updatedNotification.title,
+              oldIsRead: oldNotification.is_read,
+              newIsRead: updatedNotification.is_read
+            });
+            
             setNotifications(prev => 
               prev.map(n => n.id === updatedNotification.id ? updatedNotification : n)
             );
@@ -73,6 +80,12 @@ export const useNotifications = () => {
           } else if (payload.eventType === 'DELETE') {
             // 알림 삭제
             const deletedNotification = payload.old as Notification;
+            
+            console.log('🔔 알림 삭제 실시간 감지:', {
+              id: deletedNotification.id,
+              title: deletedNotification.title,
+              wasUnread: !deletedNotification.is_read
+            });
             
             setNotifications(prev => 
               prev.filter(n => n.id !== deletedNotification.id)
@@ -97,19 +110,29 @@ export const useNotifications = () => {
     if (!user?.id) return false;
 
     try {
+      console.log('🔔 알림 읽음 처리 요청:', notificationId);
       const success = await NotificationService.markAsRead(notificationId, user.id);
+      console.log('🔔 알림 읽음 처리 성공:', success);
+      
       if (success) {
         // 로컬 상태 업데이트 - prev를 사용하여 최신 상태 접근
         setNotifications(prev => {
           const notification = prev.find(n => n.id === notificationId);
           const wasUnread = notification && !notification.is_read;
+          console.log('🔔 읽음 처리할 알림:', notification, 'wasUnread:', wasUnread);
           
           // 읽지 않은 알림이었다면 개수 감소
           if (wasUnread) {
-            setUnreadCount(count => Math.max(0, count - 1));
+            setUnreadCount(count => {
+              const newCount = Math.max(0, count - 1);
+              console.log('🔔 unreadCount:', count, '→', newCount);
+              return newCount;
+            });
           }
           
-          return prev.map(n => n.id === notificationId ? { ...n, is_read: true } : n);
+          const updated = prev.map(n => n.id === notificationId ? { ...n, is_read: true } : n);
+          console.log('🔔 알림 상태 업데이트 완료');
+          return updated;
         });
       }
       return success;
@@ -143,18 +166,29 @@ export const useNotifications = () => {
     if (!user?.id) return false;
 
     try {
+      console.log('🔔 알림 삭제 요청:', notificationId);
       const success = await NotificationService.deleteNotification(notificationId, user.id);
+      console.log('🔔 알림 삭제 성공:', success);
+      
       if (success) {
         // 로컬 상태 업데이트 - prev를 사용하여 최신 상태 접근
         setNotifications(prev => {
           const notification = prev.find(n => n.id === notificationId);
+          console.log('🔔 삭제할 알림:', notification);
           
           // 읽지 않은 알림이었다면 개수 감소
           if (notification && !notification.is_read) {
-            setUnreadCount(count => Math.max(0, count - 1));
+            console.log('🔔 unreadCount 감소');
+            setUnreadCount(count => {
+              const newCount = Math.max(0, count - 1);
+              console.log('🔔 unreadCount:', count, '→', newCount);
+              return newCount;
+            });
           }
           
-          return prev.filter(n => n.id !== notificationId);
+          const filtered = prev.filter(n => n.id !== notificationId);
+          console.log('🔔 알림 상태 업데이트:', prev.length, '→', filtered.length);
+          return filtered;
         });
       }
       return success;

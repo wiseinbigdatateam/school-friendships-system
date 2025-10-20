@@ -13,6 +13,15 @@ const Header: React.FC<HeaderProps> = ({ logo, navigationItems }) => {
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [showNotificationMenu, setShowNotificationMenu] = useState(false);
 
+  // 알림 상태 변경 감지 로그
+  useEffect(() => {
+    console.log('🔔 [Header] 알림 상태 변경:', {
+      총알림: notifications.length,
+      읽지않은알림: notifications.filter(n => !n.is_read).length,
+      unreadCount: unreadCount
+    });
+  }, [notifications, unreadCount]);
+
   // 드롭다운 메뉴 참조
   const userMenuRef = useRef<HTMLDivElement>(null);
   const notificationMenuRef = useRef<HTMLDivElement>(null);

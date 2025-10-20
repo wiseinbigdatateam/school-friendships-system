@@ -6,6 +6,7 @@ const Notifications: React.FC = () => {
   const navigate = useNavigate();
   const {
     notifications,
+    unreadCount,
     loading,
     markAsRead,
     deleteNotification,
@@ -15,6 +16,15 @@ const Notifications: React.FC = () => {
   const [filter, setFilter] = useState<"all" | "unread" | "read">("all");
   const [selectedNotifications, setSelectedNotifications] = useState<string[]>([]);
   const [isSelectAll, setIsSelectAll] = useState(false);
+
+  // 알림 상태 변경 감지 로그
+  React.useEffect(() => {
+    console.log('🔔 [Notifications Page] 알림 상태 변경:', {
+      총알림: notifications.length,
+      읽지않은알림: notifications.filter(n => !n.is_read).length,
+      unreadCount: unreadCount
+    });
+  }, [notifications, unreadCount]);
 
   const handleMarkAsRead = async (notificationId: string) => {
     try {
