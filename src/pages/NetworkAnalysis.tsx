@@ -600,34 +600,64 @@ const NetworkAnalysis: React.FC = () => {
       
       
 
-      // 네트워크 분석 완료 알림 생성
+      // 네트워크 분석 완료 개별화된 알림 생성
       try {
-        if (teacherInfo?.id) {
-          await NotificationService.createSystemNotification(
-            teacherInfo.id,
-            "network_analysis_completed",
-            {
-              surveyTitle: selectedSurvey.title,
-              surveyId: selectedSurvey.id,
-              totalStudents: analysisResults.nodes.length,
-              totalRelationships: analysisResults.edges.length,
-            },
-            "success",
-          );
+        if (teacherInfo?.id && userSchoolId) {
+          // 학교의 모든 사용자에게 개별화된 알림 생성
+          const { data: users, error: usersError } = await supabase
+            .from('users')
+            .select('id, role, grade_level, class_number')
+            .eq('school_id', userSchoolId);
 
-          // 권한별 알림 생성 (학년부장, 학교 관리자 등)
-          if (teacherInfo?.role && userSchoolId) {
-            await NotificationService.createRoleBasedNotification(
-              teacherInfo.role,
-              userSchoolId,
-              "network_analysis_completed",
-              {
-                title: "Python 네트워크 분석 완료",
-                message: `"${selectedSurvey.title}" 설문의 Python 네트워크 분석이 완료되었습니다. 총 ${analysisResults.nodes.length}명의 학생과 ${analysisResults.edges.length}개의 관계가 분석되었습니다.`,
-                type: "success",
-                category: "분석",
-              },
-            );
+          if (!usersError && users) {
+            for (const user of users) {
+              // 설문 대상 학년/반과 사용자 권한 매칭 확인
+              const targetGrades = selectedSurvey.target_grades || [];
+              const targetClasses = selectedSurvey.target_classes || [];
+              
+              let shouldNotify = false;
+              let personalizedMessage = `"${selectedSurvey.title}" 설문의 Python 네트워크 분석이 완료되었습니다. 총 ${analysisResults.nodes.length}명의 학생과 ${analysisResults.edges.length}개의 관계가 분석되었습니다.`;
+              
+              if (user.role === 'homeroom_teacher' && user.grade_level && user.class_number) {
+                // 담임교사: 담당 학급이 설문 대상에 포함되는지 확인
+                const gradeMatch = targetGrades.length === 0 || targetGrades.includes(user.grade_level.toString());
+                const classMatch = targetClasses.length === 0 || targetClasses.includes(user.class_number.toString());
+                
+                if (gradeMatch && classMatch) {
+                  shouldNotify = true;
+                  personalizedMessage = `담당하시는 ${user.grade_level}학년 ${user.class_number}반의 "${selectedSurvey.title}" 설문 분석이 완료되었습니다.`;
+                }
+              } else if (user.role === 'grade_teacher' && user.grade_level) {
+                // 학년담당: 담당 학년이 설문 대상에 포함되는지 확인
+                const gradeMatch = targetGrades.length === 0 || targetGrades.includes(user.grade_level.toString());
+                
+                if (gradeMatch) {
+                  shouldNotify = true;
+                  personalizedMessage = `담당하시는 ${user.grade_level}학년의 "${selectedSurvey.title}" 설문 분석이 완료되었습니다.`;
+                }
+              } else if (['school_admin', 'district_admin'].includes(user.role)) {
+                // 관리자: 모든 설문 알림
+                shouldNotify = true;
+              }
+              
+              if (shouldNotify) {
+                await NotificationService.createPersonalizedNotification({
+                  userId: user.id,
+                  userRole: user.role,
+                  schoolId: userSchoolId,
+                  gradeLevel: user.grade_level || undefined,
+                  classNumber: user.class_number || undefined,
+                  event: 'network_analysis_completed',
+                  details: {
+                    title: '네트워크 분석 완료',
+                    message: personalizedMessage,
+                    type: 'success',
+                    category: '분석',
+                    surveyDetails: selectedSurvey
+                  }
+                });
+              }
+            }
           }
         }
       } catch (error) {

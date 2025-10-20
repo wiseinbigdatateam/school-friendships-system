@@ -20,6 +20,23 @@ export interface CreateNotificationData {
   category?: string;
 }
 
+export interface PersonalizedNotificationData {
+  userId: string;
+  userRole: string;
+  schoolId: string;
+  gradeLevel?: string;
+  classNumber?: string;
+  event: string;
+  details: {
+    title: string;
+    message: string;
+    type?: 'info' | 'success' | 'warning' | 'error';
+    category?: string;
+    studentDetails?: any[];
+    surveyDetails?: any;
+  };
+}
+
 export class NotificationService {
   /**
    * 특정 사용자의 알림 목록 조회
@@ -329,7 +346,76 @@ export class NotificationService {
   }
 
   /**
-   * 권한별 알림 생성 (학년부장, 학교 관리자 등)
+   * 개별화된 알림 생성 (선생님별 맞춤형)
+   */
+  static async createPersonalizedNotification(
+    data: PersonalizedNotificationData
+  ): Promise<void> {
+    try {
+      const { userId, userRole, schoolId, gradeLevel, classNumber, event, details } = data;
+      
+      // 사용자별 맞춤형 알림 내용 생성
+      let personalizedMessage = details.message;
+      let personalizedTitle = details.title;
+      
+      if (userRole === 'homeroom_teacher' && gradeLevel && classNumber) {
+        // 담임교사: 담당 학급 학생만 언급
+        if (details.studentDetails && details.studentDetails.length > 0) {
+          const relevantStudents = details.studentDetails.filter((student: any) => 
+            student.grade === gradeLevel && student.class === classNumber
+          );
+          
+          if (relevantStudents.length > 0) {
+            const studentNames = relevantStudents.map((s: any) => s.name).join(', ');
+            personalizedMessage = `${gradeLevel}학년 ${classNumber}반 담당 학생 중 ${studentNames}이(가) 고위험으로 감지되었습니다.`;
+            personalizedTitle = `${gradeLevel}학년 ${classNumber}반 고위험 학생 감지`;
+          } else {
+            // 담당 학급에 해당하는 학생이 없으면 알림 생성하지 않음
+            return;
+          }
+        } else {
+          personalizedMessage = `${gradeLevel}학년 ${classNumber}반 담당 학생 관련 알림입니다.`;
+        }
+      } else if (userRole === 'grade_teacher' && gradeLevel) {
+        // 학년담당: 해당 학년 학생만 언급
+        if (details.studentDetails && details.studentDetails.length > 0) {
+          const relevantStudents = details.studentDetails.filter((student: any) => 
+            student.grade === gradeLevel
+          );
+          
+          if (relevantStudents.length > 0) {
+            const studentNames = relevantStudents.map((s: any) => s.name).join(', ');
+            personalizedMessage = `${gradeLevel}학년 학생 중 ${studentNames}이(가) 고위험으로 감지되었습니다.`;
+            personalizedTitle = `${gradeLevel}학년 고위험 학생 감지`;
+          } else {
+            return;
+          }
+        } else {
+          personalizedMessage = `${gradeLevel}학년 학생 관련 알림입니다.`;
+        }
+      } else if (userRole === 'school_admin') {
+        // 학교관리자: 학교 전체 학생 언급
+        if (details.studentDetails && details.studentDetails.length > 0) {
+          const studentNames = details.studentDetails.map((s: any) => s.name).join(', ');
+          personalizedMessage = `학교 전체 학생 중 ${studentNames}이(가) 고위험으로 감지되었습니다.`;
+          personalizedTitle = '학교 전체 고위험 학생 감지';
+        }
+      }
+      
+      // 개별화된 알림 생성
+      await this.createSystemNotification(userId, event, {
+        ...details,
+        title: personalizedTitle,
+        message: personalizedMessage
+      });
+      
+    } catch (error) {
+      console.error('개별화된 알림 생성 오류:', error);
+    }
+  }
+
+  /**
+   * 권한별 알림 생성 (학년부장, 학교 관리자 등) - 개선된 버전
    */
   static async createRoleBasedNotification(
     role: string,
@@ -338,20 +424,17 @@ export class NotificationService {
     details: any
   ): Promise<void> {
     try {
-
-      
       // 해당 권한을 가진 사용자들 조회 (role 필드 포함)
       let { data: users, error } = await supabase
         .from('users')
-        .select('id, role')
+        .select('id, role, grade_level, class_number')
         .eq('school_id', schoolId);
 
       if (error || !users) {
-
         return;
       }
 
-      // 권한별 필터링
+      // 권한별 필터링 및 개별화된 알림 생성
       let targetUsers = users;
       if (role === 'grade_teacher') {
         targetUsers = users.filter(user => 
@@ -361,22 +444,26 @@ export class NotificationService {
         targetUsers = users.filter(user => 
           ['school_admin', 'district_admin'].includes(user.role)
         );
+      } else if (role === 'homeroom_teacher') {
+        targetUsers = users.filter(user => 
+          ['homeroom_teacher', 'grade_teacher', 'school_admin', 'district_admin'].includes(user.role)
+        );
       }
 
-      // 알림 생성
-      if (targetUsers.length > 0) {
-        const userIds = targetUsers.map(user => user.id);
-        await this.createNotificationsForUsers(
-          userIds,
-          details.title,
-          details.message,
-          details.type || 'info',
-          details.category || '시스템'
-        );
-
+      // 각 사용자별로 개별화된 알림 생성
+      for (const user of targetUsers) {
+        await this.createPersonalizedNotification({
+          userId: user.id,
+          userRole: user.role,
+          schoolId: schoolId,
+          gradeLevel: user.grade_level || undefined,
+          classNumber: user.class_number || undefined,
+          event: event,
+          details: details
+        });
       }
     } catch (error) {
-
+      console.error('권한별 알림 생성 오류:', error);
     }
   }
 
@@ -411,31 +498,67 @@ export class NotificationService {
 
 
 
-      // 각 설문에 대해 담당 교사들에게 알림 생성
-      for (const survey of surveys) {
-        if (survey.created_by) {
-          // 설문 생성자에게 알림
-          await this.createNotification({
-            user_id: survey.created_by,
-            title: '설문 마감 임박',
-            message: `"${survey.title}" 설문이 ${new Date(survey.end_date).toLocaleDateString()}에 마감됩니다.`,
-            type: 'warning',
-            category: '마감'
-          });
-        }
+      // 학교의 모든 사용자 조회
+      const { data: users, error: usersError } = await supabase
+        .from('users')
+        .select('id, role, grade_level, class_number')
+        .eq('school_id', schoolId);
 
-        // 권한별 알림 생성 (학년부장, 학교 관리자 등)
-        await this.createRoleBasedNotification(
-          'grade_teacher',
-          schoolId,
-          'survey_deadline_approaching',
-          {
-            title: '설문 마감 임박',
-            message: `"${survey.title}" 설문이 ${new Date(survey.end_date).toLocaleDateString()}에 마감됩니다.`,
-            type: 'warning',
-            category: '마감'
+      if (usersError || !users) {
+        return;
+      }
+
+      // 각 설문에 대해 사용자별 개별화된 알림 생성
+      for (const survey of surveys) {
+        for (const user of users) {
+          // 설문 대상 학년/반과 사용자 권한 매칭 확인
+          const targetGrades = survey.target_grades || [];
+          const targetClasses = survey.target_classes || [];
+          
+          let shouldNotify = false;
+          let personalizedMessage = `"${survey.title}" 설문이 ${new Date(survey.end_date).toLocaleDateString()}에 마감됩니다.`;
+          
+          if (user.role === 'homeroom_teacher' && user.grade_level && user.class_number) {
+            // 담임교사: 담당 학급이 설문 대상에 포함되는지 확인
+            const gradeMatch = targetGrades.length === 0 || targetGrades.includes(user.grade_level.toString());
+            const classMatch = targetClasses.length === 0 || targetClasses.includes(user.class_number.toString());
+            
+            if (gradeMatch && classMatch) {
+              shouldNotify = true;
+              personalizedMessage = `담당하시는 ${user.grade_level}학년 ${user.class_number}반의 "${survey.title}" 설문이 ${new Date(survey.end_date).toLocaleDateString()}에 마감됩니다.`;
+            }
+          } else if (user.role === 'grade_teacher' && user.grade_level) {
+            // 학년담당: 담당 학년이 설문 대상에 포함되는지 확인
+            const gradeMatch = targetGrades.length === 0 || targetGrades.includes(user.grade_level.toString());
+            
+            if (gradeMatch) {
+              shouldNotify = true;
+              personalizedMessage = `담당하시는 ${user.grade_level}학년의 "${survey.title}" 설문이 ${new Date(survey.end_date).toLocaleDateString()}에 마감됩니다.`;
+            }
+          } else if (['school_admin', 'district_admin'].includes(user.role)) {
+            // 관리자: 모든 설문 알림
+            shouldNotify = true;
+            personalizedMessage = `"${survey.title}" 설문이 ${new Date(survey.end_date).toLocaleDateString()}에 마감됩니다.`;
           }
-        );
+          
+          if (shouldNotify) {
+            await this.createPersonalizedNotification({
+              userId: user.id,
+              userRole: user.role,
+              schoolId: schoolId,
+              gradeLevel: user.grade_level || undefined,
+              classNumber: user.class_number || undefined,
+              event: 'survey_deadline_approaching',
+              details: {
+                title: '설문 마감 임박',
+                message: personalizedMessage,
+                type: 'warning',
+                category: '마감',
+                surveyDetails: survey
+              }
+            });
+          }
+        }
       }
 
 
@@ -605,30 +728,47 @@ export class NotificationService {
         return;
       }
 
-      // 권한별 알림 생성
-      await this.createRoleBasedNotification(
-        'grade_teacher',
-        schoolId,
-        'high_risk_students_detected',
-        {
-          title: '고위험 학생 주기적 감지',
-          message: `${highRiskStudents.length}명의 고위험 학생이 감지되었습니다. 정기 점검이 필요합니다.`,
-          type: 'warning',
-          category: '위험 관리'
-        }
-      );
+      // 실제 학생 정보 조회
+      const studentIds = highRiskStudents.map((node: any) => node.id);
+      const { data: students, error: studentsError } = await supabase
+        .from('students')
+        .select('id, name, grade, class, current_school_id')
+        .in('id', studentIds)
+        .eq('current_school_id', schoolId)
+        .eq('is_active', true);
 
-      await this.createRoleBasedNotification(
-        'school_admin',
-        schoolId,
-        'high_risk_students_detected',
-        {
-          title: '고위험 학생 주기적 감지',
-          message: `${highRiskStudents.length}명의 고위험 학생이 감지되었습니다. 학교 차원의 개입이 필요합니다.`,
-          type: 'warning',
-          category: '위험 관리'
-        }
-      );
+      if (studentsError || !students) {
+        return;
+      }
+
+      // 학교의 모든 사용자 조회
+      const { data: users, error: usersError } = await supabase
+        .from('users')
+        .select('id, role, grade_level, class_number')
+        .eq('school_id', schoolId);
+
+      if (usersError || !users) {
+        return;
+      }
+
+      // 각 사용자별로 개별화된 알림 생성
+      for (const user of users) {
+        await this.createPersonalizedNotification({
+          userId: user.id,
+          userRole: user.role,
+          schoolId: schoolId,
+          gradeLevel: user.grade_level || undefined,
+          classNumber: user.class_number || undefined,
+          event: 'high_risk_students_detected',
+          details: {
+            title: '고위험 학생 감지',
+            message: `${highRiskStudents.length}명의 고위험 학생이 감지되었습니다.`,
+            type: 'warning',
+            category: '위험 관리',
+            studentDetails: students
+          }
+        });
+      }
 
       // 마지막 알림 시간은 기존 알림 테이블에서 자동으로 확인됨
 

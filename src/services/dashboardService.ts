@@ -201,29 +201,55 @@ export class DashboardService {
             }
             
             
-            // 고위험 학생 감지 시 알림 생성 (한 번만)
+            // 고위험 학생 감지 시 개별화된 알림 생성
             if (highRiskCount > 0) {
               try {
                 // 이미 고위험 학생 알림이 생성되었는지 확인
                 const hasExistingNotification = await NotificationService.checkExistingHighRiskNotification(schoolId);
                 
                 if (!hasExistingNotification) {
-                  // 권한별 알림 생성
-                  if (teacherInfo?.role && schoolId) {
-                    await NotificationService.createRoleBasedNotification(
-                      teacherInfo.role,
-                      schoolId,
-                      'high_risk_students_detected',
-                      {
-                        title: '고위험 학생 감지',
-                        message: `${highRiskCount}명의 고위험 학생이 감지되었습니다. 즉시 개입이 필요합니다.`,
-                        type: 'warning',
-                        category: '위험 관리'
-                      }
-                    );
-                  }
+                  // 고위험 학생들의 실제 정보 조회
+                  // 네트워크 분석 결과에서 고위험 학생 ID 추출
+                  const recommendations = analysis.recommendations as any;
+                  const completeData = recommendations?.complete_analysis_data;
+                  const highRiskStudentIds = completeData?.nodes
+                    ?.filter((node: any) => node.centrality < 0.3)
+                    ?.map((node: any) => node.id) || [];
                   
-                } else {
+                  const { data: highRiskStudents, error: studentsError } = await supabase
+                    .from('students')
+                    .select('id, name, grade, class, current_school_id')
+                    .in('id', highRiskStudentIds)
+                    .eq('current_school_id', schoolId)
+                    .eq('is_active', true);
+
+                  if (!studentsError && highRiskStudents) {
+                    // 학교의 모든 사용자에게 개별화된 알림 생성
+                    const { data: users, error: usersError } = await supabase
+                      .from('users')
+                      .select('id, role, grade_level, class_number')
+                      .eq('school_id', schoolId);
+
+                    if (!usersError && users) {
+                      for (const user of users) {
+                        await NotificationService.createPersonalizedNotification({
+                          userId: user.id,
+                          userRole: user.role,
+                          schoolId: schoolId,
+                          gradeLevel: user.grade_level || undefined,
+                          classNumber: user.class_number || undefined,
+                          event: 'high_risk_students_detected',
+                          details: {
+                            title: '고위험 학생 감지',
+                            message: `${highRiskCount}명의 고위험 학생이 감지되었습니다. 즉시 개입이 필요합니다.`,
+                            type: 'warning',
+                            category: '위험 관리',
+                            studentDetails: highRiskStudents
+                          }
+                        });
+                      }
+                    }
+                  }
                 }
               } catch (error) {
                 console.error('고위험 학생 알림 생성 오류:', error);
