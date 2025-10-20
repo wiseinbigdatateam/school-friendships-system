@@ -8,7 +8,6 @@ const Notifications: React.FC = () => {
     notifications,
     loading,
     markAsRead,
-    markAllAsRead,
     deleteNotification,
     markMultipleAsRead,
     deleteMultipleNotifications,
@@ -22,14 +21,6 @@ const Notifications: React.FC = () => {
       await markAsRead(notificationId);
     } catch (error) {
       console.error("읽음 처리 오류:", error);
-    }
-  };
-
-  const handleMarkAllAsRead = async () => {
-    try {
-      await markAllAsRead();
-    } catch (error) {
-      console.error("전체 읽음 처리 오류:", error);
     }
   };
 
@@ -63,7 +54,18 @@ const Notifications: React.FC = () => {
 
   const handleBulkMarkAsRead = async () => {
     try {
-      await markMultipleAsRead(selectedNotifications);
+      // 선택된 알림 중 읽지 않은 알림만 필터링
+      const unreadSelectedNotifications = selectedNotifications.filter(id => {
+        const notification = notifications.find(n => n.id === id);
+        return notification && !notification.is_read;
+      });
+
+      if (unreadSelectedNotifications.length === 0) {
+        alert('읽지 않은 알림이 없습니다.');
+        return;
+      }
+
+      await markMultipleAsRead(unreadSelectedNotifications);
       setSelectedNotifications([]);
       setIsSelectAll(false);
     } catch (error) {
@@ -168,14 +170,6 @@ const Notifications: React.FC = () => {
                 모든 알림을 확인하고 관리하세요.
               </p>
             </div>
-            <div className="flex items-center space-x-3">
-              <button
-                onClick={handleMarkAllAsRead}
-                className="rounded-lg bg-[#3F80EA] px-4 py-2 text-white transition-colors hover:bg-blue-600"
-              >
-                모두 읽음 처리
-              </button>
-            </div>
           </div>
         </div>
 
@@ -244,11 +238,17 @@ const Notifications: React.FC = () => {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
                   <span>읽음 처리</span>
-                  {selectedNotifications.length > 0 && (
-                    <span className="ml-1 rounded-full bg-green-600 px-2 py-0.5 text-xs">
-                      {selectedNotifications.length}
-                    </span>
-                  )}
+                  {selectedNotifications.length > 0 && (() => {
+                    const unreadCount = selectedNotifications.filter(id => {
+                      const notification = notifications.find(n => n.id === id);
+                      return notification && !notification.is_read;
+                    }).length;
+                    return unreadCount > 0 && (
+                      <span className="ml-1 rounded-full bg-green-600 px-2 py-0.5 text-xs">
+                        {unreadCount}
+                      </span>
+                    );
+                  })()}
                 </button>
                 
                 <button
