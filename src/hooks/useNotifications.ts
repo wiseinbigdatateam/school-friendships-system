@@ -60,22 +60,25 @@ export const useNotifications = () => {
           } else if (payload.eventType === 'UPDATE') {
             // 알림 업데이트 (읽음 처리 등)
             const updatedNotification = payload.new as Notification;
+            const oldNotification = payload.old as Notification;
+            
             setNotifications(prev => 
               prev.map(n => n.id === updatedNotification.id ? updatedNotification : n)
             );
             
-            // 읽지 않은 알림 개수 재계산
-            if (updatedNotification.is_read) {
+            // 읽지 않음 → 읽음으로 변경된 경우에만 개수 감소
+            if (!oldNotification.is_read && updatedNotification.is_read) {
               setUnreadCount(prev => Math.max(0, prev - 1));
             }
           } else if (payload.eventType === 'DELETE') {
             // 알림 삭제
             const deletedNotification = payload.old as Notification;
+            
             setNotifications(prev => 
               prev.filter(n => n.id !== deletedNotification.id)
             );
             
-            // 읽지 않은 알림 개수 재계산
+            // 읽지 않은 알림이었다면 개수 감소
             if (!deletedNotification.is_read) {
               setUnreadCount(prev => Math.max(0, prev - 1));
             }
@@ -94,26 +97,27 @@ export const useNotifications = () => {
     if (!user?.id) return false;
 
     try {
-      // 먼저 읽지 않은 알림인지 확인
-      const notification = notifications.find(n => n.id === notificationId);
-      const wasUnread = notification && !notification.is_read;
-      
       const success = await NotificationService.markAsRead(notificationId, user.id);
       if (success) {
-        setNotifications(prev => 
-          prev.map(n => n.id === notificationId ? { ...n, is_read: true } : n)
-        );
-        // 읽지 않은 알림이었다면 개수 감소
-        if (wasUnread) {
-          setUnreadCount(prev => Math.max(0, prev - 1));
-        }
+        // 로컬 상태 업데이트 - prev를 사용하여 최신 상태 접근
+        setNotifications(prev => {
+          const notification = prev.find(n => n.id === notificationId);
+          const wasUnread = notification && !notification.is_read;
+          
+          // 읽지 않은 알림이었다면 개수 감소
+          if (wasUnread) {
+            setUnreadCount(count => Math.max(0, count - 1));
+          }
+          
+          return prev.map(n => n.id === notificationId ? { ...n, is_read: true } : n);
+        });
       }
       return success;
     } catch (error) {
       console.error('🔔 읽음 처리 오류:', error);
       return false;
     }
-  }, [user?.id, notifications]);
+  }, [user?.id]);
 
   // 모든 알림 읽음 처리
   const markAllAsRead = useCallback(async () => {
@@ -141,78 +145,86 @@ export const useNotifications = () => {
     try {
       const success = await NotificationService.deleteNotification(notificationId, user.id);
       if (success) {
-        const notification = notifications.find(n => n.id === notificationId);
-        setNotifications(prev => 
-          prev.filter(n => n.id !== notificationId)
-        );
-        
-        // 읽지 않은 알림 개수 재계산
-        if (notification && !notification.is_read) {
-          setUnreadCount(prev => Math.max(0, prev - 1));
-        }
+        // 로컬 상태 업데이트 - prev를 사용하여 최신 상태 접근
+        setNotifications(prev => {
+          const notification = prev.find(n => n.id === notificationId);
+          
+          // 읽지 않은 알림이었다면 개수 감소
+          if (notification && !notification.is_read) {
+            setUnreadCount(count => Math.max(0, count - 1));
+          }
+          
+          return prev.filter(n => n.id !== notificationId);
+        });
       }
       return success;
     } catch (error) {
       console.error('🔔 알림 삭제 오류:', error);
       return false;
     }
-  }, [user?.id, notifications]);
+  }, [user?.id]);
 
   // 여러 알림 일괄 읽음 처리
   const markMultipleAsRead = useCallback(async (notificationIds: string[]) => {
     if (!user?.id) return false;
 
     try {
-      // 읽지 않은 알림만 필터링하여 개수 계산
-      const unreadNotificationsToUpdate = notifications.filter(n => 
-        notificationIds.includes(n.id) && !n.is_read
-      );
-      
       await NotificationService.markMultipleAsRead(notificationIds);
       
-      // 로컬 상태 업데이트
-      setNotifications(prev => 
-        prev.map(n => 
+      // 로컬 상태 업데이트 - prev를 사용하여 최신 상태 접근
+      setNotifications(prev => {
+        // 읽지 않은 알림만 필터링하여 개수 계산
+        const unreadNotificationsToUpdate = prev.filter(n => 
+          notificationIds.includes(n.id) && !n.is_read
+        );
+        
+        // 읽지 않은 알림 개수 정확히 감소
+        if (unreadNotificationsToUpdate.length > 0) {
+          setUnreadCount(count => Math.max(0, count - unreadNotificationsToUpdate.length));
+        }
+        
+        return prev.map(n => 
           notificationIds.includes(n.id) 
             ? { ...n, is_read: true }
             : n
-        )
-      );
-      
-      // 읽지 않은 알림 개수 정확히 감소
-      setUnreadCount(prev => Math.max(0, prev - unreadNotificationsToUpdate.length));
+        );
+      });
       
       return true;
     } catch (error) {
       console.error('🔔 일괄 읽음 처리 오류:', error);
       return false;
     }
-  }, [user?.id, notifications]);
+  }, [user?.id]);
 
   // 여러 알림 일괄 삭제
   const deleteMultipleNotifications = useCallback(async (notificationIds: string[]) => {
     if (!user?.id) return false;
 
     try {
-      // 삭제될 알림 중 읽지 않은 알림만 필터링하여 개수 계산
-      const deletedUnreadNotifications = notifications.filter(n => 
-        notificationIds.includes(n.id) && !n.is_read
-      );
-      
       await NotificationService.deleteMultipleNotifications(notificationIds);
       
-      // 로컬 상태 업데이트
-      setNotifications(prev => prev.filter(n => !notificationIds.includes(n.id)));
-      
-      // 삭제된 읽지 않은 알림 개수만큼 unreadCount 감소
-      setUnreadCount(prev => Math.max(0, prev - deletedUnreadNotifications.length));
+      // 로컬 상태 업데이트 - prev를 사용하여 최신 상태 접근
+      setNotifications(prev => {
+        // 삭제될 알림 중 읽지 않은 알림만 필터링하여 개수 계산
+        const deletedUnreadNotifications = prev.filter(n => 
+          notificationIds.includes(n.id) && !n.is_read
+        );
+        
+        // 삭제된 읽지 않은 알림 개수만큼 unreadCount 감소
+        if (deletedUnreadNotifications.length > 0) {
+          setUnreadCount(count => Math.max(0, count - deletedUnreadNotifications.length));
+        }
+        
+        return prev.filter(n => !notificationIds.includes(n.id));
+      });
       
       return true;
     } catch (error) {
       console.error('🔔 일괄 삭제 오류:', error);
       return false;
     }
-  }, [user?.id, notifications]);
+  }, [user?.id]);
 
   // 최근 알림 조회 (헤더용)
   const getRecentNotifications = useCallback(async (limit: number = 5) => {
