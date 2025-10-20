@@ -1,14 +1,13 @@
 import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { useAuth } from "../contexts/AuthContext";
 import { supabase } from "../lib/supabase";
 import { hashPassword } from "../utils/password";
 import TermsModal from "../components/TermsModal";
 import SchoolSearchModal from "../components/SchoolSearchModal";
+import { emailService } from "../services/emailService";
 
 const Signup: React.FC = () => {
   const navigate = useNavigate();
-  const { login } = useAuth();
 
   const [formData, setFormData] = useState({
     name: "",
@@ -162,7 +161,7 @@ const Signup: React.FC = () => {
       }
 
       // 2. 이메일 중복 확인
-      const { data: existingUser, error: checkError } = await supabase
+      const { data: existingUser } = await supabase
         .from("users")
         .select("email")
         .eq("email", formData.email)
@@ -173,7 +172,7 @@ const Signup: React.FC = () => {
       }
 
       // 3. 교직원 번호 중복 확인
-      const { data: existingEmployee, error: empCheckError } = await supabase
+      const { data: existingEmployee } = await supabase
         .from("users")
         .select("employee_id")
         .eq("employee_id", formData.employeeId)
@@ -269,9 +268,113 @@ const Signup: React.FC = () => {
         throw new Error("사용자 등록에 실패했습니다. 관리자에게 문의하세요.");
       }
 
-      // 8. 성공 메시지 및 로그인 페이지로 이동
+      // 8. 관리자에게 회원가입 알림 이메일 전송
+      try {
+        const { data: schoolInfo } = await supabase
+          .from("schools")
+          .select("name")
+          .eq("id", schoolData.id)
+          .single();
+
+        const roleNames: { [key: string]: string } = {
+          homeroom_teacher: "담임교사",
+          grade_teacher: "학년부장",
+          school_admin: "학교관리자",
+          district_admin: "교육청관리자"
+        };
+
+        await emailService.sendEmail({
+          to: 'jinseong-kim@wiseinc.co.kr',
+          subject: `[와이즈온스쿨 회원가입 승인 요청] ${formData.name} - ${schoolInfo?.name || ''}`,
+          content: `
+<div style="font-family: 'Noto Sans KR', Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f9fafb;">
+  <div style="background-color: white; border-radius: 12px; padding: 30px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+    <h2 style="color: #3F80EA; margin-bottom: 20px; font-size: 24px; border-bottom: 3px solid #3F80EA; padding-bottom: 10px;">
+      👤 새로운 교직원 회원가입
+    </h2>
+    
+    <div style="margin-bottom: 30px;">
+      <p style="color: #6b7280; margin-bottom: 20px;">새로운 교직원이 회원가입을 완료했습니다. 승인 처리가 필요합니다.</p>
+    </div>
+
+    <div style="background-color: #f3f4f6; border-radius: 8px; padding: 20px; margin-bottom: 20px;">
+      <h3 style="color: #374151; margin-bottom: 15px; font-size: 18px;">📋 가입자 정보</h3>
+      
+      <table style="width: 100%; border-collapse: collapse;">
+        <tr>
+          <td style="padding: 10px 0; color: #6b7280; font-weight: 600; width: 120px;">이름</td>
+          <td style="padding: 10px 0; color: #111827;">${formData.name}</td>
+        </tr>
+        <tr>
+          <td style="padding: 10px 0; color: #6b7280; font-weight: 600;">이메일</td>
+          <td style="padding: 10px 0; color: #111827;">${formData.email}</td>
+        </tr>
+        <tr>
+          <td style="padding: 10px 0; color: #6b7280; font-weight: 600;">학교</td>
+          <td style="padding: 10px 0; color: #111827;">${schoolInfo?.name || '정보 없음'}</td>
+        </tr>
+        <tr>
+          <td style="padding: 10px 0; color: #6b7280; font-weight: 600;">학교 코드</td>
+          <td style="padding: 10px 0; color: #111827;">${formData.schoolCode}</td>
+        </tr>
+        ${formData.employeeId ? `
+        <tr>
+          <td style="padding: 10px 0; color: #6b7280; font-weight: 600;">교직원 번호</td>
+          <td style="padding: 10px 0; color: #111827;">${formData.employeeId}</td>
+        </tr>
+        ` : ''}
+        <tr>
+          <td style="padding: 10px 0; color: #6b7280; font-weight: 600;">직책</td>
+          <td style="padding: 10px 0; color: #111827;">${roleNames[formData.role] || formData.role}</td>
+        </tr>
+        ${formData.gradeLevel || formData.classNumber ? `
+        <tr>
+          <td style="padding: 10px 0; color: #6b7280; font-weight: 600;">담당</td>
+          <td style="padding: 10px 0; color: #111827;">${formData.gradeLevel ? formData.gradeLevel + '학년' : ''} ${formData.classNumber ? formData.classNumber + '반' : ''}</td>
+        </tr>
+        ` : ''}
+        ${formData.department ? `
+        <tr>
+          <td style="padding: 10px 0; color: #6b7280; font-weight: 600;">부서/교과</td>
+          <td style="padding: 10px 0; color: #111827;">${formData.department}</td>
+        </tr>
+        ` : ''}
+        ${formData.phone ? `
+        <tr>
+          <td style="padding: 10px 0; color: #6b7280; font-weight: 600;">연락처</td>
+          <td style="padding: 10px 0; color: #111827;">${formData.phone}</td>
+        </tr>
+        ` : ''}
+      </table>
+    </div>
+
+    <div style="background-color: #fef3c7; border-left: 4px solid #f59e0b; border-radius: 8px; padding: 20px; margin-bottom: 20px;">
+      <h3 style="color: #92400e; margin-bottom: 10px; font-size: 18px;">⚠️ 승인 대기 중</h3>
+      <p style="color: #78350f; line-height: 1.6;">
+        관리자 승인이 완료되면 해당 교직원이 시스템을 사용할 수 있습니다.<br>
+        Supabase 대시보드에서 users 테이블의 <strong>is_active</strong> 컬럼을 <strong>true</strong>로 변경하여 승인해주세요.
+      </p>
+    </div>
+
+    <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #e5e7eb;">
+      <p style="color: #9ca3af; font-size: 12px; line-height: 1.5;">
+        이 알림은 와이즈온스쿨 회원가입 시스템에서 자동으로 발송되었습니다.<br>
+        가입 일시: ${new Date().toLocaleString('ko-KR', { timeZone: 'Asia/Seoul' })}<br>
+        사용자 ID: ${userData?.id || 'N/A'}
+      </p>
+    </div>
+  </div>
+</div>
+          `
+        });
+      } catch (emailError) {
+        // 이메일 전송 실패해도 회원가입은 성공이므로 경고만 출력
+        console.warn('관리자 이메일 알림 전송 실패:', emailError);
+      }
+
+      // 9. 성공 메시지 및 로그인 페이지로 이동
       alert(
-        "회원가입이 완료되었습니다!\n관리자 승인 후 로그인이 가능합니다.\n승인 상태는 이메일로 안내드립니다.",
+        "회원가입이 완료되었습니다!\n관리자 승인 후 로그인이 가능합니다.",
       );
       navigate("/login");
     } catch (error: any) {
@@ -613,8 +716,8 @@ const Signup: React.FC = () => {
                 />
               </div>
 
-              <div className="flex">
-                {/* <button
+              <div className="flex space-x-3">
+                <button
                   type="button"
                   onClick={handlePrevStep}
                   className="flex-1 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
@@ -633,7 +736,7 @@ const Signup: React.FC = () => {
                     />
                   </svg>
                   이전
-                </button> */}
+                </button>
 
                 <button
                   type="button"
@@ -827,8 +930,8 @@ const Signup: React.FC = () => {
                 />
               </div>
 
-              <div className="flex">
-                {/* <button
+              <div className="flex space-x-3">
+                <button
                   type="button"
                   onClick={handlePrevStep}
                   className="flex-1 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
@@ -847,7 +950,7 @@ const Signup: React.FC = () => {
                     />
                   </svg>
                   이전
-                </button> */}
+                </button>
 
                 <button
                   type="submit"

@@ -1,6 +1,44 @@
 const OPENAI_API_KEY = process.env.REACT_APP_OPENAI_API_KEY || '';
 const OPENAI_API_URL = 'https://api.openai.com/v1/chat/completions';
 
+// API 사용량 추적 (로컬 스토리지에 저장)
+const STORAGE_KEY = 'openai_usage_count';
+const STORAGE_DATE_KEY = 'openai_usage_date';
+
+export const getApiUsageCount = () => {
+  const today = new Date().toDateString();
+  const storedDate = localStorage.getItem(STORAGE_DATE_KEY);
+  
+  // 날짜가 바뀌었으면 카운트 리셋
+  if (storedDate !== today) {
+    localStorage.setItem(STORAGE_KEY, '0');
+    localStorage.setItem(STORAGE_DATE_KEY, today);
+    return 0;
+  }
+  
+  return parseInt(localStorage.getItem(STORAGE_KEY) || '0');
+};
+
+export const incrementApiUsageCount = () => {
+  const currentCount = getApiUsageCount();
+  const newCount = currentCount + 1;
+  localStorage.setItem(STORAGE_KEY, newCount.toString());
+  return newCount;
+};
+
+export const resetApiUsageCount = () => {
+  localStorage.setItem(STORAGE_KEY, '0');
+  localStorage.setItem(STORAGE_DATE_KEY, new Date().toDateString());
+};
+
+export const checkApiUsageLimit = () => {
+  const MAX_DAILY_USAGE = 50; // 일일 최대 사용량 설정
+  const currentUsage = getApiUsageCount();
+  if (currentUsage >= MAX_DAILY_USAGE) {
+    throw new Error(`일일 API 사용량 한도에 도달했습니다. (${currentUsage}/${MAX_DAILY_USAGE}) 내일 다시 시도해주세요.`);
+  }
+};
+
 export interface StudentAnalysisData {
   studentName: string;
   grade: number;
@@ -11,6 +49,8 @@ export interface StudentAnalysisData {
   isolationRisk: string;
   friendshipDevelopment: string;
   communityIntegration: string;
+  satisfaction?: number; // 학교생활 만족도 (0-1)
+  violenceExperience?: number; // 폭력 경험도 (0-1)
   personalSummary?: any;
 }
 
@@ -26,6 +66,13 @@ export interface GeneratedReport {
   // 세부 분석
   detailedAnalysis: {
     schoolLifeSatisfaction: {
+      surveyResults: {
+        question: string;
+        answer: string;
+      }[];
+      analysis: string;
+    };
+    violenceExperience: {
       surveyResults: {
         question: string;
         answer: string;
@@ -140,18 +187,50 @@ export const generateStudentGuidanceReport = async (
 - 고립 위험도: ${analysisData.isolationRisk}
 - 친구 관계 발전: ${analysisData.friendshipDevelopment}
 - 커뮤니티 통합: ${analysisData.communityIntegration}
+- 학교생활 만족도: ${((analysisData.satisfaction || 0) * 100).toFixed(1)}% (${(analysisData.satisfaction || 0) >= 0.7 ? '높음' : (analysisData.satisfaction || 0) >= 0.4 ? '보통' : '낮음'})
+- 폭력 경험도: ${((analysisData.violenceExperience || 0) * 100).toFixed(1)}% (${(analysisData.violenceExperience || 0) >= 0.7 ? '높음' : (analysisData.violenceExperience || 0) >= 0.4 ? '보통' : '낮음'})
 
 ${additionalSurveyData ? `
 [추가 설문 데이터]
 ${JSON.stringify(additionalSurveyData, null, 2)}
 ` : ''}
 
+[설문 내용 안내]
+종합조사 설문은 다음과 같은 9개 문항으로 구성됩니다:
+
+1. 교우관계 조사 (1문항):
+   Q1. 최근 한달 동안 가장 많이 함께 한 친구들을 학생이름으로 적어주세요 (최대 3명)
+   
+2. 학교생활 만족도 조사 (4문항):
+   Q2. 쉬는 시간에 친구들과 잘 논다
+   Q3. 수업 시간에 즐겁게 참여한다
+   Q4. 학교에 오고 싶다는 생각이 든다
+   Q5. 선생님과 이야기하는 것이 편하다
+   (응답: 예 / 아니오)
+   
+3. 학교폭력 경험도 조사 (3문항):
+   Q6. 친구들이 나를 때리거나 발로 차거나 밀치는 행동을 한 적이 있나요?
+   Q7. 친구들이 나에게 욕을 하거나 놀린 적이 있나요?
+   Q8. 친구들이 나를 따돌리거나 괴롭힌 적이 있나요?
+   (응답: 전혀 없다 / 한 두번 당한 적 있다 / 자주 있다)
+   
+4. 주관식 (1문항):
+   Q9. 학교생활에서 가장 힘든 점이나 바라는 점을 자유롭게 적어주세요
+
+분석 시 이 설문 구조를 고려하여 학생의 교우관계, 학교생활 만족도, 폭력 경험을 종합적으로 평가해야 합니다.
+
 [분석 기준]
-중심성 점수에 따른 분류:
-- 70% 이상: 주도형/인기형 (네트워크 중심부)
-- 40-69%: 일반형 (네트워크 중간부)
-- 30-39%: 주변형 (네트워크 주변부)
-- 30% 미만: 고립 위험형 (네트워크 외곽부)
+교우관계 유형 분류 (연결 수 기준):
+- 연결 수 0개: 외톨이형 (네트워크 외곽부)
+- 연결 수 1-2개: 소수 친구 학생 (네트워크 주변부)
+- 연결 수 3-5개: 평균적인 학생 (네트워크 중간부)
+- 연결 수 6-8개: 친구 많은 학생 (네트워크 중심부)
+- 연결 수 9개 이상: 사교 스타 (네트워크 핵심부)
+
+만족도와 폭력 경험도 종합 고려사항:
+- 학교생활 만족도가 낮은 경우: 학교생활 부적응, 학습 동기 저하, 우울감 등의 위험
+- 폭력 경험도가 높은 경우: 가해자/피해자 위험, 학교폭력 예방 교육 필요
+- 교우관계 유형과 만족도/폭력 경험도를 종합하여 맞춤형 지도 방안 제시 필요
 
 [요청사항]
 다음과 같이 매우 상세하고 전문적인 JSON 형태의 지도 리포트를 생성해주세요. 첨부된 파일 형태를 참고하여 다음 구조로 작성해주세요:
@@ -173,19 +252,25 @@ ${JSON.stringify(additionalSurveyData, null, 2)}
   "detailedAnalysis": {
     "schoolLifeSatisfaction": {
       "surveyResults": [
-        {"question": "쉬는 시간에 친구들과 잘 논다", "answer": "예"},
-        {"question": "수업 시간에 즐겁게 참여한다", "answer": "예"},
-        {"question": "학교에 오고 싶다는 생각이 든다", "answer": "예"},
-        {"question": "선생님과 이야기하는 것이 편하다", "answer": "아니요"},
-        {"question": "학교 활동에 적극적으로 참여한다", "answer": "아니요"},
-        {"question": "급식을 남기지 않고 잘 먹는다", "answer": "예"}
+        {"question": "Q2. 쉬는 시간에 친구들과 잘 논다", "answer": "예"},
+        {"question": "Q3. 수업 시간에 즐겁게 참여한다", "answer": "예"},
+        {"question": "Q4. 학교에 오고 싶다는 생각이 든다", "answer": "예"},
+        {"question": "Q5. 선생님과 이야기하는 것이 편하다", "answer": "아니오"}
       ],
-      "analysis": "친구 관계에 대한 긍정 응답과 달리, 교사와의 관계나 학교 활동 참여에는 부정적으로 답했습니다. 이는 자신이 주도하지 않는 관계나 활동에는 큰 흥미를 느끼지 못하는 성향을 시사합니다."
+      "analysis": "친구 관계에 대한 긍정 응답과 달리, 교사와의 관계에는 부정적으로 답했습니다. 이는 자신이 주도하지 않는 관계에는 큰 흥미를 느끼지 못하는 성향을 시사합니다."
+    },
+    "violenceExperience": {
+      "surveyResults": [
+        {"question": "Q6. 친구들이 나를 때리거나 발로 차거나 밀치는 행동을 한 적이 있나요?", "answer": "전혀 없다"},
+        {"question": "Q7. 친구들이 나에게 욕을 하거나 놀린 적이 있나요?", "answer": "한 두번 당한 적 있다"},
+        {"question": "Q8. 친구들이 나를 따돌리거나 괴롭힌 적이 있나요?", "answer": "전혀 없다"}
+      ],
+      "analysis": "신체적 폭력이나 따돌림은 경험하지 않았으나, 언어적 괴롭힘을 경험한 것으로 나타나 주의 깊은 관찰이 필요합니다."
     },
     "peerNetworkAnalysis": {
       "receivedChoices": ${analysisData.totalRelationships},
       "madeChoices": ${Math.max(1, analysisData.totalRelationships - 1)},
-      "networkPosition": "주도형 또는 인기형",
+      "networkPosition": "사교 스타",
       "analysis": "다수의 학생으로부터 선택을 받아 관계망의 중심에 있으며, 본인 역시 여러 친구들과 상호작용하며 네트워크 허브 역할을 하고 있습니다. 학급 내 여론 형성이나 분위기를 주도하는 핵심적인 인물입니다."
     }
   },
@@ -260,10 +345,13 @@ ${JSON.stringify(additionalSurveyData, null, 2)}
 7. 모든 배열과 객체 필드는 완전히 채워져야 합니다.
 `;
 
+    // API 사용량 한도 확인
+    checkApiUsageLimit();
+    
     // API 호출 (재시도 로직 포함)
     let response: Response;
     let retryCount = 0;
-    const maxRetries = 3;
+    const maxRetries = 5;
     
     while (retryCount < maxRetries) {
       try {
@@ -296,7 +384,7 @@ ${JSON.stringify(additionalSurveyData, null, 2)}
             throw new Error('API 사용량 제한에 도달했습니다. 잠시 후 다시 시도해주세요.');
           }
           retryCount++;
-          const waitTime = Math.pow(2, retryCount) * 1000; // 지수 백오프
+          const waitTime = Math.pow(2, retryCount) * 2000 + Math.random() * 1000; // 지수 백오프 + 랜덤 지연
           await new Promise(resolve => setTimeout(resolve, waitTime));
           continue;
         }
@@ -305,6 +393,8 @@ ${JSON.stringify(additionalSurveyData, null, 2)}
           throw new Error(`OpenAI API 오류: ${response.status}`);
         }
 
+        // API 사용량 증가
+        incrementApiUsageCount();
         break; // 성공하면 루프 종료
       } catch (error) {
         if (retryCount >= maxRetries - 1) {
@@ -436,17 +526,37 @@ ${JSON.stringify(additionalSurveyData, null, 2)}
     }
 
   } catch (error) {
-    console.error('ChatGPT API 호출 오류:', error);
-    throw error;
+    // 사용자 친화적인 에러 메시지
+    if (error instanceof Error) {
+      if (error.message.includes('429') || error.message.includes('사용량 제한')) {
+        throw new Error('AI 서비스 사용량이 초과되었습니다. 잠시 후 다시 시도해주세요.');
+      } else if (error.message.includes('insufficient_quota') || error.message.includes('quota')) {
+        throw new Error('AI 서비스 결제 한도에 도달했습니다. 결제 정보를 확인해주세요.');
+      } else if (error.message.includes('401') || error.message.includes('인증')) {
+        throw new Error('AI 서비스 인증에 실패했습니다. 관리자에게 문의해주세요.');
+      } else if (error.message.includes('500')) {
+        throw new Error('AI 서비스에 일시적인 문제가 발생했습니다. 잠시 후 다시 시도해주세요.');
+      } else {
+        throw new Error(`AI 리포트 생성 중 오류가 발생했습니다: ${error.message}`);
+      }
+    } else {
+      throw new Error('AI 리포트 생성 중 알 수 없는 오류가 발생했습니다.');
+    }
   }
 };
 
-// 간단한 리포트 생성 (API 실패 시 대체)
+// 정확한 대체 리포트 생성 (API 실패 시 사용)
 export const generateFallbackReport = (
   analysisData: StudentAnalysisData
 ): GeneratedReport => {
   const centrality = analysisData.centrality;
   const studentName = analysisData.studentName;
+  const satisfaction = analysisData.satisfaction || 0;
+  const violenceExperience = analysisData.violenceExperience || 0;
+  
+  // 만족도와 폭력 경험도 반영한 분석
+  const satisfactionLevel = satisfaction >= 0.7 ? '높음' : satisfaction >= 0.4 ? '보통' : '낮음';
+  const violenceRisk = violenceExperience >= 0.7 ? '높음' : violenceExperience >= 0.4 ? '보통' : '낮음';
   
   let summary = '';
   let currentStatus = '';
@@ -454,30 +564,54 @@ export const generateFallbackReport = (
   let guidancePlan = '';
   let studentTypeClassification = '';
   
-  if (centrality >= 0.7) {
-    studentTypeClassification = '주도형/인기형';
-    summary = `${studentName} 학생은 교우관계 네트워크의 중심에 위치한 '주도형' 학생입니다. 뛰어난 사회성과 리더십을 바탕으로 많은 친구들에게 긍정적인 영향을 미치고 있으며, 이는 학급 전체에 활기를 불어넣는 중요한 강점입니다. 하지만 선생님과의 관계를 다소 불편하게 느끼고, 스스로 참여를 결정하는 활동 외에는 소극적인 모습을 보입니다. 이는 리더 역할의 부담감이나, 수직적인 관계에 대한 심리적 저항감에서 비롯될 수 있으므로, 학생의 영향력을 긍정적으로 이끌어주기 위한 전략적인 지원이 필요합니다.`;
-    currentStatus = `학교생활 만족도 분석 (설문 결과): ${studentName} 학생의 설문 응답은 또래 관계에 대한 높은 만족감과 교사 및 일부 활동에 대한 미묘한 거리감을 동시에 보여줍니다. 쉬는 시간에 친구들과 잘 논다: 예, 수업 시간에 즐겁게 참여한다: 예, 학교에 오고 싶다는 생각이 든다: 예, 선생님과 이야기하는 것이 편하다: 아니요, 학교 활동에 적극적으로 참여한다: 아니요, 급식을 남기지 않고 잘 먹는다: 예. 친구 관계에 대한 긍정 응답과 달리, 교사와의 관계나 학교 활동 참여에는 부정적으로 답했습니다. 이는 자신이 주도하지 않는 관계나 활동에는 큰 흥미를 느끼지 못하는 성향을 시사합니다. 교우관계 네트워크 분석 (관계도): 위의 교우관계 네트워크에서 ${studentName} 학생은 '주도형' 또는 '인기형'으로 분류됩니다. 받은 선택 (나를 선택한 친구): ${analysisData.totalRelationships}명, 한 선택 (내가 선택한 친구): ${Math.max(1, analysisData.totalRelationships - 1)}명. 다수의 학생으로부터 선택을 받아 관계망의 중심에 있으며, 본인 역시 여러 친구들과 상호작용하며 네트워크 허브 역할을 하고 있습니다. 학급 내 여론 형성이나 분위기를 주도하는 핵심적인 인물입니다.`;
-    riskAssessment = `긍정적인 요인 (강점): 1. 뛰어난 사회성 및 리더십 - 많은 친구들에게 신뢰와 인기를 얻고 있어 관계의 중심 역할을 합니다. 2. 긍정적 또래 영향력 - 학생의 즐거운 학교생활 태도는 주변 친구들에게도 긍정적인 영향을 미칠 수 있습니다. 주의가 필요한 부분 (개선 영역): 1. 권위와의 관계 설정 - 교사와의 관계를 불편하게 여겨, 지도나 조언을 받아들이는 데 어려움을 겪을 수 있습니다. 2. 역할에 대한 부담감 - 네트워크의 중심에 있다는 사실이 때로는 압박감이나 과도한 책임감으로 작용할 수 있습니다. 3. 선택적 참여 - 자신이 흥미를 느끼거나 주도하는 활동에만 참여하려는 경향이 있어, 다양한 경험의 기회를 놓칠 수 있습니다.`;
-    guidancePlan = `${studentName} 학생의 뛰어난 리더십을 긍정적으로 발휘하도록 돕고, 모든 관계에서 건강한 상호작용을 배울 수 있도록 지원해야 합니다.`;
-  } else if (centrality >= 0.4) {
-    studentTypeClassification = '일반형';
-    summary = `${studentName} 학생은 교우관계에서 안정적인 위치를 유지하고 있는 일반형 학생입니다. 적절한 수준의 친구 관계를 형성하고 있으며, 대부분의 학교 활동에 균형 있게 참여하고 있습니다.`;
-    currentStatus = `중심성 점수 ${(centrality * 100).toFixed(1)}%로 네트워크의 중간부에 위치합니다. 총 ${analysisData.totalRelationships}명의 친구와 연결되어 있으며, 안정적이면서도 확장 가능한 교우관계를 유지하고 있습니다.`;
-    riskAssessment = '현재는 안정적인 상태이지만, 더 다양한 친구들과의 교류 기회가 필요합니다. 또한 리더십 발휘 기회를 통해 잠재력을 개발할 수 있습니다.';
-    guidancePlan = '현재의 안정적인 교우관계를 유지하면서 네트워크를 점진적으로 확장하고, 리더십 기회를 제공하여 성장을 도모해야 합니다.';
-  } else if (centrality >= 0.3) {
-    studentTypeClassification = '주변형';
-    summary = `${studentName} 학생은 교우관계에서 주변부에 위치한 주변형 학생입니다. 소수의 친구들과 깊은 관계를 유지하고 있지만, 전체 네트워크와의 연결이 상대적으로 약한 상태입니다.`;
-    currentStatus = `중심성 점수 ${(centrality * 100).toFixed(1)}%로 네트워크의 주변부에 위치합니다. 총 ${analysisData.totalRelationships}명의 친구와 연결되어 있으며, 소규모 그룹 내에서 안정적인 관계를 유지하고 있습니다.`;
-    riskAssessment = '네트워크 확장의 어려움과 사회적 기술 부족이 주요 위험 요소입니다. 고립될 가능성이 있어 지속적인 관찰과 개입이 필요합니다.';
-    guidancePlan = '친구 관계를 점진적으로 확장하고, 그룹 활동 참여를 통해 사회적 기술을 향상시켜야 합니다.';
+  // 중심성과 만족도, 폭력 경험도를 종합적으로 분석
+  const connectionCount = analysisData.totalRelationships;
+  
+  if (connectionCount === 0) {
+    studentTypeClassification = '외톨이형';
+    summary = `${studentName} 학생은 교우관계에서 고립된 상태입니다. 연결 수 0개로 네트워크 외곽부에 위치하며, 학교생활 만족도는 ${satisfactionLevel} 수준, 폭력 경험도는 ${violenceRisk} 수준입니다. 친구 관계 형성에 어려움을 겪고 있으며, 즉각적인 개입과 지원이 필요한 상태입니다.`;
+    
+    currentStatus = `교우관계 네트워크 분석: 연결 수 0개로 네트워크의 외곽부에 위치합니다. 다른 학생들과의 연결이 전혀 없어 고립된 상태입니다. 학교생활 만족도: ${satisfactionLevel} 수준 (${(satisfaction * 100).toFixed(1)}%)으로 ${satisfaction >= 0.5 ? '일부 만족스러운 부분이 있음' : '학교생활에 심각한 어려움을 겪고 있을 가능성'}이 있습니다. 폭력 경험도: ${violenceRisk} 수준 (${(violenceExperience * 100).toFixed(1)}%)으로 ${violenceExperience >= 0.5 ? '폭력 상황에 노출될 위험이 매우 높음' : '고립 상황으로 인한 위험이 높음'}입니다.`;
+    
+    riskAssessment = `긍정적인 요인: 1. 학교생활 만족도 ${satisfactionLevel} - ${satisfaction >= 0.5 ? '일부 긍정적인 학교생활 경험' : '제한적이지만 긍정적 요소 존재'}가 있습니다. 주의가 필요한 부분: 1. 고립 위험 - 네트워크 외곽부에 위치하여 고립될 위험이 매우 높습니다. 2. 폭력 경험도 ${violenceRisk} - ${violenceExperience >= 0.5 ? '폭력 상황에 노출될 위험이 매우 높아 즉각적인 개입이 필요' : '고립 상황으로 인한 폭력 위험이 높음'}합니다. 3. 사회적 기술 부족 - 친구 관계 형성에 어려움을 겪고 있습니다. 4. 자존감 저하 - 학교생활 부적응 가능성이 높습니다.`;
+    
+    guidancePlan = '즉각적인 개입을 통해 친구 관계 형성을 지원하고, 사회적 기술 향상을 위한 체계적인 프로그램과 폭력 예방 교육을 통해 안전한 학교생활을 유지할 수 있도록 지원해야 합니다.';
+  } else if (connectionCount <= 2) {
+    studentTypeClassification = '소수 친구 학생';
+    summary = `${studentName} 학생은 교우관계에서 주변부에 위치한 소수 친구 학생입니다. 연결 수 ${connectionCount}개로 네트워크의 주변부에 위치하며, 학교생활 만족도는 ${satisfactionLevel} 수준, 폭력 경험도는 ${violenceRisk} 수준입니다. 소수의 친구들과 깊은 관계를 유지하고 있지만, 전체 네트워크와의 연결이 상대적으로 약한 상태입니다.`;
+    
+    currentStatus = `교우관계 네트워크 분석: 연결 수 ${connectionCount}개로 네트워크의 주변부에 위치합니다. 소규모 그룹 내에서 안정적인 관계를 유지하고 있습니다. 학교생활 만족도: ${satisfactionLevel} 수준 (${(satisfaction * 100).toFixed(1)}%)으로 ${satisfaction >= 0.5 ? '만족스러운 학교생활' : '학교생활에 어려움을 겪고 있을 가능성'}이 있습니다. 폭력 경험도: ${violenceRisk} 수준 (${(violenceExperience * 100).toFixed(1)}%)으로 ${violenceExperience >= 0.5 ? '폭력 상황에 노출될 위험이 높음' : '상대적으로 안전한 상태'}입니다.`;
+    
+    riskAssessment = `긍정적인 요인: 1. 소규모 그룹 내 안정적 관계 - 깊이 있는 친구 관계를 유지하고 있습니다. 2. 학교생활 만족도 ${satisfactionLevel} - ${satisfaction >= 0.5 ? '전반적으로 만족스러운 학교생활' : '일부 어려움을 겪고 있을 가능성'}이 있습니다. 주의가 필요한 부분: 1. 네트워크 확장 어려움 - 전체 네트워크와의 연결이 약합니다. 2. 폭력 경험도 ${violenceRisk} - ${violenceExperience >= 0.5 ? '폭력 상황에 노출될 위험이 높아 주의 깊은 관찰이 필요' : '상대적으로 안전한 상태'}합니다. 3. 사회적 기술 부족 - 더 다양한 친구들과의 교류 기회가 필요합니다.`;
+    
+    guidancePlan = '친구 관계를 점진적으로 확장하고, 그룹 활동 참여를 통해 사회적 기술을 향상시키며, 폭력 예방 교육을 통해 안전한 학교생활을 유지할 수 있도록 지원해야 합니다.';
+  } else if (connectionCount <= 5) {
+    studentTypeClassification = '평균적인 학생';
+    summary = `${studentName} 학생은 교우관계에서 안정적인 위치를 유지하고 있는 평균적인 학생입니다. 연결 수 ${connectionCount}개로 네트워크의 중간부에 위치하며, 학교생활 만족도는 ${satisfactionLevel} 수준, 폭력 경험도는 ${violenceRisk} 수준입니다. 적절한 수준의 친구 관계를 형성하고 있으며, 대부분의 학교 활동에 균형 있게 참여하고 있습니다.`;
+    
+    currentStatus = `교우관계 네트워크 분석: 연결 수 ${connectionCount}개로 네트워크의 중간부에 위치합니다. 안정적이면서도 확장 가능한 교우관계를 유지하고 있습니다. 학교생활 만족도: ${satisfactionLevel} 수준 (${(satisfaction * 100).toFixed(1)}%)으로 전반적으로 만족스러운 학교생활을 하고 있습니다. 폭력 경험도: ${violenceRisk} 수준 (${(violenceExperience * 100).toFixed(1)}%)으로 ${violenceExperience >= 0.5 ? '주의 관찰이 필요' : '안전한 상태'}합니다.`;
+    
+    riskAssessment = `긍정적인 요인: 1. 안정적인 교우관계 - 균형 잡힌 관계를 유지하고 있습니다. 2. 긍정적 학교생활 - 만족도가 ${satisfactionLevel} 수준으로 학교생활에 잘 적응하고 있습니다. 주의가 필요한 부분: 1. 네트워크 확장 기회 - 더 다양한 친구들과의 교류 기회가 필요합니다. 2. 폭력 경험도 ${violenceRisk} - ${violenceExperience >= 0.5 ? '폭력 상황에 대한 예방 교육이 필요' : '현재 안전한 상태를 유지하고 있음'}합니다.`;
+    
+    guidancePlan = '현재의 안정적인 교우관계를 유지하면서 네트워크를 점진적으로 확장하고, 폭력 예방 교육을 통해 안전한 학교생활을 유지할 수 있도록 지원해야 합니다.';
+  } else if (connectionCount <= 8) {
+    studentTypeClassification = '친구 많은 학생';
+    summary = `${studentName} 학생은 교우관계에서 중심부에 위치한 친구 많은 학생입니다. 연결 수 ${connectionCount}개로 네트워크의 중심부에 위치하며, 학교생활 만족도는 ${satisfactionLevel} 수준, 폭력 경험도는 ${violenceRisk} 수준입니다. 많은 친구들과 좋은 관계를 유지하고 있으며, 학급 내에서 영향력 있는 역할을 하고 있습니다.`;
+    
+    currentStatus = `교우관계 네트워크 분석: 연결 수 ${connectionCount}개로 네트워크의 중심부에 위치합니다. 학급 내에서 영향력 있는 역할을 하고 있습니다. 학교생활 만족도: ${satisfactionLevel} 수준 (${(satisfaction * 100).toFixed(1)}%)으로 전반적으로 긍정적인 학교생활을 하고 있습니다. 폭력 경험도: ${violenceRisk} 수준 (${(violenceExperience * 100).toFixed(1)}%)으로 ${violenceExperience >= 0.5 ? '주의가 필요' : '안전한 상태'}합니다.`;
+    
+    riskAssessment = `긍정적인 요인: 1. 뛰어난 사회성 - 많은 친구들과 좋은 관계를 유지하고 있습니다. 2. 긍정적 학교생활 - 만족도가 ${satisfactionLevel} 수준으로 학교생활에 잘 적응하고 있습니다. 주의가 필요한 부분: 1. 리더십 부담감 - 네트워크의 중심에 있다는 사실이 때로는 압박감으로 작용할 수 있습니다. 2. 폭력 경험도 ${violenceRisk} - ${violenceExperience >= 0.5 ? '폭력 상황에 노출될 가능성이 있으므로 주의 깊은 관찰이 필요' : '현재 안전한 상태를 유지하고 있음'}합니다.`;
+    
+    guidancePlan = `${studentName} 학생의 뛰어난 사회성을 긍정적으로 발휘하도록 돕고, 폭력 예방 교육을 통해 안전한 학교생활을 유지할 수 있도록 지원해야 합니다.`;
   } else {
-    studentTypeClassification = '고립 위험형';
-    summary = `${studentName} 학생은 교우관계에서 고립 위험이 높은 상황입니다. 네트워크 외곽부에 위치하여 친구 관계 형성에 어려움을 겪고 있으며, 즉각적인 개입과 지원이 필요한 상태입니다.`;
-    currentStatus = `중심성 점수 ${(centrality * 100).toFixed(1)}%로 네트워크의 외곽부에 위치합니다. 총 ${analysisData.totalRelationships}명의 친구와 연결되어 있지만, 관계의 질과 깊이에 문제가 있을 수 있습니다.`;
-    riskAssessment = '고립 위험이 매우 높아 지속적인 관찰과 적극적인 개입이 필요합니다. 사회적 기술 부족, 자존감 저하, 학교생활 부적응 등의 위험이 있습니다.';
-    guidancePlan = '즉각적인 개입을 통해 친구 관계 형성을 지원하고, 사회적 기술 향상을 위한 체계적인 프로그램이 필요합니다.';
+    studentTypeClassification = '사교 스타';
+    summary = `${studentName} 학생은 교우관계에서 핵심부에 위치한 사교 스타입니다. 연결 수 ${connectionCount}개로 네트워크의 핵심부에 위치하며, 학교생활 만족도는 ${satisfactionLevel} 수준, 폭력 경험도는 ${violenceRisk} 수준입니다. 뛰어난 사회성과 리더십을 바탕으로 많은 친구들에게 긍정적인 영향을 미치고 있으며, 이는 학급 전체에 활기를 불어넣는 중요한 강점입니다.`;
+    
+    currentStatus = `교우관계 네트워크 분석: 연결 수 ${connectionCount}개로 네트워크의 핵심부에 위치합니다. 학급 내 여론 형성이나 분위기를 주도하는 역할을 하고 있습니다. 학교생활 만족도: ${satisfactionLevel} 수준 (${(satisfaction * 100).toFixed(1)}%)으로 전반적으로 긍정적인 학교생활을 하고 있습니다. 폭력 경험도: ${violenceRisk} 수준 (${(violenceExperience * 100).toFixed(1)}%)으로 ${violenceExperience >= 0.5 ? '주의가 필요' : '안전한 상태'}합니다.`;
+    
+    riskAssessment = `긍정적인 요인: 1. 뛰어난 사회성 및 리더십 - 많은 친구들에게 신뢰와 인기를 얻고 있어 관계의 중심 역할을 합니다. 2. 긍정적 학교생활 - 만족도가 ${satisfactionLevel} 수준으로 학교생활에 잘 적응하고 있습니다. 주의가 필요한 부분: 1. 리더십 부담감 - 네트워크의 중심에 있다는 사실이 때로는 압박감으로 작용할 수 있습니다. 2. 폭력 경험도 ${violenceRisk} - ${violenceExperience >= 0.5 ? '폭력 상황에 노출될 가능성이 있으므로 주의 깊은 관찰이 필요' : '현재 안전한 상태를 유지하고 있음'}합니다.`;
+    
+    guidancePlan = `${studentName} 학생의 뛰어난 리더십을 긍정적으로 발휘하도록 돕고, 폭력 예방 교육을 통해 안전한 학교생활을 유지할 수 있도록 지원해야 합니다.`;
   }
 
   return {
@@ -516,32 +650,42 @@ export const generateFallbackReport = (
     detailedAnalysis: {
       schoolLifeSatisfaction: {
         surveyResults: [
-          {"question": "쉬는 시간에 친구들과 잘 논다", "answer": centrality >= 0.4 ? "예" : "보통"},
-          {"question": "수업 시간에 즐겁게 참여한다", "answer": centrality >= 0.4 ? "예" : "보통"},
-          {"question": "학교에 오고 싶다는 생각이 든다", "answer": centrality >= 0.3 ? "예" : "아니요"},
-          {"question": "선생님과 이야기하는 것이 편하다", "answer": centrality >= 0.7 ? "아니요" : centrality >= 0.4 ? "보통" : "아니요"},
-          {"question": "학교 활동에 적극적으로 참여한다", "answer": centrality >= 0.7 ? "아니요" : centrality >= 0.4 ? "예" : "아니요"},
-          {"question": "급식을 남기지 않고 잘 먹는다", "answer": "예"}
+          {"question": "Q2. 쉬는 시간에 친구들과 잘 논다", "answer": connectionCount >= 3 ? "예" : "보통"},
+          {"question": "Q3. 수업 시간에 즐겁게 참여한다", "answer": satisfaction >= 0.5 ? "예" : "보통"},
+          {"question": "Q4. 학교에 오고 싶다는 생각이 든다", "answer": satisfaction >= 0.5 ? "예" : "아니오"},
+          {"question": "Q5. 선생님과 이야기하는 것이 편하다", "answer": connectionCount >= 6 ? "보통" : satisfaction >= 0.7 ? "예" : "아니오"}
         ],
-        analysis: centrality >= 0.7 ? 
-          "친구 관계에 대한 긍정 응답과 달리, 교사와의 관계나 학교 활동 참여에는 부정적으로 답했습니다. 이는 자신이 주도하지 않는 관계나 활동에는 큰 흥미를 느끼지 못하는 성향을 시사합니다." :
-          centrality >= 0.4 ?
-          "전반적으로 균형 잡힌 학교생활을 하고 있으며, 친구 관계와 교사 관계 모두에서 적절한 수준의 만족감을 보입니다." :
-          centrality >= 0.3 ?
-          "친구 관계에서는 어느 정도 만족감을 보이지만, 교사와의 관계나 학교 활동 참여에는 소극적인 모습을 보입니다." :
-          "학교생활 전반에 대한 만족도가 낮으며, 특히 교사와의 관계와 학교 활동 참여에 어려움을 겪고 있습니다."
+        analysis: connectionCount >= 6 ? 
+          "친구 관계에 대한 긍정 응답과 달리, 교사와의 관계에는 미묘한 거리감을 보입니다." :
+          connectionCount >= 3 ?
+          "친구 관계에서는 어느 정도 만족감을 보이며, 전반적으로 균형잡힌 학교생활을 하고 있습니다." :
+          "학교생활 전반에 대한 만족도가 낮으며, 특히 교사와의 관계와 학교생활 적응에 어려움을 겪고 있습니다."
+      },
+      violenceExperience: {
+        surveyResults: [
+          {"question": "Q6. 친구들이 나를 때리거나 발로 차거나 밀치는 행동을 한 적이 있나요?", "answer": violenceExperience >= 0.7 ? "자주 있다" : violenceExperience >= 0.4 ? "한 두번 당한 적 있다" : "전혀 없다"},
+          {"question": "Q7. 친구들이 나에게 욕을 하거나 놀린 적이 있나요?", "answer": violenceExperience >= 0.6 ? "자주 있다" : violenceExperience >= 0.3 ? "한 두번 당한 적 있다" : "전혀 없다"},
+          {"question": "Q8. 친구들이 나를 따돌리거나 괴롭힌 적이 있나요?", "answer": violenceExperience >= 0.7 ? "자주 있다" : violenceExperience >= 0.4 ? "한 두번 당한 적 있다" : "전혀 없다"}
+        ],
+        analysis: violenceExperience >= 0.7 ?
+          "신체적, 언어적, 관계적 폭력을 자주 경험하고 있어 즉각적인 개입이 필요합니다." :
+          violenceExperience >= 0.4 ?
+          "일부 폭력 경험이 있어 주의 깊은 관찰과 예방 교육이 필요합니다." :
+          "현재까지 심각한 폭력 경험은 없으나, 예방 교육을 통해 안전한 학교생활을 유지해야 합니다."
       },
       peerNetworkAnalysis: {
         receivedChoices: analysisData.totalRelationships,
         madeChoices: Math.max(1, analysisData.totalRelationships - 1),
-        networkPosition: centrality >= 0.7 ? "주도형 또는 인기형" : centrality >= 0.4 ? "일반형" : centrality >= 0.3 ? "주변형" : "고립 위험형",
-        analysis: centrality >= 0.7 ?
-          "다수의 학생으로부터 선택을 받아 관계망의 중심에 있으며, 본인 역시 여러 친구들과 상호작용하며 네트워크 허브 역할을 하고 있습니다. 학급 내 여론 형성이나 분위기를 주도하는 핵심적인 인물입니다." :
-          centrality >= 0.4 ?
-          "적절한 수준의 친구 관계를 형성하고 있으며, 네트워크의 중간부에서 안정적인 위치를 유지하고 있습니다." :
-          centrality >= 0.3 ?
-          "소수의 친구들과 깊은 관계를 유지하고 있지만, 전체 네트워크와의 연결이 상대적으로 약한 상태입니다." :
-          "네트워크 외곽부에 위치하여 친구 관계 형성에 어려움을 겪고 있으며, 즉각적인 개입과 지원이 필요한 상태입니다."
+        networkPosition: studentTypeClassification,
+        analysis: connectionCount >= 9 ?
+          "다수의 학생으로부터 선택을 받아 관계망의 중심에 있으며, 학급 내 여론 형성이나 분위기를 주도하는 핵심적인 인물입니다." :
+          connectionCount >= 6 ?
+          "많은 친구들과 연결되어 있으며, 학급 내에서 영향력 있는 역할을 하고 있습니다." :
+          connectionCount >= 3 ?
+          "안정적인 교우관계를 유지하고 있으며, 적절한 수준의 친구 관계를 형성하고 있습니다." :
+          connectionCount >= 1 ?
+          "소수의 친구들과 관계를 유지하고 있으나, 전체 네트워크와의 연결이 약한 편입니다." :
+          "친구 관계 형성에 어려움을 겪고 있으며, 고립될 위험이 높습니다."
       }
     },
     strengthsAndImprovements: {

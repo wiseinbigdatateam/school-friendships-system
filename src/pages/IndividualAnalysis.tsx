@@ -179,6 +179,7 @@ const IndividualAnalysis: React.FC = () => {
   const [networkAnalysisData, setNetworkAnalysisData] =
     useState<NetworkAnalysisData | null>(null);
   const [networkAnalysisLoading, setNetworkAnalysisLoading] = useState(false);
+  const [showPrintPreview, setShowPrintPreview] = useState(false);
 
   // 통합 서비스를 사용한 개별 학생 분석
   const performUnifiedIndividualAnalysis = useCallback(
@@ -1094,6 +1095,323 @@ const IndividualAnalysis: React.FC = () => {
     }
   }, [selectedStudentData]);
 
+  // AI 리포트 파일 출력 함수
+  const handlePrintReport = useCallback(() => {
+    if (!aiReport || !selectedStudentData || !selectedSurvey) return;
+
+    // HTML 생성
+    const printContent = `
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>${selectedStudentData.name} 학생 AI 리포트</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { 
+      font-family: 'Noto Sans KR', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      line-height: 1.6;
+      color: #1f2937;
+      background: white;
+      padding: 40px;
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+    .header {
+      text-align: center;
+      border-bottom: 3px solid #3F80EA;
+      padding-bottom: 20px;
+      margin-bottom: 30px;
+    }
+    .header h1 {
+      font-size: 28px;
+      color: #3F80EA;
+      margin-bottom: 10px;
+    }
+    .header .meta {
+      font-size: 14px;
+      color: #6b7280;
+    }
+    .section {
+      margin-bottom: 30px;
+      page-break-inside: avoid;
+    }
+    .section-title {
+      font-size: 20px;
+      font-weight: 700;
+      color: #111827;
+      margin-bottom: 15px;
+      padding-bottom: 8px;
+      border-bottom: 2px solid #e5e7eb;
+    }
+    .subsection {
+      margin-bottom: 20px;
+    }
+    .subsection-title {
+      font-size: 16px;
+      font-weight: 600;
+      color: #374151;
+      margin-bottom: 10px;
+    }
+    .content {
+      font-size: 14px;
+      color: #4b5563;
+      line-height: 1.8;
+      white-space: pre-wrap;
+    }
+    .list {
+      margin-left: 20px;
+    }
+    .list-item {
+      margin-bottom: 8px;
+      padding-left: 10px;
+      border-left: 3px solid #3F80EA;
+    }
+    .badge {
+      display: inline-block;
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 600;
+      margin-right: 8px;
+    }
+    .badge-primary { background: #dbeafe; color: #1e40af; }
+    .badge-success { background: #d1fae5; color: #065f46; }
+    .badge-warning { background: #fef3c7; color: #92400e; }
+    .badge-danger { background: #fee2e2; color: #991b1b; }
+    .table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 15px;
+    }
+    .table td {
+      padding: 10px;
+      border-bottom: 1px solid #e5e7eb;
+    }
+    .table td:first-child {
+      font-weight: 600;
+      color: #6b7280;
+      width: 150px;
+    }
+    .footer {
+      margin-top: 40px;
+      padding-top: 20px;
+      border-top: 2px solid #e5e7eb;
+      text-align: center;
+      font-size: 12px;
+      color: #9ca3af;
+    }
+    @media print {
+      body { padding: 20px; }
+      .no-print { display: none; }
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>🎓 학생 개별 지도 리포트</h1>
+    <div class="meta">
+      <p><strong>${selectedStudentData.name}</strong> 학생 (${selectedStudentData.grade}학년 ${selectedStudentData.class}반)</p>
+      <p>설문: ${selectedSurvey.title}</p>
+      <p>생성일: ${new Date().toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' })}</p>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">📊 1. 종합 진단</div>
+    <div class="subsection">
+      <div class="subsection-title">학생 유형</div>
+      <div class="content">
+        <span class="badge badge-primary">${aiReport.comprehensiveDiagnosis.studentType}</span>
+      </div>
+    </div>
+    <div class="subsection">
+      <div class="subsection-title">종합 평가</div>
+      <div class="content">${aiReport.comprehensiveDiagnosis.summary}</div>
+    </div>
+    <div class="subsection">
+      <div class="subsection-title">주요 특징</div>
+      <div class="list">
+        ${aiReport.comprehensiveDiagnosis.keyCharacteristics.map(char => `<div class="list-item">✓ ${char}</div>`).join('')}
+      </div>
+    </div>
+    <div class="subsection">
+      <div class="subsection-title">개선 영역</div>
+      <div class="list">
+        ${aiReport.comprehensiveDiagnosis.challenges.map(challenge => `<div class="list-item">• ${challenge}</div>`).join('')}
+      </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">📝 2. 세부 분석</div>
+    
+    <div class="subsection">
+      <div class="subsection-title">학교생활 만족도</div>
+      <table class="table">
+        ${aiReport.detailedAnalysis.schoolLifeSatisfaction.surveyResults.map(result => `
+          <tr>
+            <td>${result.question}</td>
+            <td><strong>${result.answer}</strong></td>
+          </tr>
+        `).join('')}
+      </table>
+      <div class="content">${aiReport.detailedAnalysis.schoolLifeSatisfaction.analysis}</div>
+    </div>
+
+    <div class="subsection">
+      <div class="subsection-title">폭력 경험도</div>
+      <table class="table">
+        ${aiReport.detailedAnalysis.violenceExperience.surveyResults.map(result => `
+          <tr>
+            <td>${result.question}</td>
+            <td><strong>${result.answer}</strong></td>
+          </tr>
+        `).join('')}
+      </table>
+      <div class="content">${aiReport.detailedAnalysis.violenceExperience.analysis}</div>
+    </div>
+
+    <div class="subsection">
+      <div class="subsection-title">교우관계 네트워크 분석</div>
+      <table class="table">
+        <tr>
+          <td>받은 선택 수</td>
+          <td><strong>${aiReport.detailedAnalysis.peerNetworkAnalysis.receivedChoices}명</strong></td>
+        </tr>
+        <tr>
+          <td>한 선택 수</td>
+          <td><strong>${aiReport.detailedAnalysis.peerNetworkAnalysis.madeChoices}명</strong></td>
+        </tr>
+        <tr>
+          <td>네트워크 위치</td>
+          <td><strong>${aiReport.detailedAnalysis.peerNetworkAnalysis.networkPosition}</strong></td>
+        </tr>
+      </table>
+      <div class="content">${aiReport.detailedAnalysis.peerNetworkAnalysis.analysis}</div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">💪 3. 강점 및 개선 영역</div>
+    
+    <div class="subsection">
+      <div class="subsection-title">강점</div>
+      <div class="list">
+        ${aiReport.strengthsAndImprovements.strengths.map(strength => `
+          <div class="list-item">
+            <strong>${strength.title}</strong><br>
+            ${strength.description}
+          </div>
+        `).join('')}
+      </div>
+    </div>
+
+    <div class="subsection">
+      <div class="subsection-title">개선 영역</div>
+      <div class="list">
+        ${aiReport.strengthsAndImprovements.improvementAreas.map(area => `
+          <div class="list-item">
+            <strong>${area.title}</strong><br>
+            ${area.description}
+          </div>
+        `).join('')}
+      </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">🎯 4. 맞춤형 솔루션</div>
+    
+    <div class="subsection">
+      <div class="subsection-title">전체 목표</div>
+      <div class="content">${aiReport.customizedSolutions.overallGoal}</div>
+    </div>
+
+    <div class="subsection">
+      <div class="subsection-title">단기 솔루션 (1-2주)</div>
+      <div class="list">
+        ${aiReport.customizedSolutions.shortTermSolutions.map(solution => `
+          <div class="list-item">
+            <strong>${solution.title}</strong><br>
+            ${solution.description}
+          </div>
+        `).join('')}
+      </div>
+    </div>
+
+    <div class="subsection">
+      <div class="subsection-title">중기 솔루션 (1-2개월)</div>
+      <div class="list">
+        ${aiReport.customizedSolutions.midTermSolutions.map(solution => `
+          <div class="list-item">
+            <strong>${solution.title}</strong><br>
+            ${solution.description}
+          </div>
+        `).join('')}
+      </div>
+    </div>
+
+    <div class="subsection">
+      <div class="subsection-title">장기 솔루션 (3-6개월)</div>
+      <div class="list">
+        ${aiReport.customizedSolutions.longTermSolutions.map(solution => `
+          <div class="list-item">
+            <strong>${solution.title}</strong><br>
+            ${solution.description}
+          </div>
+        `).join('')}
+      </div>
+    </div>
+  </div>
+
+  <div class="footer">
+    <p>본 리포트는 와이즈온스쿨 AI 분석 시스템에서 자동으로 생성되었습니다.</p>
+    <p>생성 일시: ${new Date().toLocaleString('ko-KR', { timeZone: 'Asia/Seoul' })}</p>
+    <p>© 2025 WiseOn School. All rights reserved.</p>
+  </div>
+
+  <div class="no-print" style="position: fixed; top: 20px; right: 20px; display: flex; gap: 10px;">
+    <button onclick="window.print()" style="
+      background: #3F80EA;
+      color: white;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 600;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    ">
+      🖨️ 인쇄하기
+    </button>
+    <button onclick="window.close()" style="
+      background: #6b7280;
+      color: white;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 600;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    ">
+      ✕ 닫기
+    </button>
+  </div>
+</body>
+</html>
+    `;
+
+    // 새 창에서 미리보기 열기
+    const printWindow = window.open('', '_blank');
+    if (printWindow) {
+      printWindow.document.write(printContent);
+      printWindow.document.close();
+    }
+  }, [aiReport, selectedStudentData, selectedSurvey]);
+
   // AI 리포트 생성 함수
   const generateAIReport = useCallback(async () => {
     if (
@@ -1603,8 +1921,27 @@ const IndividualAnalysis: React.FC = () => {
                           </div>
                         ) : aiReport ? (
                           <div className="space-y-4">
-                            {/* 재생성 버튼 */}
-                            <div className="flex justify-end">
+                            {/* 재생성 및 출력 버튼 */}
+                            <div className="flex justify-end space-x-3">
+                              <button
+                                onClick={handlePrintReport}
+                                className="flex items-center space-x-2 rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-green-700"
+                              >
+                                <svg
+                                  className="h-4 w-4"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  viewBox="0 0 24 24"
+                                >
+                                  <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    strokeWidth={2}
+                                    d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"
+                                  />
+                                </svg>
+                                <span>파일로 출력</span>
+                              </button>
                               <button
                                 onClick={async () => {
                                   // 기존 리포트 삭제 후 재생성
@@ -1648,6 +1985,542 @@ const IndividualAnalysis: React.FC = () => {
 
                             {/* AI 리포트 표시 */}
                             <AIReportDisplay aiReport={aiReport} />
+
+                            {/* 실용적인 활용 예시 섹션 */}
+                            <div className="mt-8 space-y-6">
+                              {/* 문자메시지 예시 */}
+                              <div className="rounded-lg border border-blue-200 bg-blue-50 p-6">
+                                <h3 className="mb-4 flex items-center text-lg font-semibold text-blue-900">
+                                  <svg
+                                    className="mr-2 h-5 w-5"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    viewBox="0 0 24 24"
+                                  >
+                                    <path
+                                      strokeLinecap="round"
+                                      strokeLinejoin="round"
+                                      strokeWidth={2}
+                                      d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"
+                                    />
+                                  </svg>
+                                  💬 학부모 문자메시지 예시
+                                </h3>
+                                <div className="space-y-3">
+                                  <div className="rounded-lg bg-white p-4 shadow-sm">
+                                    <div className="mb-2 flex items-center justify-between">
+                                      <span className="text-sm font-semibold text-blue-700">
+                                        📱 긍정적 피드백형
+                                      </span>
+                                      <button
+                                        onClick={() => {
+                                          const message = `안녕하세요, ${selectedStudentData?.name} 학부모님.\n\n최근 교우관계 분석 결과, ${selectedStudentData?.name} 학생이 친구들과 매우 긍정적인 관계를 맺고 있는 것으로 나타났습니다. ${selectedStudentData?.name} 학생의 밝은 모습이 학급 분위기에도 좋은 영향을 주고 있습니다.\n\n앞으로도 건강하고 즐거운 학교생활이 되도록 지도하겠습니다.\n\n${teacherInfo?.name || ''} 담임 올림`;
+                                          navigator.clipboard.writeText(message);
+                                          alert('문자 내용이 복사되었습니다!');
+                                        }}
+                                        className="text-xs text-blue-600 underline hover:text-blue-800"
+                                      >
+                                        복사
+                                      </button>
+                                    </div>
+                                    <p className="text-sm text-gray-700">
+                                      안녕하세요, <strong>{selectedStudentData?.name}</strong> 학부모님.
+                                      <br />
+                                      <br />
+                                      최근 교우관계 분석 결과, <strong>{selectedStudentData?.name}</strong> 학생이 친구들과 매우 긍정적인 관계를 맺고 있는 것으로 나타났습니다. {selectedStudentData?.name} 학생의 밝은 모습이 학급 분위기에도 좋은 영향을 주고 있습니다.
+                                      <br />
+                                      <br />
+                                      앞으로도 건강하고 즐거운 학교생활이 되도록 지도하겠습니다.
+                                      <br />
+                                      <br />
+                                      {teacherInfo?.name || ''} 담임 올림
+                                    </p>
+                                  </div>
+
+                                  <div className="rounded-lg bg-white p-4 shadow-sm">
+                                    <div className="mb-2 flex items-center justify-between">
+                                      <span className="text-sm font-semibold text-orange-700">
+                                        📱 관심 필요형
+                                      </span>
+                                      <button
+                                        onClick={() => {
+                                          const message = `안녕하세요, ${selectedStudentData?.name} 학부모님.\n\n최근 교우관계 분석을 통해 ${selectedStudentData?.name} 학생의 학교생활을 살펴보았습니다. 좀 더 다양한 친구들과 교류할 수 있도록 학급에서 소그룹 활동 기회를 제공하고 있습니다.\n\n가정에서도 학교생활에 대해 편안하게 이야기 나눌 수 있는 시간을 가져주시면 좋겠습니다. 필요시 상담 일정을 잡아 자세히 말씀드리겠습니다.\n\n${teacherInfo?.name || ''} 담임 올림`;
+                                          navigator.clipboard.writeText(message);
+                                          alert('문자 내용이 복사되었습니다!');
+                                        }}
+                                        className="text-xs text-orange-600 underline hover:text-orange-800"
+                                      >
+                                        복사
+                                      </button>
+                                    </div>
+                                    <p className="text-sm text-gray-700">
+                                      안녕하세요, <strong>{selectedStudentData?.name}</strong> 학부모님.
+                                      <br />
+                                      <br />
+                                      최근 교우관계 분석을 통해 <strong>{selectedStudentData?.name}</strong> 학생의 학교생활을 살펴보았습니다. 좀 더 다양한 친구들과 교류할 수 있도록 학급에서 소그룹 활동 기회를 제공하고 있습니다.
+                                      <br />
+                                      <br />
+                                      가정에서도 학교생활에 대해 편안하게 이야기 나눌 수 있는 시간을 가져주시면 좋겠습니다. 필요시 상담 일정을 잡아 자세히 말씀드리겠습니다.
+                                      <br />
+                                      <br />
+                                      {teacherInfo?.name || ''} 담임 올림
+                                    </p>
+                                  </div>
+                                </div>
+                              </div>
+
+                              {/* 학생 대상 문자메시지 예시 */}
+                              <div className="rounded-lg border border-pink-200 bg-pink-50 p-6">
+                                <h3 className="mb-4 flex items-center text-lg font-semibold text-pink-900">
+                                  <svg
+                                    className="mr-2 h-5 w-5"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    viewBox="0 0 24 24"
+                                  >
+                                    <path
+                                      strokeLinecap="round"
+                                      strokeLinejoin="round"
+                                      strokeWidth={2}
+                                      d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"
+                                    />
+                                  </svg>
+                                  💌 학생 대상 문자메시지 예시
+                                </h3>
+                                <div className="space-y-3">
+                                  <div className="rounded-lg bg-white p-4 shadow-sm">
+                                    <div className="mb-2 flex items-center justify-between">
+                                      <span className="text-sm font-semibold text-pink-700">
+                                        📱 격려 및 응원형
+                                      </span>
+                                      <button
+                                        onClick={() => {
+                                          const message = `${selectedStudentData?.name}야 안녕! 선생님이야 😊\n\n오늘 친구들이랑 재밌게 노는 거 봤어. ${selectedStudentData?.name} 웃는 모습 보니까 선생님도 기분 좋더라 ㅎㅎ\n\n내일도 오늘처럼 즐겁게 보내! 힘들거나 이야기하고 싶은 거 있으면 언제든 말해 🤗\n\n${teacherInfo?.name || ''} 쌤이`;
+                                          navigator.clipboard.writeText(message);
+                                          alert('문자 내용이 복사되었습니다!');
+                                        }}
+                                        className="text-xs text-pink-600 underline hover:text-pink-800"
+                                      >
+                                        복사
+                                      </button>
+                                    </div>
+                                    <p className="text-sm text-gray-700">
+                                      <strong>{selectedStudentData?.name}</strong>야 안녕! 선생님이야 😊
+                                      <br />
+                                      <br />
+                                      오늘 친구들이랑 재밌게 노는 거 봤어. <strong>{selectedStudentData?.name}</strong> 웃는 모습 보니까 선생님도 기분 좋더라 ㅎㅎ
+                                      <br />
+                                      <br />
+                                      내일도 오늘처럼 즐겁게 보내! 힘들거나 이야기하고 싶은 거 있으면 언제든 말해 🤗
+                                      <br />
+                                      <br />
+                                      {teacherInfo?.name || ''} 쌤이
+                                    </p>
+                                  </div>
+
+                                  <div className="rounded-lg bg-white p-4 shadow-sm">
+                                    <div className="mb-2 flex items-center justify-between">
+                                      <span className="text-sm font-semibold text-pink-700">
+                                        📱 관심 및 지지형
+                                      </span>
+                                      <button
+                                        onClick={() => {
+                                          const message = `${selectedStudentData?.name}아 안녕~ 쌤이야! ☺️\n\n요즘 어때? 학교생활 재밌어? 선생님이 ${selectedStudentData?.name} 생각나서 연락했어 ㅎㅎ\n\n혹시 힘든 일 있거나 고민 있으면 쌤한테 언제든 말해도 돼. 내일 쉬는 시간에 잠깐 얘기할까? 🍪 과자도 준비할게!\n\n쌤이 항상 응원해! 💪\n\n${teacherInfo?.name || ''} 쌤`;
+                                          navigator.clipboard.writeText(message);
+                                          alert('문자 내용이 복사되었습니다!');
+                                        }}
+                                        className="text-xs text-pink-600 underline hover:text-pink-800"
+                                      >
+                                        복사
+                                      </button>
+                                    </div>
+                                    <p className="text-sm text-gray-700">
+                                      <strong>{selectedStudentData?.name}</strong>아 안녕~ 쌤이야! ☺️
+                                      <br />
+                                      <br />
+                                      요즘 어때? 학교생활 재밌어? 선생님이 <strong>{selectedStudentData?.name}</strong> 생각나서 연락했어 ㅎㅎ
+                                      <br />
+                                      <br />
+                                      혹시 힘든 일 있거나 고민 있으면 쌤한테 언제든 말해도 돼. 내일 쉬는 시간에 잠깐 얘기할까? 🍪 과자도 준비할게!
+                                      <br />
+                                      <br />
+                                      쌤이 항상 응원해! 💪
+                                      <br />
+                                      <br />
+                                      {teacherInfo?.name || ''} 쌤
+                                    </p>
+                                  </div>
+
+                                  <div className="rounded-lg bg-white p-4 shadow-sm">
+                                    <div className="mb-2 flex items-center justify-between">
+                                      <span className="text-sm font-semibold text-pink-700">
+                                        📱 칭찬 및 동기부여형
+                                      </span>
+                                      <button
+                                        onClick={() => {
+                                          const message = `${selectedStudentData?.name}야! 🌟\n\n오늘 수업시간에 발표한 거 진짜 대박이었어! 👏 ${selectedStudentData?.name} 점점 더 당당해지는 모습 보니까 쌤이 완전 뿌듯하다 ㅠㅠ\n\n이번 주도 이렇게 멋지게! 화이팅!! 💪✨\n\n${teacherInfo?.name || ''} 쌤이`;
+                                          navigator.clipboard.writeText(message);
+                                          alert('문자 내용이 복사되었습니다!');
+                                        }}
+                                        className="text-xs text-pink-600 underline hover:text-pink-800"
+                                      >
+                                        복사
+                                      </button>
+                                    </div>
+                                    <p className="text-sm text-gray-700">
+                                      <strong>{selectedStudentData?.name}</strong>야! 🌟
+                                      <br />
+                                      <br />
+                                      오늘 수업시간에 발표한 거 진짜 대박이었어! 👏 <strong>{selectedStudentData?.name}</strong> 점점 더 당당해지는 모습 보니까 쌤이 완전 뿌듯하다 ㅠㅠ
+                                      <br />
+                                      <br />
+                                      이번 주도 이렇게 멋지게! 화이팅!! 💪✨
+                                      <br />
+                                      <br />
+                                      {teacherInfo?.name || ''} 쌤이
+                                    </p>
+                                  </div>
+
+                                  <div className="rounded-lg bg-white p-4 shadow-sm">
+                                    <div className="mb-2 flex items-center justify-between">
+                                      <span className="text-sm font-semibold text-pink-700">
+                                        📱 생일/특별한 날
+                                      </span>
+                                      <button
+                                        onClick={() => {
+                                          const message = `🎂 ${selectedStudentData?.name}야 생일 축하해!! 🎉🎈\n\n${selectedStudentData?.name} 덕분에 우리 반이 더 재밌고 행복해! 올해도 멋진 일들만 가득하길! 🌟\n\n내일 학교에서 보자~ 쌤이 작은 서프라이즈 준비했어 ㅎㅎ 기대해도 돼! 😊🎁\n\n${teacherInfo?.name || ''} 쌤이`;
+                                          navigator.clipboard.writeText(message);
+                                          alert('문자 내용이 복사되었습니다!');
+                                        }}
+                                        className="text-xs text-pink-600 underline hover:text-pink-800"
+                                      >
+                                        복사
+                                      </button>
+                                    </div>
+                                    <p className="text-sm text-gray-700">
+                                      🎂 <strong>{selectedStudentData?.name}</strong>야 생일 축하해!! 🎉🎈
+                                      <br />
+                                      <br />
+                                      <strong>{selectedStudentData?.name}</strong> 덕분에 우리 반이 더 재밌고 행복해! 올해도 멋진 일들만 가득하길! 🌟
+                                      <br />
+                                      <br />
+                                      내일 학교에서 보자~ 쌤이 작은 서프라이즈 준비했어 ㅎㅎ 기대해도 돼! 😊🎁
+                                      <br />
+                                      <br />
+                                      {teacherInfo?.name || ''} 쌤이
+                                    </p>
+                                  </div>
+                                </div>
+                              </div>
+
+                              {/* 상담 스킬 및 대화 예시 */}
+                              <div className="rounded-lg border border-green-200 bg-green-50 p-6">
+                                <h3 className="mb-4 flex items-center text-lg font-semibold text-green-900">
+                                  <svg
+                                    className="mr-2 h-5 w-5"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    viewBox="0 0 24 24"
+                                  >
+                                    <path
+                                      strokeLinecap="round"
+                                      strokeLinejoin="round"
+                                      strokeWidth={2}
+                                      d="M17 8h2a2 2 0 012 2v6a2 2 0 01-2 2h-2v4l-4-4H9a1.994 1.994 0 01-1.414-.586m0 0L11 14h4a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2v4l.586-.586z"
+                                    />
+                                  </svg>
+                                  🗣️ 학생 상담 대화 스킬
+                                </h3>
+                                <div className="space-y-4">
+                                  <div className="rounded-lg bg-white p-4 shadow-sm">
+                                    <h4 className="mb-2 font-semibold text-green-700">
+                                      1. 라포 형성 (신뢰 구축)
+                                    </h4>
+                                    <div className="space-y-2 text-sm text-gray-700">
+                                      <p className="font-medium text-green-600">✓ 대화 시작</p>
+                                      <p className="ml-4">
+                                        "안녕, {selectedStudentData?.name}! 오늘 기분은 어때? 선생님이랑 잠깐 이야기 나눌 수 있을까?"
+                                      </p>
+                                      <p className="ml-4 text-xs text-gray-500">
+                                        → 편안한 분위기에서 학생이 마음을 열 수 있도록 합니다
+                                      </p>
+                                    </div>
+                                  </div>
+
+                                  <div className="rounded-lg bg-white p-4 shadow-sm">
+                                    <h4 className="mb-2 font-semibold text-green-700">
+                                      2. 공감적 경청
+                                    </h4>
+                                    <div className="space-y-2 text-sm text-gray-700">
+                                      <p className="font-medium text-green-600">✓ 감정 인정하기</p>
+                                      <p className="ml-4">
+                                        "요즘 친구들과 지내는 게 조금 힘들구나. 그런 기분이 드는 게 당연해. 선생님한테 더 이야기해줄 수 있어?"
+                                      </p>
+                                      <p className="ml-4 text-xs text-gray-500">
+                                        → 학생의 감정을 먼저 인정하고 공감해줍니다
+                                      </p>
+                                    </div>
+                                  </div>
+
+                                  <div className="rounded-lg bg-white p-4 shadow-sm">
+                                    <h4 className="mb-2 font-semibold text-green-700">
+                                      3. 구체적 질문 (열린 질문)
+                                    </h4>
+                                    <div className="space-y-2 text-sm text-gray-700">
+                                      <p className="font-medium text-green-600">✓ 상황 파악하기</p>
+                                      <p className="ml-4">
+                                        "쉬는 시간에는 주로 누구랑 무엇을 하면서 시간을 보내니?"
+                                      </p>
+                                      <p className="ml-4">
+                                        "요즘 학교에서 가장 즐거운 순간은 언제야?"
+                                      </p>
+                                      <p className="ml-4">
+                                        "친구들이랑 같이 하고 싶은 활동이 있어?"
+                                      </p>
+                                      <p className="ml-4 text-xs text-gray-500">
+                                        → 예/아니오로 답할 수 없는 열린 질문으로 학생의 생각을 듣습니다
+                                      </p>
+                                    </div>
+                                  </div>
+
+                                  <div className="rounded-lg bg-white p-4 shadow-sm">
+                                    <h4 className="mb-2 font-semibold text-green-700">
+                                      4. 긍정적 강화
+                                    </h4>
+                                    <div className="space-y-2 text-sm text-gray-700">
+                                      <p className="font-medium text-green-600">✓ 강점 발견 및 격려</p>
+                                      <p className="ml-4">
+                                        "선생님이 보니까 {selectedStudentData?.name}는 친구들 이야기를 잘 들어주더라. 그게 정말 좋은 점이야."
+                                      </p>
+                                      <p className="ml-4">
+                                        "지난주에 ○○이랑 같이 과제할 때 정말 잘 도와줬잖아. 그런 모습 계속 보여주면 좋겠어."
+                                      </p>
+                                      <p className="ml-4 text-xs text-gray-500">
+                                        → 구체적인 행동을 언급하며 강점을 강화합니다
+                                      </p>
+                                    </div>
+                                  </div>
+
+                                  <div className="rounded-lg bg-white p-4 shadow-sm">
+                                    <h4 className="mb-2 font-semibold text-green-700">
+                                      5. 실천 가능한 목표 설정
+                                    </h4>
+                                    <div className="space-y-2 text-sm text-gray-700">
+                                      <p className="font-medium text-green-600">✓ 작은 목표부터</p>
+                                      <p className="ml-4">
+                                        "이번 주에는 점심시간에 평소랑 다른 친구 한 명이랑 같이 밥 먹어보는 건 어때?"
+                                      </p>
+                                      <p className="ml-4">
+                                        "내일 쉬는 시간에 ○○이한테 먼저 인사해보자. 선생님이 응원할게!"
+                                      </p>
+                                      <p className="ml-4 text-xs text-gray-500">
+                                        → 학생이 실천 가능한 작은 목표를 함께 정합니다
+                                      </p>
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+
+                              {/* 교실 활동 예시 */}
+                              <div className="rounded-lg border border-purple-200 bg-purple-50 p-6">
+                                <h3 className="mb-4 flex items-center text-lg font-semibold text-purple-900">
+                                  <svg
+                                    className="mr-2 h-5 w-5"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    viewBox="0 0 24 24"
+                                  >
+                                    <path
+                                      strokeLinecap="round"
+                                      strokeLinejoin="round"
+                                      strokeWidth={2}
+                                      d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"
+                                    />
+                                  </svg>
+                                  🎯 교실에서 바로 실천할 수 있는 활동
+                                </h3>
+                                <div className="space-y-3">
+                                  <div className="rounded-lg bg-white p-4 shadow-sm">
+                                    <h4 className="mb-2 font-semibold text-purple-700">
+                                      📌 소그룹 협력 활동
+                                    </h4>
+                                    <ul className="ml-4 space-y-1 text-sm text-gray-700">
+                                      <li>• <strong>짝 바꾸기:</strong> 평소 교류가 적은 친구와 짝을 지어 함께 과제 수행</li>
+                                      <li>• <strong>모둠 프로젝트:</strong> 다양한 성향의 학생들로 모둠을 구성하여 협력 기회 제공</li>
+                                      <li>• <strong>점심 친구 만들기:</strong> 주 1회 랜덤으로 점심 짝 정해서 함께 식사</li>
+                                    </ul>
+                                  </div>
+
+                                  <div className="rounded-lg bg-white p-4 shadow-sm">
+                                    <h4 className="mb-2 font-semibold text-purple-700">
+                                      🎮 관계 형성 게임
+                                    </h4>
+                                    <ul className="ml-4 space-y-1 text-sm text-gray-700">
+                                      <li>• <strong>칭찬 릴레이:</strong> 돌아가며 옆 친구의 좋은 점 한 가지씩 말하기</li>
+                                      <li>• <strong>공통점 찾기:</strong> 짝과 함께 서로의 공통점 5가지 찾기</li>
+                                      <li>• <strong>감사 카드:</strong> 이번 주 도움받은 친구에게 감사 카드 쓰기</li>
+                                    </ul>
+                                  </div>
+
+                                  <div className="rounded-lg bg-white p-4 shadow-sm">
+                                    <h4 className="mb-2 font-semibold text-purple-700">
+                                      👥 역할 부여 전략
+                                    </h4>
+                                    <ul className="ml-4 space-y-1 text-sm text-gray-700">
+                                      <li>• <strong>모둠 리더:</strong> 리더십을 발휘할 수 있는 역할 부여 (조용한 학생에게도 기회)</li>
+                                      <li>• <strong>도우미 친구:</strong> 특정 과목에서 어려움을 겪는 친구 도와주기</li>
+                                      <li>• <strong>환경 도우미:</strong> 함께 교실 환경을 관리하며 협력 경험</li>
+                                    </ul>
+                                  </div>
+                                </div>
+                              </div>
+
+                              {/* 관찰 포인트 */}
+                              <div className="rounded-lg border border-yellow-200 bg-yellow-50 p-6">
+                                <h3 className="mb-4 flex items-center text-lg font-semibold text-yellow-900">
+                                  <svg
+                                    className="mr-2 h-5 w-5"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    viewBox="0 0 24 24"
+                                  >
+                                    <path
+                                      strokeLinecap="round"
+                                      strokeLinejoin="round"
+                                      strokeWidth={2}
+                                      d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                                    />
+                                    <path
+                                      strokeLinecap="round"
+                                      strokeLinejoin="round"
+                                      strokeWidth={2}
+                                      d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
+                                    />
+                                  </svg>
+                                  👀 일상 관찰 체크리스트
+                                </h3>
+                                <div className="grid gap-3 md:grid-cols-2">
+                                  <div className="rounded-lg bg-white p-4 shadow-sm">
+                                    <h4 className="mb-2 font-semibold text-yellow-700">
+                                      쉬는 시간
+                                    </h4>
+                                    <ul className="ml-4 space-y-1 text-sm text-gray-700">
+                                      <li>□ 누구와 함께 시간을 보내는가?</li>
+                                      <li>□ 주로 어떤 활동을 하는가?</li>
+                                      <li>□ 혼자 있는 시간이 얼마나 되는가?</li>
+                                      <li>□ 표정과 분위기는 어떠한가?</li>
+                                    </ul>
+                                  </div>
+
+                                  <div className="rounded-lg bg-white p-4 shadow-sm">
+                                    <h4 className="mb-2 font-semibold text-yellow-700">
+                                      수업 시간
+                                    </h4>
+                                    <ul className="ml-4 space-y-1 text-sm text-gray-700">
+                                      <li>□ 모둠 활동 참여도는 어떠한가?</li>
+                                      <li>□ 발표나 질문을 적극적으로 하는가?</li>
+                                      <li>□ 친구들과의 상호작용은 어떠한가?</li>
+                                      <li>□ 수업 태도와 집중도는 어떠한가?</li>
+                                    </ul>
+                                  </div>
+
+                                  <div className="rounded-lg bg-white p-4 shadow-sm">
+                                    <h4 className="mb-2 font-semibold text-yellow-700">
+                                      점심 시간
+                                    </h4>
+                                    <ul className="ml-4 space-y-1 text-sm text-gray-700">
+                                      <li>□ 누구와 함께 식사하는가?</li>
+                                      <li>□ 대화에 적극적으로 참여하는가?</li>
+                                      <li>□ 식사 태도는 어떠한가?</li>
+                                      <li>□ 급식 후 활동은 어떠한가?</li>
+                                    </ul>
+                                  </div>
+
+                                  <div className="rounded-lg bg-white p-4 shadow-sm">
+                                    <h4 className="mb-2 font-semibold text-yellow-700">
+                                      특별 활동
+                                    </h4>
+                                    <ul className="ml-4 space-y-1 text-sm text-gray-700">
+                                      <li>□ 학교 행사 참여 의욕은 어떠한가?</li>
+                                      <li>□ 체육 활동 시 팀워크는 어떠한가?</li>
+                                      <li>□ 동아리나 특별활동 참여도는?</li>
+                                      <li>□ 리더십 발휘 기회는 충분한가?</li>
+                                    </ul>
+                                  </div>
+                                </div>
+                              </div>
+
+                              {/* 즉시 실천 팁 */}
+                              <div className="rounded-lg border border-indigo-200 bg-indigo-50 p-6">
+                                <h3 className="mb-4 flex items-center text-lg font-semibold text-indigo-900">
+                                  <svg
+                                    className="mr-2 h-5 w-5"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    viewBox="0 0 24 24"
+                                  >
+                                    <path
+                                      strokeLinecap="round"
+                                      strokeLinejoin="round"
+                                      strokeWidth={2}
+                                      d="M13 10V3L4 14h7v7l9-11h-7z"
+                                    />
+                                  </svg>
+                                  ⚡ 오늘 바로 시작할 수 있는 3가지
+                                </h3>
+                                <div className="space-y-3">
+                                  <div className="rounded-lg bg-white p-4 shadow-sm">
+                                    <div className="flex items-start">
+                                      <span className="mr-3 flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-indigo-600 text-sm font-bold text-white">
+                                        1
+                                      </span>
+                                      <div>
+                                        <h4 className="font-semibold text-indigo-700">
+                                          긍정적 상호작용 만들기
+                                        </h4>
+                                        <p className="mt-1 text-sm text-gray-700">
+                                          오늘 하루 동안 <strong>{selectedStudentData?.name}</strong> 학생에게 최소 3번 이상 긍정적인 피드백을 주세요. 
+                                          "잘했어", "좋은 생각이야", "도움이 됐어" 같은 간단한 말도 효과적입니다.
+                                        </p>
+                                      </div>
+                                    </div>
+                                  </div>
+
+                                  <div className="rounded-lg bg-white p-4 shadow-sm">
+                                    <div className="flex items-start">
+                                      <span className="mr-3 flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-indigo-600 text-sm font-bold text-white">
+                                        2
+                                      </span>
+                                      <div>
+                                        <h4 className="font-semibold text-indigo-700">
+                                          관계 연결 기회 제공
+                                        </h4>
+                                        <p className="mt-1 text-sm text-gray-700">
+                                          수업 중 짝 활동이나 모둠 활동 시, <strong>{selectedStudentData?.name}</strong> 학생이 평소 잘 어울리지 않던 친구와 함께할 수 있도록 의도적으로 배치해보세요.
+                                        </p>
+                                      </div>
+                                    </div>
+                                  </div>
+
+                                  <div className="rounded-lg bg-white p-4 shadow-sm">
+                                    <div className="flex items-start">
+                                      <span className="mr-3 flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-indigo-600 text-sm font-bold text-white">
+                                        3
+                                      </span>
+                                      <div>
+                                        <h4 className="font-semibold text-indigo-700">
+                                          1:1 대화 시간 갖기
+                                        </h4>
+                                        <p className="mt-1 text-sm text-gray-700">
+                                          오늘 또는 내일 중 5분이라도 <strong>{selectedStudentData?.name}</strong> 학생과 개인적으로 대화할 시간을 만들어보세요. 
+                                          학교생활에 대한 솔직한 생각을 들어보는 것이 중요합니다.
+                                        </p>
+                                      </div>
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
                           </div>
                         ) : (
                           <div className="py-8 text-center">
