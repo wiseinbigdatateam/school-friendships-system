@@ -94,19 +94,26 @@ export const useNotifications = () => {
     if (!user?.id) return false;
 
     try {
+      // 먼저 읽지 않은 알림인지 확인
+      const notification = notifications.find(n => n.id === notificationId);
+      const wasUnread = notification && !notification.is_read;
+      
       const success = await NotificationService.markAsRead(notificationId, user.id);
       if (success) {
         setNotifications(prev => 
           prev.map(n => n.id === notificationId ? { ...n, is_read: true } : n)
         );
-        setUnreadCount(prev => Math.max(0, prev - 1));
+        // 읽지 않은 알림이었다면 개수 감소
+        if (wasUnread) {
+          setUnreadCount(prev => Math.max(0, prev - 1));
+        }
       }
       return success;
     } catch (error) {
       console.error('🔔 읽음 처리 오류:', error);
       return false;
     }
-  }, [user?.id]);
+  }, [user?.id, notifications]);
 
   // 모든 알림 읽음 처리
   const markAllAsRead = useCallback(async () => {
@@ -156,6 +163,11 @@ export const useNotifications = () => {
     if (!user?.id) return false;
 
     try {
+      // 읽지 않은 알림만 필터링하여 개수 계산
+      const unreadNotificationsToUpdate = notifications.filter(n => 
+        notificationIds.includes(n.id) && !n.is_read
+      );
+      
       await NotificationService.markMultipleAsRead(notificationIds);
       
       // 로컬 상태 업데이트
@@ -167,13 +179,9 @@ export const useNotifications = () => {
         )
       );
       
-      // 읽지 않은 알림 개수 재계산
-      const unreadCount = notificationIds.filter(id => {
-        const notification = notifications.find(n => n.id === id);
-        return notification && !notification.is_read;
-      }).length;
+      // 읽지 않은 알림 개수 정확히 감소
+      setUnreadCount(prev => Math.max(0, prev - unreadNotificationsToUpdate.length));
       
-      setUnreadCount(prev => Math.max(0, prev - unreadCount));
       return true;
     } catch (error) {
       console.error('🔔 일괄 읽음 처리 오류:', error);
@@ -186,16 +194,19 @@ export const useNotifications = () => {
     if (!user?.id) return false;
 
     try {
+      // 삭제될 알림 중 읽지 않은 알림만 필터링하여 개수 계산
+      const deletedUnreadNotifications = notifications.filter(n => 
+        notificationIds.includes(n.id) && !n.is_read
+      );
+      
       await NotificationService.deleteMultipleNotifications(notificationIds);
       
       // 로컬 상태 업데이트
       setNotifications(prev => prev.filter(n => !notificationIds.includes(n.id)));
       
-      // 삭제된 알림 중 읽지 않은 것들의 개수만큼 unreadCount 감소
-      const deletedUnreadCount = notifications.filter(n => 
-        notificationIds.includes(n.id) && !n.is_read
-      ).length;
-      setUnreadCount(prev => Math.max(0, prev - deletedUnreadCount));
+      // 삭제된 읽지 않은 알림 개수만큼 unreadCount 감소
+      setUnreadCount(prev => Math.max(0, prev - deletedUnreadNotifications.length));
+      
       return true;
     } catch (error) {
       console.error('🔔 일괄 삭제 오류:', error);
