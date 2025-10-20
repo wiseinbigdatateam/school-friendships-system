@@ -10,8 +10,12 @@ const Notifications: React.FC = () => {
     markAsRead,
     markAllAsRead,
     deleteNotification,
+    markMultipleAsRead,
+    deleteMultipleNotifications,
   } = useNotifications();
   const [filter, setFilter] = useState<"all" | "unread" | "read">("all");
+  const [selectedNotifications, setSelectedNotifications] = useState<string[]>([]);
+  const [isSelectAll, setIsSelectAll] = useState(false);
 
   const handleMarkAsRead = async (notificationId: string) => {
     try {
@@ -37,11 +41,57 @@ const Notifications: React.FC = () => {
     }
   };
 
+  // 선택 관련 함수들
+  const handleSelectNotification = (notificationId: string) => {
+    setSelectedNotifications(prev => 
+      prev.includes(notificationId) 
+        ? prev.filter(id => id !== notificationId)
+        : [...prev, notificationId]
+    );
+  };
+
+  const handleSelectAll = () => {
+    if (isSelectAll) {
+      setSelectedNotifications([]);
+      setIsSelectAll(false);
+    } else {
+      const allIds = filteredNotifications.map(n => n.id);
+      setSelectedNotifications(allIds);
+      setIsSelectAll(true);
+    }
+  };
+
+  const handleBulkMarkAsRead = async () => {
+    try {
+      await markMultipleAsRead(selectedNotifications);
+      setSelectedNotifications([]);
+      setIsSelectAll(false);
+    } catch (error) {
+      console.error("일괄 읽음 처리 오류:", error);
+    }
+  };
+
+  const handleBulkDelete = async () => {
+    try {
+      await deleteMultipleNotifications(selectedNotifications);
+      setSelectedNotifications([]);
+      setIsSelectAll(false);
+    } catch (error) {
+      console.error("일괄 삭제 오류:", error);
+    }
+  };
+
   const filteredNotifications = notifications.filter((notification) => {
     if (filter === "unread") return !notification.is_read;
     if (filter === "read") return notification.is_read;
     return true;
   });
+
+  // 필터 변경 시 선택 상태 초기화
+  React.useEffect(() => {
+    setSelectedNotifications([]);
+    setIsSelectAll(false);
+  }, [filter]);
 
   const getTypeColor = (type: string) => {
     switch (type) {
@@ -164,6 +214,42 @@ const Notifications: React.FC = () => {
           </div>
         </div>
 
+        {/* 선택 및 일괄 작업 영역 */}
+        {filteredNotifications.length > 0 && (
+          <div className="mb-4 flex items-center justify-between rounded-lg border border-gray-200 bg-gray-50 p-4">
+            <div className="flex items-center space-x-4">
+              <label className="flex items-center space-x-2">
+                <input
+                  type="checkbox"
+                  checked={isSelectAll}
+                  onChange={handleSelectAll}
+                  className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                />
+                <span className="text-sm font-medium text-gray-700">
+                  전체 선택 ({selectedNotifications.length}/{filteredNotifications.length})
+                </span>
+              </label>
+            </div>
+            
+            {selectedNotifications.length > 0 && (
+              <div className="flex items-center space-x-2">
+                <button
+                  onClick={handleBulkMarkAsRead}
+                  className="rounded-lg bg-green-500 px-3 py-1 text-sm font-medium text-white transition-colors hover:bg-green-600"
+                >
+                  선택 읽음 처리 ({selectedNotifications.length})
+                </button>
+                <button
+                  onClick={handleBulkDelete}
+                  className="rounded-lg bg-red-500 px-3 py-1 text-sm font-medium text-white transition-colors hover:bg-red-600"
+                >
+                  선택 삭제 ({selectedNotifications.length})
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+
         {/* 알림 목록 */}
         <div className="space-y-4">
           {filteredNotifications.length === 0 ? (
@@ -194,11 +280,17 @@ const Notifications: React.FC = () => {
                 key={notification.id}
                 className={`rounded-lg border border-gray-200 bg-white p-6 shadow-sm transition-all duration-200 ${
                   notification.is_read && "opacity-75"
-                }`}
+                } ${selectedNotifications.includes(notification.id) ? "ring-2 ring-blue-500" : ""}`}
               >
                 <div className="flex items-start justify-between">
                   <div className="flex flex-1 items-start space-x-4">
-                    {/* <div className="text-2xl">{getTypeIcon(notification.type)}</div> */}
+                    {/* 체크박스 */}
+                    <input
+                      type="checkbox"
+                      checked={selectedNotifications.includes(notification.id)}
+                      onChange={() => handleSelectNotification(notification.id)}
+                      className="mt-1 h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                    />
 
                     <div className="flex-1">
                       <div className="mb-2 flex items-center space-x-3">

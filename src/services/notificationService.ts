@@ -646,6 +646,46 @@ export class NotificationService {
   }
 
   /**
+   * 여러 알림을 일괄 읽음 처리
+   */
+  static async markMultipleAsRead(notificationIds: string[]): Promise<void> {
+    try {
+      const { error } = await supabase
+        .from('notifications')
+        .update({ is_read: true })
+        .in('id', notificationIds);
+
+      if (error) {
+        console.error('일괄 읽음 처리 오류:', error);
+        throw error;
+      }
+    } catch (error) {
+      console.error('일괄 읽음 처리 오류:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * 여러 알림을 일괄 삭제
+   */
+  static async deleteMultipleNotifications(notificationIds: string[]): Promise<void> {
+    try {
+      const { error } = await supabase
+        .from('notifications')
+        .delete()
+        .in('id', notificationIds);
+
+      if (error) {
+        console.error('일괄 삭제 오류:', error);
+        throw error;
+      }
+    } catch (error) {
+      console.error('일괄 삭제 오류:', error);
+      throw error;
+    }
+  }
+
+  /**
    * 기존 고위험 학생 알림 존재 여부 확인
    */
   static async checkExistingHighRiskNotification(schoolId: string): Promise<boolean> {

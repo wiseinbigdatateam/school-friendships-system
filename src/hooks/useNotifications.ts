@@ -151,7 +151,57 @@ export const useNotifications = () => {
     }
   }, [user?.id, notifications]);
 
+  // 여러 알림 일괄 읽음 처리
+  const markMultipleAsRead = useCallback(async (notificationIds: string[]) => {
+    if (!user?.id) return false;
 
+    try {
+      await NotificationService.markMultipleAsRead(notificationIds);
+      
+      // 로컬 상태 업데이트
+      setNotifications(prev => 
+        prev.map(n => 
+          notificationIds.includes(n.id) 
+            ? { ...n, is_read: true }
+            : n
+        )
+      );
+      
+      // 읽지 않은 알림 개수 재계산
+      const unreadCount = notificationIds.filter(id => {
+        const notification = notifications.find(n => n.id === id);
+        return notification && !notification.is_read;
+      }).length;
+      
+      setUnreadCount(prev => Math.max(0, prev - unreadCount));
+      return true;
+    } catch (error) {
+      console.error('🔔 일괄 읽음 처리 오류:', error);
+      return false;
+    }
+  }, [user?.id, notifications]);
+
+  // 여러 알림 일괄 삭제
+  const deleteMultipleNotifications = useCallback(async (notificationIds: string[]) => {
+    if (!user?.id) return false;
+
+    try {
+      await NotificationService.deleteMultipleNotifications(notificationIds);
+      
+      // 로컬 상태 업데이트
+      setNotifications(prev => prev.filter(n => !notificationIds.includes(n.id)));
+      
+      // 삭제된 알림 중 읽지 않은 것들의 개수만큼 unreadCount 감소
+      const deletedUnreadCount = notifications.filter(n => 
+        notificationIds.includes(n.id) && !n.is_read
+      ).length;
+      setUnreadCount(prev => Math.max(0, prev - deletedUnreadCount));
+      return true;
+    } catch (error) {
+      console.error('🔔 일괄 삭제 오류:', error);
+      return false;
+    }
+  }, [user?.id, notifications]);
 
   // 최근 알림 조회 (헤더용)
   const getRecentNotifications = useCallback(async (limit: number = 5) => {
@@ -173,6 +223,8 @@ export const useNotifications = () => {
     markAsRead,
     markAllAsRead,
     deleteNotification,
+    markMultipleAsRead,
+    deleteMultipleNotifications,
     getRecentNotifications,
     refresh: loadNotifications
   };
