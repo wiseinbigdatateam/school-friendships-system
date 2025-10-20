@@ -199,6 +199,10 @@ const Reports: React.FC = () => {
               surveyResults: [],
               analysis: '설문 결과 분석이 필요합니다.'
             },
+            violenceExperience: {
+              surveyResults: [],
+              analysis: '폭력 경험도 분석이 필요합니다.'
+            },
             peerNetworkAnalysis: {
               receivedChoices: 0,
               madeChoices: 0,

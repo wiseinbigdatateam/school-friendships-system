@@ -31,7 +31,7 @@ export class AIReportService {
   ): Promise<AIReportRecord> {
     try {
       // 현재 로그인한 사용자 ID 가져오기
-      let userId = '86358d6e-29bd-439f-ba60-80ca2ccc4a5f'; // 현재 로그인한 김담임 선생님 ID
+      let userId: string | null = null;
       
       try {
         const { data: { user } } = await supabase.auth.getUser();
@@ -39,7 +39,12 @@ export class AIReportService {
           userId = user.id;
         }
       } catch (authError) {
-        console.warn('인증 정보 조회 실패, 현재 사용자 ID 사용:', authError);
+        // 인증 정보 조회 실패
+      }
+
+      // 사용자가 로그인하지 않은 경우 에러 처리
+      if (!userId) {
+        throw new Error('로그인이 필요합니다.');
       }
 
       // 기존 리포트가 있는지 확인
@@ -95,7 +100,6 @@ export class AIReportService {
         return data as unknown as AIReportRecord;
       }
     } catch (error) {
-      console.error('AI 리포트 저장 오류:', error);
       throw error;
     }
   }
@@ -125,7 +129,6 @@ export class AIReportService {
 
       return data as unknown as AIReportRecord;
     } catch (error) {
-      console.error('AI 리포트 조회 오류:', error);
       throw error;
     }
   }
@@ -151,7 +154,6 @@ export class AIReportService {
       if (error) throw error;
       return data as unknown as AIReportRecord[];
     } catch (error) {
-      console.error('학생 AI 리포트 목록 조회 오류:', error);
       throw error;
     }
   }
@@ -168,7 +170,6 @@ export class AIReportService {
 
       if (error) throw error;
     } catch (error) {
-      console.error('AI 리포트 삭제 오류:', error);
       throw error;
     }
   }
@@ -186,7 +187,6 @@ export class AIReportService {
 
       if (error) throw error;
     } catch (error) {
-      console.error('AI 리포트 삭제 오류:', error);
       throw error;
     }
   }
@@ -212,7 +212,6 @@ export class AIReportService {
 
       return !!data;
     } catch (error) {
-      console.error('AI 리포트 존재 확인 오류:', error);
       return false;
     }
   }
