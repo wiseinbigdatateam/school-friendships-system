@@ -563,7 +563,6 @@ const ClassSurvey: React.FC = () => {
 
   const fetchSurveys = async () => {
     try {
-
       if (!user) {
         setSurveys([]);
         setLoading(false);
@@ -580,7 +579,6 @@ const ClassSurvey: React.FC = () => {
         throw templateError;
       }
 
-
       // 카테고리가 "학교폭력", "만족도", 또는 "종합조사"인 템플릿 ID들 찾기
       const targetTemplateIds = templates
         .filter((template: any) => {
@@ -594,7 +592,6 @@ const ClassSurvey: React.FC = () => {
           );
         })
         .map((template: any) => template.id);
-
 
       if (targetTemplateIds.length === 0) {
         setSurveys([]);
@@ -620,23 +617,19 @@ const ClassSurvey: React.FC = () => {
       const { data, error } = await query;
 
       if (error) {
-        console.error("Survey error:", error);
         throw error;
       }
-
 
       // 사용자 권한에 따른 추가 필터링
       let filteredSurveys = data || [];
 
       if (user.role === "homeroom_teacher" && user.grade && user.class) {
         // 담임교사: 자신의 담당 학급만
-        
         filteredSurveys = filteredSurveys.filter((survey: any) => {
           const gradeMatch =
             survey.target_grades && survey.target_grades.includes(user.grade);
           const classMatch =
             survey.target_classes && survey.target_classes.includes(user.class);
-          
           return gradeMatch && classMatch;
         });
       } else if (user.role === "grade_teacher" && user.grade) {
@@ -650,8 +643,9 @@ const ClassSurvey: React.FC = () => {
         user.role === "school_admin" ||
         user.role === "district_admin" ||
         user.role === "main_admin"
-      ) 
-
+      ) {
+        // 관리자: 학교의 모든 설문 (이미 school_id로 필터링됨)
+      }
 
       if (filteredSurveys.length > 0) {
         // 템플릿 정보와 함께 데이터 구성
@@ -688,7 +682,6 @@ const ClassSurvey: React.FC = () => {
 
   const fetchChartData = async () => {
     try {
-
       // 실제 설문 응답 데이터를 가져오는 로직
       const { data: responsesData, error: responsesError } = await supabase
         .from("survey_responses")
@@ -696,9 +689,6 @@ const ClassSurvey: React.FC = () => {
         .eq("survey_id", selectedSurvey);
 
       if (responsesError) throw responsesError;
-
-      if (responsesData && responsesData.length > 0) {
-      }
 
       // 설문 정보 가져오기
       const { data: surveyData, error: surveyError } = await supabase
@@ -714,7 +704,6 @@ const ClassSurvey: React.FC = () => {
 
       if (!schoolId) {
         // 설문에 학교 ID가 없으면 현재 사용자의 학교 ID 사용
-
         if (user?.school_id) {
           schoolId = user.school_id;
         } else if (user?.schoolId) {
@@ -736,11 +725,9 @@ const ClassSurvey: React.FC = () => {
       }
 
       if (!schoolId) {
-        console.error("No school ID available");
         setChartData([]);
         return;
       }
-
 
       // 학생 정보 가져오기 (current_school_id 사용)
       const { data: studentsData, error: studentsError } = await supabase
@@ -769,7 +756,6 @@ const ClassSurvey: React.FC = () => {
             const numericKey = originalIndex.toString();
             const qKey = `q${originalIndex}`;
 
-
             // 다양한 키로 응답 찾기
             const findResponseValue = (response: any) => {
               if (!response.responses) return null;
@@ -797,7 +783,6 @@ const ClassSurvey: React.FC = () => {
               ? findResponseValue(sampleResponse)
               : null;
 
-
             // 응답 값이 문자열인 경우 (예/아니오 또는 빈도 기반)
             if (typeof sampleValue === "string") {
 
@@ -822,9 +807,7 @@ const ClassSurvey: React.FC = () => {
                     question.text.includes("소지품") ||
                     question.text.includes("무시")));
 
-
               if (isViolenceSurvey) {
-                
 
                 // 학교 폭력 조사 3단계 빈도 처리
                 const neverKeywords = ["전혀 없다", "전혀 없음"];
@@ -866,8 +849,6 @@ const ClassSurvey: React.FC = () => {
                         .includes(keyword.toLowerCase()),
                   );
                 }).length;
-
-                
 
                 // 학교 폭력 조사는 3개 카테고리로 분리
                 return {
@@ -958,8 +939,6 @@ const ClassSurvey: React.FC = () => {
                   );
                 }).length;
 
-                
-
                 return {
                   question:
                     question.text ||
@@ -1017,8 +996,6 @@ const ClassSurvey: React.FC = () => {
                 return !value || (Array.isArray(value) && value.length === 0);
               }).length;
 
-              
-
               return {
                 question:
                   question.text || question.question || `질문 ${originalIndex}`,
@@ -1072,7 +1049,6 @@ const ClassSurvey: React.FC = () => {
                   value === false
                 );
               }).length;
-
 
               return {
                 question:
