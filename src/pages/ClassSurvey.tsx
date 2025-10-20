@@ -545,7 +545,6 @@ const ClassSurvey: React.FC = () => {
   // 페이지가 포커스될 때마다 설문 목록 새로고침 (삭제된 설문 제거)
   useEffect(() => {
     const handleFocus = () => {
-      console.log("페이지 포커스 - 설문 목록 새로고침");
       fetchSurveys();
     };
 
@@ -564,10 +563,8 @@ const ClassSurvey: React.FC = () => {
 
   const fetchSurveys = async () => {
     try {
-      console.log("Fetching surveys for user:", user);
 
       if (!user) {
-        console.log("No user found");
         setSurveys([]);
         setLoading(false);
         return;
@@ -580,17 +577,14 @@ const ClassSurvey: React.FC = () => {
         .eq("is_active", true);
 
       if (templateError) {
-        console.error("Template error:", templateError);
         throw templateError;
       }
 
-      console.log("Templates found:", templates);
 
       // 카테고리가 "학교폭력", "만족도", 또는 "종합조사"인 템플릿 ID들 찾기
       const targetTemplateIds = templates
         .filter((template: any) => {
           const metadata = template.metadata;
-          console.log("Template metadata:", template.name, metadata);
           return (
             metadata &&
             metadata.category &&
@@ -601,10 +595,8 @@ const ClassSurvey: React.FC = () => {
         })
         .map((template: any) => template.id);
 
-      console.log("Target template IDs:", targetTemplateIds);
 
       if (targetTemplateIds.length === 0) {
-        console.log("No matching templates found");
         setSurveys([]);
         setLoading(false);
         return;
@@ -623,7 +615,6 @@ const ClassSurvey: React.FC = () => {
       // 학교 ID 필터링
       if (user.school_id) {
         query = query.eq("school_id", user.school_id);
-        console.log("Filtering by school_id:", user.school_id);
       }
 
       const { data, error } = await query;
@@ -633,47 +624,34 @@ const ClassSurvey: React.FC = () => {
         throw error;
       }
 
-      console.log("All surveys found:", data);
 
       // 사용자 권한에 따른 추가 필터링
       let filteredSurveys = data || [];
 
       if (user.role === "homeroom_teacher" && user.grade && user.class) {
         // 담임교사: 자신의 담당 학급만
-        console.log("Filtering for homeroom teacher:", {
-          grade: user.grade,
-          class: user.class,
-        });
+        
         filteredSurveys = filteredSurveys.filter((survey: any) => {
           const gradeMatch =
             survey.target_grades && survey.target_grades.includes(user.grade);
           const classMatch =
             survey.target_classes && survey.target_classes.includes(user.class);
-          console.log(`Survey "${survey.title}" grade/class match:`, {
-            gradeMatch,
-            classMatch,
-          });
+          
           return gradeMatch && classMatch;
         });
       } else if (user.role === "grade_teacher" && user.grade) {
         // 학년담당: 해당 학년만
-        console.log("Filtering for grade teacher:", { grade: user.grade });
         filteredSurveys = filteredSurveys.filter((survey: any) => {
           const gradeMatch =
             survey.target_grades && survey.target_grades.includes(user.grade);
-          console.log(`Survey "${survey.title}" grade match:`, { gradeMatch });
           return gradeMatch;
         });
       } else if (
         user.role === "school_admin" ||
         user.role === "district_admin" ||
         user.role === "main_admin"
-      ) {
-        // 관리자: 학교의 모든 설문 (이미 school_id로 필터링됨)
-        console.log("Admin user - showing all surveys for school");
-      }
+      ) 
 
-      console.log("Filtered surveys:", filteredSurveys);
 
       if (filteredSurveys.length > 0) {
         // 템플릿 정보와 함께 데이터 구성
@@ -689,7 +667,6 @@ const ClassSurvey: React.FC = () => {
           };
         });
 
-        console.log("Final surveys data:", surveysWithTemplates);
         setSurveys(surveysWithTemplates);
 
         // 현재 선택된 설문이 삭제되었을 경우 첫 번째 설문으로 변경
@@ -711,7 +688,6 @@ const ClassSurvey: React.FC = () => {
 
   const fetchChartData = async () => {
     try {
-      console.log("Fetching chart data for survey:", selectedSurvey);
 
       // 실제 설문 응답 데이터를 가져오는 로직
       const { data: responsesData, error: responsesError } = await supabase
@@ -720,15 +696,8 @@ const ClassSurvey: React.FC = () => {
         .eq("survey_id", selectedSurvey);
 
       if (responsesError) throw responsesError;
-      console.log("📊 설문 응답 데이터:", responsesData);
-      console.log("📊 응답 데이터 개수:", responsesData?.length || 0);
 
       if (responsesData && responsesData.length > 0) {
-        console.log("📊 첫 번째 응답 예시:", responsesData[0]);
-        console.log(
-          "📊 첫 번째 응답의 responses 필드:",
-          responsesData[0].responses,
-        );
       }
 
       // 설문 정보 가져오기
@@ -739,27 +708,21 @@ const ClassSurvey: React.FC = () => {
         .single();
 
       if (surveyError) throw surveyError;
-      console.log("📋 설문 정보:", surveyData);
-      console.log("📋 설문 질문들:", surveyData.questions);
 
       // 설문의 학교 ID를 사용하여 학생 정보 가져오기
       let schoolId = surveyData.school_id;
 
       if (!schoolId) {
         // 설문에 학교 ID가 없으면 현재 사용자의 학교 ID 사용
-        console.log("설문에 학교 ID가 없음, 현재 사용자 정보 사용:", user);
 
         if (user?.school_id) {
           schoolId = user.school_id;
-          console.log("사용자의 학교 ID 사용:", schoolId);
         } else if (user?.schoolId) {
           schoolId = user.schoolId;
-          console.log("사용자의 schoolId 사용:", schoolId);
         }
 
         // 사용자에게 학교 ID가 없으면 첫 번째 학교 사용
         if (!schoolId) {
-          console.log("사용자에게도 학교 ID가 없음, 첫 번째 학교 사용");
           const { data: firstSchool } = await supabase
             .from("schools")
             .select("id")
@@ -768,7 +731,6 @@ const ClassSurvey: React.FC = () => {
 
           if (firstSchool) {
             schoolId = firstSchool.id;
-            console.log("첫 번째 학교 ID 사용:", schoolId);
           }
         }
       }
@@ -779,7 +741,6 @@ const ClassSurvey: React.FC = () => {
         return;
       }
 
-      console.log("Using school ID:", schoolId);
 
       // 학생 정보 가져오기 (current_school_id 사용)
       const { data: studentsData, error: studentsError } = await supabase
@@ -788,13 +749,10 @@ const ClassSurvey: React.FC = () => {
         .eq("current_school_id", schoolId);
 
       if (studentsError) throw studentsError;
-      console.log("👥 학생 데이터:", studentsData);
-      console.log("👥 학생 수:", studentsData?.length || 0);
 
       // 응답 데이터를 차트 데이터로 변환
       if (responsesData && surveyData && surveyData.questions) {
         const questions = surveyData.questions as any[];
-        console.log("Questions from survey:", questions);
 
         const chartDataArray: ChartData[] = questions
           .filter((question: any, index: number) => {
@@ -805,18 +763,12 @@ const ClassSurvey: React.FC = () => {
             // 필터링 후 실제 인덱스 계산 (1번, 9번 제외)
             // 원본 질문 인덱스 1 (2번 질문)이 필터링 후 인덱스 0이 되므로 +2
             const originalIndex = index + 2;
-            console.log(`처리 중인 질문 ${originalIndex}:`, question);
 
             // 다양한 키 형식으로 응답 데이터 찾기 (원본 인덱스 사용)
             const questionId = question.id || `q${originalIndex}`;
             const numericKey = originalIndex.toString();
             const qKey = `q${originalIndex}`;
 
-            console.log(`질문 ${originalIndex} 키 후보:`, {
-              questionId,
-              numericKey,
-              qKey,
-            });
 
             // 다양한 키로 응답 찾기
             const findResponseValue = (response: any) => {
@@ -845,19 +797,9 @@ const ClassSurvey: React.FC = () => {
               ? findResponseValue(sampleResponse)
               : null;
 
-            console.log(`질문 ${originalIndex} - 샘플 응답 값:`, sampleValue);
-            console.log(
-              `질문 ${originalIndex} - 샘플 응답 타입:`,
-              typeof sampleValue,
-            );
-            console.log(
-              `질문 ${originalIndex} - 샘플 응답이 배열인가:`,
-              Array.isArray(sampleValue),
-            );
 
             // 응답 값이 문자열인 경우 (예/아니오 또는 빈도 기반)
             if (typeof sampleValue === "string") {
-              console.log(`질문 ${originalIndex} - 문자열 응답 처리`);
 
               // 학교 폭력 조사 감지 - 설문 제목, 질문 텍스트, 종합조사 6~8번 질문 확인
               const isViolenceSurvey =
@@ -880,16 +822,9 @@ const ClassSurvey: React.FC = () => {
                     question.text.includes("소지품") ||
                     question.text.includes("무시")));
 
-              console.log(`질문 ${originalIndex} - 학교 폭력 조사 감지:`, {
-                surveyTitle: currentSurvey?.title,
-                questionText: question.text,
-                isViolenceSurvey,
-              });
 
               if (isViolenceSurvey) {
-                console.log(
-                  `질문 ${originalIndex} - 학교 폭력 조사 3단계 빈도 처리`,
-                );
+                
 
                 // 학교 폭력 조사 3단계 빈도 처리
                 const neverKeywords = ["전혀 없다", "전혀 없음"];
@@ -932,19 +867,7 @@ const ClassSurvey: React.FC = () => {
                   );
                 }).length;
 
-                console.log(`질문 ${originalIndex} 응답 수 (폭력조사 3단계):`, {
-                  neverCount,
-                  sometimesCount,
-                  oftenCount,
-                });
-                console.log(`질문 ${originalIndex} - 빈도 키워드 매칭:`, {
-                  neverKeywords,
-                  sometimesKeywords,
-                  oftenKeywords,
-                  sampleResponses: responsesData
-                    .slice(0, 3)
-                    .map((r) => findResponseValue(r)),
-                });
+                
 
                 // 학교 폭력 조사는 3개 카테고리로 분리
                 return {
@@ -1012,7 +935,6 @@ const ClassSurvey: React.FC = () => {
                 };
               } else {
                 // 일반적인 예/아니오 응답 처리 (만족도 조사 등)
-                console.log(`질문 ${originalIndex} - 일반 예/아니오 응답 처리`);
 
                 const yesCount = responsesData.filter((response: any) => {
                   const value = findResponseValue(response);
@@ -1036,10 +958,7 @@ const ClassSurvey: React.FC = () => {
                   );
                 }).length;
 
-                console.log(`질문 ${originalIndex} 응답 수:`, {
-                  yesCount,
-                  noCount,
-                });
+                
 
                 return {
                   question:
@@ -1087,7 +1006,6 @@ const ClassSurvey: React.FC = () => {
             }
             // 응답 값이 배열인 경우 (교우관계 설문 등)
             else if (Array.isArray(sampleValue)) {
-              console.log(`질문 ${originalIndex} - 배열 응답 처리`);
 
               const yesCount = responsesData.filter((response: any) => {
                 const value = findResponseValue(response);
@@ -1099,10 +1017,7 @@ const ClassSurvey: React.FC = () => {
                 return !value || (Array.isArray(value) && value.length === 0);
               }).length;
 
-              console.log(`질문 ${originalIndex} 응답 수:`, {
-                yesCount,
-                noCount,
-              });
+              
 
               return {
                 question:
@@ -1137,7 +1052,6 @@ const ClassSurvey: React.FC = () => {
             }
             // 기타 경우
             else {
-              console.log(`질문 ${originalIndex} - 기타 응답 처리`);
 
               const yesCount = responsesData.filter((response: any) => {
                 const value = findResponseValue(response);
@@ -1159,10 +1073,6 @@ const ClassSurvey: React.FC = () => {
                 );
               }).length;
 
-              console.log(`질문 ${originalIndex} 응답 수:`, {
-                yesCount,
-                noCount,
-              });
 
               return {
                 question:
@@ -1205,7 +1115,6 @@ const ClassSurvey: React.FC = () => {
             }
           });
 
-        console.log("Final chart data:", chartDataArray);
         setChartData(chartDataArray);
       }
     } catch (error) {

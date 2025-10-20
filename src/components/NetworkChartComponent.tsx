@@ -75,20 +75,14 @@ const NetworkChartComponent: React.FC<NetworkChartComponentProps> = ({
 
   // 실제 네트워크 데이터 사용
   const getNetworkData = (data: NetworkAnalysisData) => {
-    console.log("📊 실제 네트워크 데이터 사용:", data);
-    console.log("📊 노드 수:", data.nodes.length);
-    console.log("📊 엣지 수:", data.edges.length);
-    console.log("📊 친구 관계 유형:", data.friendship_types);
     return data;
   };
 
   useEffect(() => {
     if (chartData && chartData.length > 0) {
-      console.log("📊 NetworkChartComponent 데이터 수신:", chartData);
       setFirstGraphData(chartData[0]);
       if (chartData.length > 1) {
         setSecondGraphData(chartData[1]);
-        console.log("📊 비교분석을 위한 두 번째 데이터:", chartData[1]);
       } else {
         setSecondGraphData(null);
       }

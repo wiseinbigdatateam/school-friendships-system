@@ -81,11 +81,7 @@ const NetworkGraph: React.FC<NetworkGraphProps> = ({
 
     // 학생 유형별 색상 매핑 함수 (NetworkVisualization과 동일한 색상)
     const getStudentTypeColor = (student: Student) => {
-      console.log(`🎨 NetworkGraph 색상 결정: ${student.name}`, {
-        friendship_type: (student as any).friendship_type,
-        friendCount: student.friendCount,
-        totalStudents: students.length
-      });
+      
       
       // friendship_type이 있으면 직접 사용
       if ((student as any).friendship_type) {
@@ -97,7 +93,6 @@ const NetworkGraph: React.FC<NetworkGraphProps> = ({
           "사교 스타": "#FFEAA7"
         };
         const color = colorMap[(student as any).friendship_type] || "#94a3b8";
-        console.log(`✅ friendship_type 사용: ${(student as any).friendship_type} → ${color}`);
         return color;
       }
       
@@ -112,7 +107,6 @@ const NetworkGraph: React.FC<NetworkGraphProps> = ({
       else if (normalizedCentrality < 0.8) color = "#96CEB4"; // 친구 많은 학생
       else color = "#FFEAA7";                                 // 사교 스타
       
-      console.log(`⚠️ friendCount 기반 계산: ${student.friendCount}/${maxPossibleConnections} = ${normalizedCentrality.toFixed(2)} → ${color}`);
       return color;
     };
 

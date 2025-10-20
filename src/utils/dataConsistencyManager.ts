@@ -48,7 +48,6 @@ export class DataConsistencyManager {
       version: this.generateVersion()
     });
 
-    console.log(`📦 캐시 저장: ${key} (TTL: ${ttl || this.config.defaultTTL}ms)`);
   }
 
   /**
@@ -58,7 +57,6 @@ export class DataConsistencyManager {
     const entry = this.cache.get(key);
     
     if (!entry) {
-      console.log(`❌ 캐시 미스: ${key}`);
       return null;
     }
 
@@ -66,12 +64,10 @@ export class DataConsistencyManager {
     
     // 만료 확인
     if (now > entry.expiry) {
-      console.log(`⏰ 캐시 만료: ${key}`);
       this.cache.delete(key);
       return null;
     }
 
-    console.log(`✅ 캐시 히트: ${key} (age: ${now - entry.timestamp}ms)`);
     return entry.data;
   }
 
@@ -81,7 +77,6 @@ export class DataConsistencyManager {
   invalidate(key: string): void {
     if (this.cache.has(key)) {
       this.cache.delete(key);
-      console.log(`🗑️ 캐시 무효화: ${key}`);
     }
   }
 
@@ -101,7 +96,6 @@ export class DataConsistencyManager {
       }
     }
     
-    console.log(`🗑️ 패턴 캐시 무효화: ${pattern} (${count}개 항목)`);
   }
 
   /**
@@ -110,7 +104,6 @@ export class DataConsistencyManager {
   clear(): void {
     const size = this.cache.size;
     this.cache.clear();
-    console.log(`🗑️ 전체 캐시 클리어: ${size}개 항목`);
   }
 
   /**
@@ -161,7 +154,6 @@ export class DataConsistencyManager {
 
     if (oldestKey) {
       this.cache.delete(oldestKey);
-      console.log(`🗑️ 오래된 캐시 항목 제거: ${oldestKey}`);
     }
   }
 
@@ -191,7 +183,6 @@ export class DataConsistencyManager {
     }
 
     if (cleanedCount > 0) {
-      console.log(`🧹 캐시 정리 완료: ${cleanedCount}개 항목 제거`);
     }
   }
 
@@ -250,7 +241,6 @@ export class NetworkAnalysisSyncManager {
   invalidateSurveyCache(surveyId: string): void {
     const pattern = `survey:${surveyId}:*`;
     this.consistencyManager.invalidatePattern(pattern);
-    console.log(`🔄 설문 캐시 무효화: ${surveyId}`);
   }
 
   /**
@@ -270,7 +260,6 @@ export class NetworkAnalysisSyncManager {
     }
 
     this.isProcessing = true;
-    console.log(`🔄 동기화 큐 처리 시작: ${this.syncQueue.size}개 항목`);
 
     try {
       const surveyIds = Array.from(this.syncQueue);
@@ -280,7 +269,6 @@ export class NetworkAnalysisSyncManager {
         await this.syncSurveyData(surveyId);
       }
 
-      console.log(`✅ 동기화 큐 처리 완료`);
     } catch (error) {
       console.error('❌ 동기화 큐 처리 오류:', error);
     } finally {
@@ -293,7 +281,6 @@ export class NetworkAnalysisSyncManager {
    */
   private async syncSurveyData(surveyId: string): Promise<void> {
     try {
-      console.log(`🔄 설문 데이터 동기화: ${surveyId}`);
       
       // 관련된 모든 캐시 무효화
       this.invalidateSurveyCache(surveyId);
@@ -303,7 +290,6 @@ export class NetworkAnalysisSyncManager {
       // - 캐시 업데이트
       // - 관련 페이지에 변경 알림
       
-      console.log(`✅ 설문 데이터 동기화 완료: ${surveyId}`);
     } catch (error) {
       console.error(`❌ 설문 데이터 동기화 오류: ${surveyId}`, error);
     }
@@ -328,7 +314,6 @@ export class NetworkAnalysisSyncManager {
    */
   clearAllCache(): void {
     this.consistencyManager.clear();
-    console.log('🗑️ 전체 네트워크 분석 캐시 클리어');
   }
 
   /**

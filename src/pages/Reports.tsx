@@ -114,13 +114,6 @@ const Reports: React.FC = () => {
           
           // 5분 이내의 데이터만 유효하게 처리
           if (now.getTime() - timestamp.getTime() < 5 * 60 * 1000) {
-            console.log('🔍 localStorage에서 임시 분석 결과 발견:', parsed);
-            console.log('🔍 분석 데이터 구조:', {
-              nodes: parsed.analysis_data?.nodes?.length || 0,
-              edges: parsed.analysis_data?.edges?.length || 0,
-              surveyId: parsed.survey_id,
-              timestamp: parsed.timestamp
-            });
             
             // 임시 분석 결과를 개별 학생별로 변환
             const validResults: NetworkAnalysisResult[] = students.map(student => {
@@ -131,18 +124,6 @@ const Reports: React.FC = () => {
               );
               
               if (!node) {
-                console.log('🔍 학생 노드를 찾을 수 없음:', {
-                  studentId: student.id,
-                  studentName: student.name,
-                  studentGrade: student.grade,
-                  studentClass: student.class,
-                  availableNodes: parsed.analysis_data.nodes.map((n: any) => ({
-                    id: n.id,
-                    name: n.name,
-                    grade: n.grade,
-                    class: n.class
-                  }))
-                });
                 return null;
               }
 
@@ -171,14 +152,12 @@ const Reports: React.FC = () => {
               };
             }).filter(Boolean) as NetworkAnalysisResult[];
 
-            console.log('🔍 임시 분석 결과에서 생성된 개별 결과:', validResults);
             setAnalysisResults(validResults);
             
             // 사용 후 localStorage에서 제거
             localStorage.removeItem('temp_network_analysis');
             return;
           } else {
-            console.log('🔍 임시 분석 결과가 만료되었습니다. localStorage에서 제거합니다.');
             localStorage.removeItem('temp_network_analysis');
           }
         } catch (error) {
@@ -345,7 +324,6 @@ const Reports: React.FC = () => {
       // 학교별 필터링
       if (teacherInfo.role === 'district_admin') {
         // 교육청 관리자: 모든 학교 학생 조회 (필터링 없음)
-        console.log('🔍 교육청 관리자: 모든 학교 학생 조회');
       } else {
         // 다른 역할: 해당 학교 학생만 조회
         query = query.eq('current_school_id', userSchoolId);
@@ -362,10 +340,8 @@ const Reports: React.FC = () => {
         query = query.eq('grade', teacherInfo.grade_level.toString());
       } else if (teacherInfo.role === 'school_admin') {
         // 학교관리자: 해당 학교 전체 (추가 필터링 없음)
-        console.log('🔍 학교관리자: 해당 학교 전체 학생 조회');
       } else if (teacherInfo.role === 'district_admin') {
         // 교육청관리자: 모든 학교 (추가 필터링 없음)
-        console.log('🔍 교육청관리자: 모든 학교 학생 조회');
       }
 
       const { data, error } = await query;
@@ -383,12 +359,6 @@ const Reports: React.FC = () => {
         current_school_id: student.current_school_id || (userSchoolId ?? '')
       }));
       
-      console.log('🔍 권한별 학생 데이터 조회:', {
-        role: teacherInfo.role,
-        grade_level: teacherInfo.grade_level,
-        class_number: teacherInfo.class_number,
-        조회된_학생수: convertedStudents.length
-      });
       
       setStudents(convertedStudents);
     } catch (error) {
@@ -398,16 +368,12 @@ const Reports: React.FC = () => {
 
   const fetchAnalysisResults = async () => {
     if (students.length === 0) {
-      console.log('🔍 학생 데이터가 없어 분석 결과 조회를 건너뜁니다.');
       return;
     }
     
     try {
       setLoading(true);
-      console.log('🔍 분석 결과 조회 시작:', {
-        학생수: students.length,
-        학생ID목록: students.map(s => s.id)
-      });
+      
       
       // 전체 네트워크 분석 결과 조회 (새로운 저장 방식)
       const { data, error } = await supabase
@@ -422,18 +388,14 @@ const Reports: React.FC = () => {
         return;
       }
 
-      console.log('🔍 DB에서 가져온 원본 데이터:', data);
-      console.log('🔍 원본 데이터 개수:', data?.length || 0);
 
       if (!data || data.length === 0) {
-        console.log('🔍 DB에 분석 결과가 없습니다.');
         setAnalysisResults([]);
         return;
       }
 
       // 전체 분석 결과에서 개별 학생 데이터 추출
       if (!data || data.length === 0) {
-        console.log('🔍 DB에 전체 분석 결과가 없습니다.');
         setAnalysisResults([]);
         return;
       }
@@ -443,7 +405,6 @@ const Reports: React.FC = () => {
       const completeData = recommendations?.complete_analysis_data;
 
       if (!completeData) {
-        console.log('🔍 전체 분석 데이터가 recommendations에 없습니다.');
         setAnalysisResults([]);
         return;
       }
@@ -452,7 +413,6 @@ const Reports: React.FC = () => {
       const validResults: NetworkAnalysisResult[] = students.map(student => {
         const node = completeData.nodes.find((n: any) => n.id === student.id);
         if (!node) {
-          console.log('🔍 학생 노드를 찾을 수 없음:', student.id);
           return null;
         }
 
@@ -484,8 +444,6 @@ const Reports: React.FC = () => {
         };
       }).filter(Boolean) as NetworkAnalysisResult[];
 
-      console.log('🔍 유효한 분석 결과:', validResults);
-      console.log('🔍 유효한 결과 개수:', validResults.length);
       setAnalysisResults(validResults);
     } catch (error) {
       console.error('🔍 분석 결과 조회 오류:', error);
@@ -960,7 +918,6 @@ const Reports: React.FC = () => {
                        onClick={async () => {
                          try {
                            setLoading(true);
-                           console.log('🔍 강제 분석 결과 확인 시작');
                            
                            // 모든 네트워크 분석 결과 조회 (학생 ID 제한 없이)
                            const { data, error } = await supabase
@@ -974,7 +931,6 @@ const Reports: React.FC = () => {
                              return;
                            }
 
-                           console.log('🔍 강제 조회 결과:', data);
                            toast.success(`총 ${data?.length || 0}개의 분석 결과를 찾았습니다.`);
                            
                          } catch (error) {

@@ -20,7 +20,6 @@ export const emailService = {
   // 네이버 웍스 액세스 토큰 획득 (프록시 서버 사용)
   async getAccessToken(): Promise<string> {
     try {
-      console.log('🔑 액세스 토큰 획득 시작');
       
       // 운영 환경에서는 HTTPS를 통해 Nginx 프록시 사용, 개발 환경에서는 환경 변수 사용
       const isProduction = window.location.hostname === 'edu.wiseon.io';
@@ -33,25 +32,17 @@ export const emailService = {
         ? `${baseUrl}/naver-works/token`
         : `${baseUrl}/api/naver-works/token`;
         
-      console.log('🌐 프록시 서버 URL (토큰):', tokenUrl);
-      console.log('🔧 클라이언트 설정:', {
-        clientId: NAVER_WORKS_CONFIG.clientId ? '설정됨' : '미설정',
-        clientSecret: NAVER_WORKS_CONFIG.clientSecret ? '설정됨' : '미설정'
-      });
-        
       const response = await axios.post(tokenUrl, {
         clientId: NAVER_WORKS_CONFIG.clientId,
         clientSecret: NAVER_WORKS_CONFIG.clientSecret
       });
 
-      console.log('📊 토큰 응답:', response.data);
 
       const accessToken = response.data.access_token;
       if (!accessToken) {
         throw new Error('액세스 토큰을 받지 못했습니다.');
       }
       
-      console.log('✅ 액세스 토큰 획득 완료');
       return accessToken;
     } catch (error) {
       console.error('❌ 네이버 웍스 액세스 토큰 획득 실패:', error);
@@ -67,32 +58,15 @@ export const emailService = {
   // 이메일 발송 (실제 네이버 웍스 API 사용)
   async sendEmail(emailData: EmailData): Promise<boolean> {
     try {
-      console.log('🚀 이메일 발송 시작:', {
-        to: emailData.to,
-        subject: emailData.subject,
-        hostname: window.location.hostname
-      });
 
       // 네이버 웍스 설정이 없으면 시뮬레이션 모드
       if (!NAVER_WORKS_CONFIG.clientId || !NAVER_WORKS_CONFIG.clientSecret || !NAVER_WORKS_CONFIG.domain) {
-        console.log('🔧 개발 환경 - 이메일 발송 시뮬레이션:');
-        console.log('📧 받는 사람:', emailData.to);
-        console.log('📝 제목:', emailData.subject);
-        console.log('📄 내용:', emailData.content);
-        console.log('✅ 이메일이 성공적으로 발송되었습니다 (시뮬레이션)');
         return true;
       }
 
-      console.log('🔧 네이버 웍스 설정 확인:', {
-        clientId: NAVER_WORKS_CONFIG.clientId ? '설정됨' : '미설정',
-        clientSecret: NAVER_WORKS_CONFIG.clientSecret ? '설정됨' : '미설정',
-        domain: NAVER_WORKS_CONFIG.domain
-      });
 
       // 실제 네이버 웍스 API 호출 (프록시 서버 사용)
-      console.log('🔑 액세스 토큰 획득 중...');
       const accessToken = await this.getAccessToken();
-      console.log('✅ 액세스 토큰 획득 완료');
 
       // 운영 환경에서는 HTTPS를 통해 Nginx 프록시 사용, 개발 환경에서는 환경 변수 사용
       const isProduction = window.location.hostname === 'edu.wiseon.io';
@@ -105,7 +79,6 @@ export const emailService = {
         ? `${baseUrl}/naver-works/send-email`
         : `${baseUrl}/api/naver-works/send-email`;
 
-      console.log('🌐 프록시 서버 URL:', sendEmailUrl);
 
       const requestData = {
         accessToken,
@@ -113,11 +86,9 @@ export const emailService = {
         emailData
       };
 
-      console.log('📤 이메일 발송 요청 데이터:', requestData);
 
       const response = await axios.post(sendEmailUrl, requestData);
 
-      console.log('✅ 이메일 발송 성공:', response.data);
       return true;
     } catch (error) {
       console.error('❌ 이메일 발송 실패:', error);

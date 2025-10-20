@@ -33,7 +33,6 @@ class UnifiedNetworkAnalysisService {
    */
   async performCompleteAnalysis(surveyId: string): Promise<CompleteAnalysisResult> {
     try {
-      console.log(`🔍 전체 네트워크 분석 시작: ${surveyId}`);
       
       // Python API 호출로 전체 분석 수행
       const pythonData = await this.getSurveyDataForPython(surveyId);
@@ -63,7 +62,6 @@ class UnifiedNetworkAnalysisService {
       // Python 결과를 통합 형식으로 변환
       const completeAnalysis = this.convertPythonResultToUnifiedFormat(result.data, surveyId);
       
-      console.log(`✅ 전체 네트워크 분석 완료: ${surveyId}`);
       return completeAnalysis;
       
     } catch (error) {
@@ -71,14 +69,12 @@ class UnifiedNetworkAnalysisService {
       
       // Python API 실패 시 기존 네트워크 분석 서비스로 fallback
       if (error instanceof TypeError && error.message.includes('Failed to fetch')) {
-        console.log('🔄 Python API 연결 실패, 기존 분석 서비스로 fallback');
         try {
           const { networkAnalysisService } = await import('./networkAnalysisService');
           const fallbackResult = await networkAnalysisService.analyzeNetwork(surveyId);
           
           // 기존 결과를 통합 형식으로 변환
           const completeAnalysis = this.convertNetworkAnalysisToUnifiedFormat(fallbackResult, surveyId);
-          console.log(`✅ Fallback 분석 완료: ${surveyId}`);
           return completeAnalysis;
         } catch (fallbackError) {
           console.error('❌ Fallback 분석도 실패:', fallbackError);
@@ -95,12 +91,10 @@ class UnifiedNetworkAnalysisService {
    */
   async getClassAnalysis(surveyId: string, classNumber: string): Promise<ClassAnalysisResult> {
     try {
-      console.log(`🔍 학급별 분석 시작: ${surveyId} - ${classNumber}반`);
       
       const unifiedData = await this.getCachedAnalysis(surveyId);
       const classAnalysis = this.extractClassAnalysis(unifiedData, classNumber);
       
-      console.log(`✅ 학급별 분석 완료: ${classNumber}반`);
       return classAnalysis;
       
     } catch (error) {
@@ -114,7 +108,6 @@ class UnifiedNetworkAnalysisService {
    */
   async getIndividualAnalysis(surveyId: string, studentId: string): Promise<IndividualAnalysisResult> {
     try {
-      console.log(`🔍 개별 학생 분석 시작: ${surveyId} - ${studentId}`);
       
       // Python API로 개별 학생 분석 직접 호출
       const pythonData = await this.getSurveyDataForPython(surveyId);
@@ -144,7 +137,6 @@ class UnifiedNetworkAnalysisService {
       // Python 결과를 IndividualAnalysisResult 형식으로 변환
       const individualAnalysis = this.convertPythonIndividualResultToUnifiedFormat(result.data, studentId);
       
-      console.log(`✅ 개별 학생 분석 완료: ${studentId}`);
       return individualAnalysis;
       
     } catch (error) {
@@ -152,11 +144,9 @@ class UnifiedNetworkAnalysisService {
       
       // Python API 실패 시 전체 분석에서 추출하는 방식으로 fallback
       if (error instanceof TypeError && error.message.includes('Failed to fetch')) {
-        console.log('🔄 Python API 연결 실패, 전체 분석에서 추출하는 방식으로 fallback');
         try {
           const unifiedData = await this.getCachedAnalysis(surveyId);
           const individualAnalysis = this.extractIndividualAnalysis(unifiedData, studentId);
-          console.log(`✅ Fallback 개별 분석 완료: ${studentId}`);
           return individualAnalysis;
         } catch (fallbackError) {
           console.error('❌ Fallback 개별 분석도 실패:', fallbackError);
@@ -175,12 +165,10 @@ class UnifiedNetworkAnalysisService {
     // 먼저 캐시에서 확인
     const cachedData = networkAnalysisSyncManager.getCachedAnalysisData(surveyId, 'complete');
     if (cachedData) {
-      console.log(`📋 캐시된 분석 데이터 사용: ${surveyId}`);
       return cachedData;
     }
 
     // 캐시에 없으면 새로 분석
-    console.log(`🔄 분석 데이터 새로고침: ${surveyId}`);
     return await this.refreshAnalysisData(surveyId);
   }
 
@@ -189,7 +177,6 @@ class UnifiedNetworkAnalysisService {
    */
   async refreshAnalysisData(surveyId: string): Promise<UnifiedNetworkData> {
     try {
-      console.log(`🔄 분석 데이터 새로고침 시작: ${surveyId}`);
       
       // 전체 분석 수행
       const completeAnalysis = await this.performCompleteAnalysis(surveyId);
@@ -240,7 +227,6 @@ class UnifiedNetworkAnalysisService {
       // DB에 저장
       await this.saveToDatabase(surveyId, unifiedData);
       
-      console.log(`✅ 분석 데이터 새로고침 완료: ${surveyId}`);
       return unifiedData;
       
     } catch (error) {
@@ -257,7 +243,6 @@ class UnifiedNetworkAnalysisService {
     student_info: Array<{id: string, name: string, grade: string, class: string}>;
   }> {
     try {
-      console.log(`🔍 Python용 데이터 준비 시작: ${surveyId}`);
       
       // 설문 정보와 질문 구조 가져오기
       const { data: surveyData, error: surveyError } = await supabase
@@ -274,7 +259,6 @@ class UnifiedNetworkAnalysisService {
         throw surveyError;
       }
 
-      console.log(`✅ 설문 데이터 조회 성공: ${surveyData?.title}`);
 
       // 설문 응답 데이터 가져오기
       const { data: responses, error: responseError } = await supabase
@@ -287,16 +271,13 @@ class UnifiedNetworkAnalysisService {
         throw responseError;
       }
 
-      console.log(`✅ 응답 데이터 조회 성공: ${responses?.length || 0}개 응답`);
 
       // 설문 대상 학급 정보 가져오기
       const targetGrades = surveyData?.target_grades || [];
       const targetClasses = surveyData?.target_classes || [];
       
-      console.log(`📋 설문 대상: ${targetGrades.join(', ')}학년 ${targetClasses.join(', ')}반`);
       
       if (targetGrades.length === 0 || targetClasses.length === 0) {
-        console.log('⚠️ 설문 대상 학급이 지정되지 않았습니다.');
         return { survey_data: [], student_info: [] };
       }
 
@@ -312,7 +293,6 @@ class UnifiedNetworkAnalysisService {
         throw studentError;
       }
 
-      console.log(`✅ 학생 정보 조회 성공: ${students?.length || 0}명`);
 
       // 질문 구조 분석 및 관계 유형 매핑
       const templateQuestions = surveyData?.survey_templates?.questions as any;
@@ -405,14 +385,10 @@ class UnifiedNetworkAnalysisService {
    * Python 결과를 통합 형식으로 변환
    */
   private convertPythonResultToUnifiedFormat(pythonResult: any, surveyId: string): CompleteAnalysisResult {
-    console.log(`🔄 Python 결과 변환 시작:`, pythonResult);
     
     const studentDetails = pythonResult.student_details || {};
     const centralityMetrics = pythonResult.centrality_metrics || {};
     const communities = pythonResult.communities || [];
-    
-    console.log(`📊 학생 상세 정보:`, Object.keys(studentDetails));
-    console.log(`📊 중심성 메트릭:`, Object.keys(centralityMetrics));
     
     // 노드 데이터 변환
     const nodes: NetworkNode[] = Object.keys(studentDetails).map(studentId => {
@@ -435,11 +411,9 @@ class UnifiedNetworkAnalysisService {
         eigenvector_centrality: centrality.eigenvector || 0
       };
       
-      console.log(`📝 노드 생성: ${studentId} -> ${node.name}`);
       return node;
     });
     
-    console.log(`✅ 생성된 노드 수: ${nodes.length}`);
     
     // 엣지 데이터 변환
     const edges: NetworkEdge[] = [];
@@ -583,8 +557,6 @@ class UnifiedNetworkAnalysisService {
    * 개별 학생 분석 추출
    */
   private extractIndividualAnalysis(unifiedData: UnifiedNetworkData, studentId: string): IndividualAnalysisResult {
-    console.log(`🔍 개별 분석 추출: studentId=${studentId}, type=${typeof studentId}`);
-    console.log(`📋 사용 가능한 노드 IDs:`, unifiedData.completeAnalysis.nodes.map(n => n.id));
     
     // 타입 안전성 검사
     if (typeof studentId !== 'string') {
@@ -906,7 +878,6 @@ class UnifiedNetworkAnalysisService {
       if (error) {
         console.error('❌ DB 저장 오류:', error);
       } else {
-        console.log('✅ 분석 결과 DB 저장 완료');
       }
     } catch (error) {
       console.error('❌ DB 저장 중 오류:', error);
@@ -1050,11 +1021,9 @@ class UnifiedNetworkAnalysisService {
     if (surveyId) {
       this.analysisCache.delete(surveyId);
       networkAnalysisSyncManager.invalidateSurveyCache(surveyId);
-      console.log(`🗑️ 캐시 클리어: ${surveyId}`);
     } else {
       this.analysisCache.clear();
       networkAnalysisSyncManager.clearAllCache();
-      console.log('🗑️ 전체 캐시 클리어');
     }
   }
 

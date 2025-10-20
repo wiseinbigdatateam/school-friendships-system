@@ -55,13 +55,11 @@ const NetworkAnalysisPage: React.FC = () => {
 
   // 노드 클릭 핸들러 - 학생 정보만 표시
   const handleNodeClick = useCallback((node: any) => {
-    console.log("노드 클릭됨:", node);
     const studentId = node.id;
     
     // 해당 학생의 데이터 찾기
     const studentData = chartData[activeTab - 1]?.nodes.find((n: any) => n.id === studentId);
     if (studentData) {
-      console.log("선택된 학생 데이터:", studentData);
       
       // 학생 정보만 설정 (네트워크 데이터 생성하지 않음)
       setSelectedStudentData({
@@ -79,13 +77,11 @@ const NetworkAnalysisPage: React.FC = () => {
 
   // 설문별 응답자 수 계산 함수
   const calculateResponseCounts = async (surveys: any[]) => {
-    console.log("📊 응답자 수 계산 시작:", surveys.length, "개 설문");
     
     const counts: {[key: string]: number} = {};
     
     try {
       const surveyIds = surveys.map(survey => survey.id);
-      console.log("🔍 조회할 설문 ID들:", surveyIds);
       
       const { data, error } = await supabase
         .from("survey_responses")
@@ -97,17 +93,14 @@ const NetworkAnalysisPage: React.FC = () => {
         return;
       }
       
-      console.log("📋 조회된 응답 데이터 개수:", data?.length || 0);
       
       surveyIds.forEach(surveyId => {
         const responseCount = data?.filter(response => response.survey_id === surveyId).length || 0;
         counts[surveyId] = responseCount;
-        console.log(`✅ 설문 ${surveyId} 응답 수: ${responseCount}명`);
       });
       
       setSurveyResponseCounts(counts);
       setForceUpdate(prev => prev + 1);
-      console.log("✅ 응답자 수 계산 완료");
       
     } catch (error) {
       console.error("❌ 응답자 수 계산 중 오류:", error);
@@ -129,7 +122,6 @@ const NetworkAnalysisPage: React.FC = () => {
         if (teacherError) throw teacherError;
         setTeacherInfo(teacherData);
 
-        console.log("🔍 NetworkAnalysisPage 사용자 정보 설정 완료:", teacherData);
       } catch (error) {
         console.error("사용자 정보 조회 오류:", error);
       }
@@ -142,20 +134,13 @@ const NetworkAnalysisPage: React.FC = () => {
   useEffect(() => {
     const fetchSurveys = async () => {
       if (!teacherInfo) {
-        console.log("교사 정보가 없습니다.");
         setLoading(false);
         return;
       }
 
       try {
         setLoading(true);
-        console.log("🔍 NetworkAnalysisPage 설문 조회 시작:", {
-          userId: teacherInfo.id,
-          userRole: teacherInfo.role,
-          schoolId: teacherInfo.school_id,
-          gradeLevel: teacherInfo.grade_level,
-          classNumber: teacherInfo.class_number
-        });
+        
 
         // 설문 템플릿에서 교우관계 또는 종합조사 템플릿 찾기
         const { data: templates, error: templateError } = await supabase
@@ -177,7 +162,6 @@ const NetworkAnalysisPage: React.FC = () => {
           .map((template: any) => template.id);
 
         if (analysisTemplateIds.length === 0) {
-          console.log("분석 가능한 설문 템플릿이 없습니다");
           setProjectsData([]);
           setDraggableItems([]);
           setLoading(false);
@@ -201,15 +185,10 @@ const NetworkAnalysisPage: React.FC = () => {
         // 학교 ID로 필터링
         if (teacherInfo.school_id) {
           query = query.eq("school_id", teacherInfo.school_id);
-          console.log("🏫 학교 ID로 필터링:", teacherInfo.school_id);
         }
 
         // 담임교사인 경우 학년/반으로 필터링
         if (teacherInfo.role === "homeroom_teacher" && teacherInfo.grade_level && teacherInfo.class_number) {
-          console.log("👨‍🏫 담임교사 - 학년/반 필터링:", {
-            gradeLevel: teacherInfo.grade_level,
-            classNumber: teacherInfo.class_number
-          });
           
           const { data: allSurveys, error } = await query.order("created_at", { ascending: false });
           
@@ -229,7 +208,6 @@ const NetworkAnalysisPage: React.FC = () => {
             return gradeMatch && classMatch;
           }) || [];
 
-          console.log("🎯 필터링 후 분석 가능한 설문 개수:", filteredSurveys.length);
           
           if (filteredSurveys.length > 0) {
             // SurveyProject 형태로 변환
@@ -295,8 +273,6 @@ const NetworkAnalysisPage: React.FC = () => {
 
   // 강제 리렌더링을 위한 useEffect
   useEffect(() => {
-    console.log("🔄 강제 리렌더링 발생:", forceUpdate);
-    console.log("📊 현재 surveyResponseCounts:", surveyResponseCounts);
   }, [forceUpdate, surveyResponseCounts]);
 
   // 프로젝트 선택 (클릭 기반)
@@ -333,18 +309,15 @@ const NetworkAnalysisPage: React.FC = () => {
 
     try {
       setLoading(true);
-      console.log("🔍 네트워크 분석 시작:", selectedItems);
 
       const analysisResults: NetworkAnalysisData[] = [];
 
       for (const item of selectedItems) {
-        console.log(`🔍 설문 분석 중: ${item.name} (${item.pid})`);
 
         try {
           // 실제 네트워크 분석 수행
           const result = await networkAnalysisService.analyzeNetwork(item.pid);
 
-          console.log(`✅ 설문 분석 완료: ${item.name}`, result);
 
           // 외톨이형 수 계산
           const isolatedCount = result.nodes.filter((node: any) => node.friendship_type === "외톨이형").length;
@@ -441,7 +414,6 @@ const NetworkAnalysisPage: React.FC = () => {
 
       setChartData(analysisResults);
 
-      console.log("✅ 모든 분석 완료:", analysisResults);
     } catch (error) {
       console.error("❌ 분석 중 오류 발생:", error);
       alert("분석 중 오류가 발생했습니다.");

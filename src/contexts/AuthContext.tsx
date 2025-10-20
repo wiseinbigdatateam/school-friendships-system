@@ -130,15 +130,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       };
 
       // 디버깅: 로그인 시 사용자 정보 로그
-      console.log('🔐 로그인 성공 - 사용자 정보:', {
-        id: user.id,
-        name: user.name,
-        role: user.role,
-        schoolId: user.schoolId,
-        school_id: user.school_id,
-        grade: user.grade,
-        class: user.class
-      });
+      
 
       // 사용자 정보와 토큰을 로컬 스토리지에 저장
       const authToken = `db_token_${Date.now()}`;

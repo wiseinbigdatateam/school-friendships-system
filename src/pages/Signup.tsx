@@ -257,11 +257,6 @@ const Signup: React.FC = () => {
         },
         is_active: false,
       };
-
-      // 디버깅: 실제 전송되는 데이터 확인
-      console.log("🔍 전송되는 사용자 데이터:", newUser);
-      console.log("🔍 Role 값:", formData.role);
-
       // 7. Supabase에 사용자 등록
       const { data: userData, error: insertError } = await supabase
         .from("users")

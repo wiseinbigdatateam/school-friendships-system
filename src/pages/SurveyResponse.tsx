@@ -111,7 +111,6 @@ const SurveyResponse: React.FC = () => {
 
               if (!schoolError && schoolData) {
                 setSchoolName(schoolData.name);
-                console.log("🔍 학교 이름 조회 완료:", schoolData.name);
               } else {
                 setSchoolName("알 수 없는 학교");
               }
@@ -155,8 +154,6 @@ const SurveyResponse: React.FC = () => {
                   };
                 }
                 
-                console.log("🔍 템플릿 메타데이터:", metadata);
-                console.log("🔍 설문 설정:", surveyData.settings);
                 
                 setSurveyTemplate({
                   id: templateData.id,
@@ -865,36 +862,6 @@ const SurveyResponse: React.FC = () => {
               개인정보 수집·이용 동의
             </h2>
 
-            {/* 나이 안내 */}
-            {/* <div className={`mb-6 rounded-lg border p-4 ${
-              isUnder14 
-                ? "border-orange-200 bg-orange-50" 
-                : "border-blue-200 bg-blue-50"
-            }`}>
-              <div className="flex items-center">
-                <div className="flex-shrink-0">
-                  {isUnder14 ? (
-                    <svg className="h-6 w-6 text-orange-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.732-.833-2.464 0L4.732 15.5c-.77.833.192 2.5 1.732 2.5z" />
-                    </svg>
-                  ) : (
-                    <svg className="h-6 w-6 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                  )}
-                </div>
-                <div className="ml-3">
-                  <p className={`text-sm font-medium ${
-                    isUnder14 ? "text-orange-800" : "text-blue-800"
-                  }`}>
-                    {isUnder14 
-                      ? "14세 미만 학생입니다. 학부모 동의가 필요합니다."
-                      : "14세 이상 학생입니다. 본인 동의로 진행합니다."
-                    }
-                  </p>
-                </div>
-              </div>
-            </div> */}
 
             {/* 개인정보 수집·이용 안내 */}
             <div className="mb-6 rounded-lg border border-gray-200 bg-gray-50 p-4">
@@ -1232,18 +1199,14 @@ const SurveyResponse: React.FC = () => {
                                 // 종합조사 설문의 첫 번째 질문인 경우 3명 선택 가능
                                 if (surveyTemplate?.metadata?.category === "종합조사" && index === 0) {
                                   maxSelections = 3;
-                                  console.log("🔍 종합조사 첫 번째 질문 - maxSelections: 3");
                                 } else if (question.maxSelections) {
                                   maxSelections = question.maxSelections;
-                                  console.log("🔍 question.maxSelections 사용:", maxSelections);
                                 } else if (question.max_selections) {
                                   maxSelections = typeof question.max_selections === 'string' 
                                     ? parseInt(question.max_selections) || 1 
                                     : question.max_selections;
-                                  console.log("🔍 question.max_selections 사용:", maxSelections);
                                 }
                                 
-                                console.log("🔍 최종 maxSelections:", maxSelections, "현재 선택된 수:", currentValues.length);
 
                                 const isDisabled =
                                   !isSelected &&
@@ -1309,15 +1272,10 @@ const SurveyResponse: React.FC = () => {
                           
                           <div className="space-y-1">
                             {(() => {
-                              console.log(`🔍 질문 ${index + 1} 답변 옵션 렌더링:`, {
-                                questionId: question.id,
-                                answerOptions: question.answer_options,
-                                options: question.options
-                              });
+                             
                               
                               // answer_options가 있는 경우 사용
                               if (question.answer_options && typeof question.answer_options === 'object') {
-                                console.log(`🔍 질문 ${index + 1} answer_options 사용:`, question.answer_options);
                                 return Object.entries(question.answer_options).map(([key, value]) => (
                                   <label
                                     key={key}
@@ -1357,7 +1315,6 @@ const SurveyResponse: React.FC = () => {
                                 options = ["예", "아니오"];
                               }
                               
-                              console.log(`🔍 질문 ${index + 1} 하드코딩된 선택지 사용:`, options);
                               
                               return options.map((option: string) => (
                                 <label
@@ -1398,15 +1355,10 @@ const SurveyResponse: React.FC = () => {
                       
                       <div className="space-y-1">
                         {(() => {
-                          console.log(`🔍 질문 ${index + 1} (${question.type}) 답변 옵션 렌더링:`, {
-                            questionId: question.id,
-                            answerOptions: question.answer_options,
-                            options: question.options
-                          });
+                          
                           
                           // answer_options가 있는 경우 사용
                           if (question.answer_options && typeof question.answer_options === 'object') {
-                            console.log(`🔍 질문 ${index + 1} answer_options 사용:`, question.answer_options);
                             return Object.entries(question.answer_options).map(([key, value]) => (
                               <label
                                 key={key}
@@ -1441,7 +1393,6 @@ const SurveyResponse: React.FC = () => {
                             options = ["전혀 없다", "한 두번 당한 적 있다", "자주 있다"];
                           }
                           
-                          console.log(`🔍 질문 ${index + 1} 하드코딩된 선택지 사용:`, options);
                           
                           return options.map((option: string) => (
                             <label

@@ -85,21 +85,13 @@ const SurveyMonitoring: React.FC = () => {
 
       // 담임선생님인 경우 자신의 담당 학급만 필터링
       if (user?.role === "homeroom_teacher" && user?.grade && user?.class) {
-        console.log("🔍 담임선생님 필터링:", {
-          grade: user.grade,
-          class: user.class,
-          userRole: user.role,
-        });
-
+        
         studentsQuery = studentsQuery
           .eq("grade", user.grade)
           .eq("class", user.class);
       } else if (user?.role === "grade_teacher" && user?.grade) {
         // 학년담당인 경우 해당 학년만 필터링
-        console.log("🔍 학년담당 필터링:", {
-          grade: user.grade,
-          userRole: user.role,
-        });
+        
 
         studentsQuery = studentsQuery.eq("grade", user.grade);
       } else if (
@@ -108,9 +100,7 @@ const SurveyMonitoring: React.FC = () => {
         user?.role === "main_admin"
       ) {
         // 관리자는 모든 학생 조회 가능
-        console.log("🔍 관리자 권한 - 모든 학생 조회:", {
-          userRole: user?.role,
-        });
+       
 
         // 설문의 target_grades와 target_classes가 설정된 경우 해당 범위만 조회
         if (surveyData.target_grades && surveyData.target_grades.length > 0) {
@@ -176,7 +166,6 @@ const SurveyMonitoring: React.FC = () => {
 
       setMonitoringData(monitoringData);
       setError(null);
-      console.log("모니터링 데이터 로드 성공:", monitoringData);
     } catch (error) {
       console.error("모니터링 데이터 로드 실패:", error);
       setError("모니터링 데이터를 불러오는데 실패했습니다.");

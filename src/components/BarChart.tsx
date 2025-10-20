@@ -36,7 +36,6 @@ const BarChart: React.FC<BarChartProps> = ({ data }) => {
   const [labels, setLabels] = useState<string[]>([]);
 
   useEffect(() => {
-    console.log("data:", data);
     if (data !== undefined) {
       setLabels(data.map((item) => item.date));
     }

@@ -122,7 +122,6 @@ export const generateStudentGuidanceReport = async (
 ): Promise<GeneratedReport> => {
   // API 키가 없으면 대체 리포트 생성
   if (!OPENAI_API_KEY) {
-    console.log('OpenAI API 키가 설정되지 않아 대체 리포트를 생성합니다.');
     return generateFallbackReport(analysisData);
   }
 
@@ -298,7 +297,6 @@ ${JSON.stringify(additionalSurveyData, null, 2)}
           }
           retryCount++;
           const waitTime = Math.pow(2, retryCount) * 1000; // 지수 백오프
-          console.log(`API 제한으로 인한 재시도 ${retryCount}/${maxRetries}, ${waitTime}ms 대기...`);
           await new Promise(resolve => setTimeout(resolve, waitTime));
           continue;
         }
@@ -314,7 +312,6 @@ ${JSON.stringify(additionalSurveyData, null, 2)}
         }
         retryCount++;
         const waitTime = Math.pow(2, retryCount) * 1000;
-        console.log(`API 호출 실패, 재시도 ${retryCount}/${maxRetries}, ${waitTime}ms 대기...`);
         await new Promise(resolve => setTimeout(resolve, waitTime));
       }
     }
@@ -429,7 +426,6 @@ ${JSON.stringify(additionalSurveyData, null, 2)}
       return report as GeneratedReport;
     } catch (parseError) {
       console.error('JSON 파싱 오류:', parseError);
-      console.log('원본 응답:', content);
       
       // 더 구체적인 오류 메시지 제공
       if (parseError instanceof Error) {

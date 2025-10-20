@@ -64,21 +64,12 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
 
   // 필요한 역할 권한 확인
   if (requiredRole) {
-    console.log('=== ProtectedRoute 권한 검증 ===');
-    console.log('ProtectedRoute - requiredRole:', requiredRole);
-    console.log('ProtectedRoute - user.role:', user.role);
-    console.log('ProtectedRoute - user:', user);
-    console.log('ProtectedRoute - Array.isArray(requiredRole):', Array.isArray(requiredRole));
     
     // 실제 권한 검증
     const hasRequiredRole = Array.isArray(requiredRole) 
       ? requiredRole.includes(user.role)
       : user.role === requiredRole;
     
-    console.log('ProtectedRoute - hasRequiredRole:', hasRequiredRole);
-    console.log('ProtectedRoute - requiredRole.includes(user.role):', Array.isArray(requiredRole) ? requiredRole.includes(user.role) : 'N/A');
-    console.log('ProtectedRoute - user.role === requiredRole:', !Array.isArray(requiredRole) ? user.role === requiredRole : 'N/A');
-    console.log('================================');
     
     if (!hasRequiredRole) {
       return (

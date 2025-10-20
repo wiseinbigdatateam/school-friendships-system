@@ -53,13 +53,7 @@ const SurveyTemplates: React.FC = () => {
 
           if (!teacherError && teacherData) {
             setTeacherInfo(teacherData);
-            console.log("담임교사 정보 로드:", teacherData);
-            console.log("담임교사 학년/반 정보:", {
-              grade_level: teacherData.grade_level,
-              class_number: teacherData.class_number,
-              school_id: teacherData.school_id,
-              role: teacherData.role,
-            });
+            
           } else {
             console.error("담임교사 정보 조회 오류:", teacherError);
           }
@@ -104,14 +98,6 @@ const SurveyTemplates: React.FC = () => {
             const metadata = template.metadata as any;
             const maxSelections = metadata?.maxSelections || [1];
 
-            console.log(`템플릿 "${template.name}" 로드:`, {
-              id: template.id,
-              category: metadata?.category,
-              questionCount: Array.isArray(template.questions)
-                ? template.questions.length
-                : 0,
-              hasCategories: !!metadata?.questionCategories,
-            });
 
             return {
               id: template.id,
@@ -156,7 +142,6 @@ const SurveyTemplates: React.FC = () => {
         });
 
         setTemplates(sortedTemplates);
-        console.log("템플릿 데이터 로드 완료:", sortedTemplates);
       } catch (error) {
         console.error("템플릿 데이터 로드 오류:", error);
       } finally {
@@ -220,12 +205,6 @@ const SurveyTemplates: React.FC = () => {
         return;
       }
 
-      console.log("설문 생성 시 담임교사 정보:", {
-        grade_level: teacherInfo.grade_level,
-        class_number: teacherInfo.class_number,
-        school_id: teacherInfo.school_id,
-        role: teacherInfo.role,
-      });
 
       // 담임교사의 학교 ID 사용
       const schoolId = teacherInfo.school_id;
@@ -244,8 +223,6 @@ const SurveyTemplates: React.FC = () => {
         alert("담당 반 학생 정보를 불러올 수 없습니다.");
         return;
       }
-
-      console.log("담임교사 담당 학생들:", students);
 
       // 새 설문 데이터 생성 (실제 테이블 구조에 맞춤)
       const newSurvey = {
@@ -268,13 +245,6 @@ const SurveyTemplates: React.FC = () => {
           const options =
             (selectedTemplate as any).questionOptions?.[index] || [];
 
-          console.log(`질문 ${index + 1} 정보:`, {
-            text: question,
-            category,
-            type: questionType,
-            maxSelections,
-            options,
-          });
 
           return {
             id: `q${index + 1}`,
@@ -300,7 +270,6 @@ const SurveyTemplates: React.FC = () => {
         },
       };
 
-      console.log("생성할 설문 데이터:", newSurvey);
 
       // Supabase에 설문 저장
       const { data: createdSurvey, error } = await supabase
@@ -314,8 +283,6 @@ const SurveyTemplates: React.FC = () => {
         alert("설문 생성 중 오류가 발생했습니다.\n다시 시도해주세요.");
         return;
       }
-
-      console.log("설문 생성 성공:", createdSurvey);
 
       // 템플릿 사용 횟수 증가
       try {
@@ -346,7 +313,6 @@ const SurveyTemplates: React.FC = () => {
           if (updateError) {
             console.error("템플릿 사용 횟수 업데이트 오류:", updateError);
           } else {
-            console.log("템플릿 사용 횟수 증가 완료:", currentUseCount + 1);
           }
         }
       } catch (updateError) {
@@ -787,13 +753,6 @@ const SurveyConfigModal: React.FC<{
         targetGrades: [teacherInfo.grade_level],
         targetClasses: [teacherInfo.class_number],
       }));
-      console.log(
-        "담임교사 대상학년/반 자동 설정:",
-        teacherInfo.grade_level,
-        "학년",
-        teacherInfo.class_number,
-        "반",
-      );
     }
   }, [teacherInfo]);
 

@@ -58,7 +58,7 @@ interface Student {
   class: string;
   student_number: string;
   current_school_id?: string | null;
-  phone?: string | null;
+  lifelong_education_id?: string;
   birth_date?: string;
   gender?: string;
   enrolled_at?: string;
@@ -185,10 +185,6 @@ const IndividualAnalysis: React.FC = () => {
     async (surveyId: string, studentId: string) => {
       try {
         setUnifiedAnalysisLoading(true);
-        console.log(`🔍 통합 개별 분석 시작: ${surveyId} - ${studentId}`);
-        console.log(
-          `📋 studentId 타입: ${typeof studentId}, 값: ${JSON.stringify(studentId)}`,
-        );
 
         const individualAnalysis =
           await unifiedNetworkAnalysisService.getIndividualAnalysis(
@@ -197,7 +193,6 @@ const IndividualAnalysis: React.FC = () => {
           );
 
         setUnifiedAnalysisResult(individualAnalysis);
-        console.log(`✅ 통합 개별 분석 완료: ${studentId}`);
       } catch (error) {
         console.error("❌ 통합 개별 분석 오류:", error);
         setUnifiedAnalysisResult(null);
@@ -212,7 +207,6 @@ const IndividualAnalysis: React.FC = () => {
   const performNetworkAnalysis = useCallback(async (surveyId: string) => {
     try {
       setNetworkAnalysisLoading(true);
-      console.log(`🔍 전체 네트워크 분석 시작: ${surveyId}`);
 
       const result = await networkAnalysisService.analyzeNetwork(surveyId);
 
@@ -263,7 +257,6 @@ const IndividualAnalysis: React.FC = () => {
       };
 
       setNetworkAnalysisData(networkData);
-      console.log(`✅ 전체 네트워크 분석 완료: ${surveyId}`);
     } catch (error) {
       console.error("❌ 전체 네트워크 분석 오류:", error);
       setNetworkAnalysisData(null);
@@ -274,14 +267,12 @@ const IndividualAnalysis: React.FC = () => {
 
   // 설문별 응답자 수 계산 함수 - 더 간단하고 확실한 방법
   const calculateResponseCounts = async (surveys: Survey[]) => {
-    console.log("📊 응답자 수 계산 시작:", surveys.length, "개 설문");
 
     const counts: { [key: string]: number } = {};
 
     // 모든 설문의 응답 수를 한 번에 조회
     try {
       const surveyIds = surveys.map((survey) => survey.id);
-      console.log("🔍 조회할 설문 ID들:", surveyIds);
 
       const { data, error } = await supabase
         .from("survey_responses")
@@ -289,12 +280,9 @@ const IndividualAnalysis: React.FC = () => {
         .in("survey_id", surveyIds);
 
       if (error) {
-        console.error("❌ 응답자 수 조회 오류:", error);
         return;
       }
 
-      console.log("📋 조회된 응답 데이터:", data);
-      console.log("📋 조회된 응답 데이터 개수:", data?.length || 0);
 
       // 설문별로 응답 수 계산
       surveyIds.forEach((surveyId) => {
@@ -302,21 +290,16 @@ const IndividualAnalysis: React.FC = () => {
           data?.filter((response) => response.survey_id === surveyId).length ||
           0;
         counts[surveyId] = responseCount;
-        console.log(`✅ 설문 ${surveyId} 응답 수: ${responseCount}명`);
       });
 
-      console.log("📊 최종 응답자 수 결과:", counts);
 
       // 상태 업데이트 - 강제로 즉시 반영
       setSurveyResponseCounts(counts);
-      console.log("🔄 상태 업데이트 완료:", counts);
 
       // 강제 리렌더링 트리거
       setForceUpdate((prev) => prev + 1);
-      console.log("🔄 강제 리렌더링 트리거");
 
       // 상태 업데이트 완료 로그
-      console.log("✅ 응답자 수 계산 완료");
     } catch (error) {
       console.error("❌ 응답자 수 계산 중 오류:", error);
     }
@@ -335,17 +318,12 @@ const IndividualAnalysis: React.FC = () => {
 
   // 강제 리렌더링을 위한 useEffect
   useEffect(() => {
-    console.log("🔄 강제 리렌더링 발생:", forceUpdate);
-    console.log("📊 현재 surveyResponseCounts:", surveyResponseCounts);
   }, [forceUpdate, surveyResponseCounts]);
 
   // 선택된 학생이 변경될 때 개별 네트워크 데이터 생성
   useEffect(() => {
     if (selectedStudent && selectedSurvey) {
-      console.log(
-        "선택된 학생 변경됨, 개별 네트워크 데이터 생성:",
-        selectedStudent,
-      );
+      
       generateIndividualNetworkData(selectedStudent, selectedSurvey.id);
     }
   }, [selectedStudent, selectedSurvey]);
@@ -353,23 +331,16 @@ const IndividualAnalysis: React.FC = () => {
   // 네트워크 분석 데이터가 로드되면 학생 상태 업데이트를 위한 강제 리렌더링
   useEffect(() => {
     if (networkAnalysisData) {
-      console.log(
-        "네트워크 분석 데이터 로드됨, 학생 상태 업데이트:",
-        networkAnalysisData,
-      );
+      
       setForceUpdate((prev) => prev + 1);
     }
   }, [networkAnalysisData]);
 
   // 학생 선택 시 통합 분석 수행
   useEffect(() => {
-    console.log(
-      `🔄 useEffect 트리거: selectedStudent=${selectedStudent}, selectedSurvey=${selectedSurvey?.id}`,
-    );
+    
     if (selectedStudent && selectedSurvey) {
-      console.log(
-        `📋 호출할 매개변수: surveyId=${selectedSurvey.id}, studentId=${selectedStudent}`,
-      );
+    
       performUnifiedIndividualAnalysis(selectedSurvey.id, selectedStudent);
     }
   }, [selectedStudent, selectedSurvey, performUnifiedIndividualAnalysis]);
@@ -377,9 +348,6 @@ const IndividualAnalysis: React.FC = () => {
   // 설문 선택 시 전체 네트워크 분석 수행
   useEffect(() => {
     if (selectedSurvey) {
-      console.log(
-        `🔄 전체 네트워크 분석 트리거: selectedSurvey=${selectedSurvey.id}`,
-      );
       performNetworkAnalysis(selectedSurvey.id);
     }
   }, [selectedSurvey, performNetworkAnalysis]);
@@ -391,7 +359,6 @@ const IndividualAnalysis: React.FC = () => {
       const authToken = localStorage.getItem("wiseon_auth_token");
 
       if (!userStr || !authToken) {
-        console.log("🔍 로그인 정보가 없습니다. 로그인 페이지로 이동합니다.");
         window.location.href = "/login";
         return;
       }
@@ -409,10 +376,7 @@ const IndividualAnalysis: React.FC = () => {
       if (teacherError) throw teacherError;
       setTeacherInfo(teacherData);
 
-      console.log("🔍 IndividualAnalysis 사용자 정보 설정 완료:", {
-        user,
-        teacherData,
-      });
+      
     } catch (error) {
       console.error("사용자 정보 조회 오류:", error);
       // 에러 발생 시 로그인 페이지로 이동
@@ -423,19 +387,11 @@ const IndividualAnalysis: React.FC = () => {
   const fetchSurveys = async () => {
     try {
       if (!teacherInfo) {
-        console.log("교사 정보가 없습니다.");
         setSurveys([]);
         return;
       }
 
-      console.log("🔍 IndividualAnalysis 설문 조회 시작:", {
-        userId: teacherInfo.id,
-        userRole: teacherInfo.role,
-        schoolId: teacherInfo.school_id,
-        gradeLevel: teacherInfo.grade_level,
-        classNumber: teacherInfo.class_number,
-      });
-
+   
       // 먼저 설문 템플릿에서 카테고리가 "교우관계" 또는 "종합조사"인 것 찾기
       const { data: templates, error: templateError } = await supabase
         .from("survey_templates")
@@ -460,7 +416,6 @@ const IndividualAnalysis: React.FC = () => {
         .map((template: any) => template.id);
 
       if (analysisTemplateIds.length === 0) {
-        console.log("No analysis surveys found");
         setSurveys([]);
         return;
       }
@@ -485,7 +440,6 @@ const IndividualAnalysis: React.FC = () => {
       // 학교 ID로 필터링
       if (teacherInfo.school_id) {
         query = query.eq("school_id", teacherInfo.school_id);
-        console.log("🏫 학교 ID로 필터링:", teacherInfo.school_id);
       }
 
       // 담임교사인 경우 학년/반으로 추가 필터링
@@ -494,10 +448,7 @@ const IndividualAnalysis: React.FC = () => {
         teacherInfo.grade_level &&
         teacherInfo.class_number
       ) {
-        console.log("👨‍🏫 담임교사 - 학년/반 필터링:", {
-          gradeLevel: teacherInfo.grade_level,
-          classNumber: teacherInfo.class_number,
-        });
+        
 
         // 설문의 target_grades와 target_classes 확인
         const { data: allSurveys, error } = await query.order("created_at", {
@@ -522,33 +473,17 @@ const IndividualAnalysis: React.FC = () => {
               targetClasses.length === 0 ||
               targetClasses.includes(teacherInfo.class_number);
 
-            console.log(`🔍 설문 "${survey.title}" 필터링 체크:`, {
-              targetGrades,
-              targetClasses,
-              userGrade: teacherInfo.grade_level,
-              userClass: teacherInfo.class_number,
-              gradeMatch,
-              classMatch,
-              isMatch: gradeMatch && classMatch,
-            });
+            
 
             return gradeMatch && classMatch;
           }) || [];
 
-        console.log(
-          "🎯 필터링 후 분석 가능한 설문 개수:",
-          filteredSurveys.length,
-        );
+        
 
         if (filteredSurveys.length > 0) {
-          console.log(
-            "📋 필터링된 설문들:",
-            filteredSurveys.map((s) => ({ id: s.id, title: s.title })),
-          );
           setSurveys(filteredSurveys);
           setSelectedSurvey(filteredSurveys[0]);
           // 응답자 수 계산
-          console.log("🔄 응답자 수 계산 시작...");
           await calculateResponseCounts(filteredSurveys);
         } else {
           setSurveys([]);
@@ -565,27 +500,14 @@ const IndividualAnalysis: React.FC = () => {
         }
 
         if (data && data.length > 0) {
-          console.log(
-            "📋 전체 설문들:",
-            data.map((s) => ({ id: s.id, title: s.title })),
-          );
           setSurveys(data);
           setSelectedSurvey(data[0]);
           // 응답자 수 계산
-          console.log("🔄 응답자 수 계산 시작...");
           await calculateResponseCounts(data);
 
           // 즉시 테스트를 위한 추가 로그
           setTimeout(() => {
-            console.log(
-              "🧪 상태 확인 - surveyResponseCounts:",
-              surveyResponseCounts,
-            );
-            console.log("🧪 첫 번째 설문 ID:", data[0]?.id);
-            console.log(
-              "🧪 첫 번째 설문 응답 수:",
-              surveyResponseCounts[data[0]?.id] || 0,
-            );
+            
           }, 1000);
         } else {
           setSurveys([]);
@@ -599,24 +521,15 @@ const IndividualAnalysis: React.FC = () => {
   const fetchStudents = async () => {
     try {
       if (!teacherInfo) {
-        console.log("교사 정보가 없습니다.");
         setStudents([]);
         return;
       }
-
-      console.log("👥 학생 조회 시작:", {
-        userRole: teacherInfo.role,
-        schoolId: teacherInfo.school_id,
-        gradeLevel: teacherInfo.grade_level,
-        classNumber: teacherInfo.class_number,
-      });
 
       let query = supabase.from("students").select("*");
 
       // 학교 ID로 필터링
       if (teacherInfo.school_id) {
         query = query.eq("current_school_id", teacherInfo.school_id);
-        console.log("🏫 학교 ID로 필터링:", teacherInfo.school_id);
       }
 
       // 담임교사인 경우 학년/반으로 추가 필터링
@@ -628,10 +541,6 @@ const IndividualAnalysis: React.FC = () => {
         query = query
           .eq("grade", teacherInfo.grade_level)
           .eq("class", teacherInfo.class_number);
-        console.log("👨‍🏫 담임교사 - 담당 학년/반 학생 조회:", {
-          grade: teacherInfo.grade_level,
-          class: teacherInfo.class_number,
-        });
       }
 
       const { data, error } = await query.order("student_number", {
@@ -693,19 +602,8 @@ const IndividualAnalysis: React.FC = () => {
 
         setStudents(studentsWithMetrics);
         setSelectedStudent(studentsWithMetrics[0].id);
-        console.log(
-          "✅ 학생 데이터 조회 성공:",
-          studentsWithMetrics.length,
-          "명",
-        );
-        console.log(
-          "📊 네트워크 메트릭 포함:",
-          studentsWithMetrics.filter((s) => s.network_metrics).length,
-          "명",
-        );
       } else {
         setStudents([]);
-        console.log("⚠️ 해당 조건의 학생이 없습니다.");
       }
     } catch (error) {
       console.error("Error fetching students:", error);
@@ -880,10 +778,6 @@ const IndividualAnalysis: React.FC = () => {
         }
 
         if (!studentResponse) {
-          console.log("해당 학생의 설문 응답이 없습니다:", {
-            studentId,
-            surveyId,
-          });
           return [];
         }
 
@@ -1023,12 +917,6 @@ const IndividualAnalysis: React.FC = () => {
               friendship_type: getFriendshipTypeFromNetwork(friendId), // 전체 네트워크 데이터에서 가져오기
             });
           }
-        });
-
-        console.log("개별 네트워크 데이터 생성 완료:", {
-          studentName: selectedStudentData.name,
-          friendCount: selectedFriends.size,
-          totalNodes: individualNetworkData.length,
         });
 
         return individualNetworkData;
@@ -1318,19 +1206,6 @@ const IndividualAnalysis: React.FC = () => {
         communityIntegration: communityIntegration,
       };
 
-      // 디버깅을 위한 분석 데이터 출력
-      console.log("🔍 개별 리포트 분석 데이터:", {
-        studentName: analysisData.studentName,
-        centrality: analysisData.centrality,
-        community: analysisData.community,
-        totalRelationships: analysisData.totalRelationships,
-        isolationRisk: analysisData.isolationRisk,
-        friendshipDevelopment: analysisData.friendshipDevelopment,
-        communityIntegration: analysisData.communityIntegration,
-        hasNetworkMetrics: !!networkMetrics,
-        networkMetricsKeys: networkMetrics ? Object.keys(networkMetrics) : [],
-      });
-
       // 추가 설문 데이터 수집 (다른 설문들의 내용도 참조)
       const additionalSurveyData = await prepareAdditionalSurveyData();
 
@@ -1511,7 +1386,7 @@ const IndividualAnalysis: React.FC = () => {
   return (
     <div className="mx-auto min-h-screen max-w-7xl bg-gray-50 px-4 pb-16 sm:px-6 lg:px-8">
       <div className="flex-col">
-        {/* 상단 분석 대상 리스트 카드 */}
+        {/* 상단 바 */}
         <div className="mb-6 w-full rounded-lg border border-gray-200 bg-white">
           <div className="p-6">
             <h2 className="mb-4 text-lg font-semibold text-gray-900">
@@ -1530,7 +1405,7 @@ const IndividualAnalysis: React.FC = () => {
               {surveys.map((survey) => (
                 <div
                   key={survey.id}
-                  className={`min-h-36 min-w-72 cursor-pointer rounded-lg border p-4 transition-colors ${
+                  className={`h-36 min-w-72 cursor-pointer rounded-lg border p-4 transition-colors ${
                     selectedSurvey?.id === survey.id
                       ? "border-blue-500 bg-blue-50"
                       : "border-gray-200 hover:border-gray-300"
@@ -1592,13 +1467,12 @@ const IndividualAnalysis: React.FC = () => {
                     onClick={() => setSelectedStudent(student.id)}
                   >
                     <div className="flex items-center justify-between">
-                      <span className="inline-flex truncate text-sm font-medium">
-                        {index + 1}번) {student.name}
-                      </span>
-
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center space-x-2">
+                        <span className="truncate text-sm font-medium">
+                          {index + 1}번) {student.name}
+                        </span>
                         <span
-                          className={`inline-flex rounded-full px-2 py-1 text-xs font-medium ${getStudentTypeColor(
+                          className={`rounded-full px-2 py-1 text-xs font-medium ${getStudentTypeColor(
                             getStudentType(student),
                           )}`}
                           style={{
@@ -1609,11 +1483,10 @@ const IndividualAnalysis: React.FC = () => {
                         >
                           {getStudentTypeLabel(getStudentType(student))}
                         </span>
-
-                        {selectedStudent === student.id && (
-                          <ChevronRightIcon className="h-4 w-4 flex-shrink-0 text-blue-600" />
-                        )}
                       </div>
+                      {selectedStudent === student.id && (
+                        <ChevronRightIcon className="h-4 w-4 flex-shrink-0 text-blue-600" />
+                      )}
                     </div>
                   </div>
                 ))}

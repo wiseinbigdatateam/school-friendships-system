@@ -39,12 +39,6 @@ const SurveyItem: React.FC<{
   const handleStatusChange = async (newStatus: string) => {
     if (isStatusChanging) return; // 이미 변경 중이면 무시
 
-    console.log("🔍 SurveyItem handleStatusChange 호출:", {
-      surveyId: survey.id,
-      surveyTitle: survey.title,
-      newStatus,
-      surveyIdType: typeof survey.id,
-    });
 
     setIsStatusChanging(true);
     try {
@@ -259,7 +253,6 @@ const SurveyManagement: React.FC = () => {
 
   // 상태 필터 초기화 확인
   useEffect(() => {
-    console.log("🔍 현재 상태 필터:", statusFilter);
   }, [statusFilter]);
   const [error, setError] = useState<string | null>(null);
   const [currentUser, setCurrentUser] = useState<any>(null);
@@ -271,20 +264,9 @@ const SurveyManagement: React.FC = () => {
     const fetchCurrentUser = async () => {
       try {
         if (!user) {
-          console.log("🔍 사용자 정보가 없습니다. 로그인 페이지로 이동합니다.");
           window.location.href = "/login";
           return;
         }
-
-        console.log("🔍 사용자 정보:", {
-          id: user.id,
-          name: user.name,
-          role: user.role,
-          schoolId: user.schoolId,
-          school_id: user.school_id,
-          grade: user.grade,
-          class: user.class,
-        });
 
         setCurrentUser(user);
 
@@ -299,7 +281,6 @@ const SurveyManagement: React.FC = () => {
 
         // teacherInfo 설정 (담임교사 자동 설정을 위해)
         setTeacherInfo(userData);
-        console.log("🔍 teacherInfo 설정 완료:", userData);
 
         // 학교 ID 설정 (사용자 권한에 따라)
         let schoolId = "";
@@ -339,12 +320,6 @@ const SurveyManagement: React.FC = () => {
 
         setUserSchoolId(schoolId);
 
-        console.log("🔍 사용자 정보 설정 완료:", {
-          user,
-          userData,
-          schoolId,
-          userRole: user.role,
-        });
       } catch (error) {
         console.error("사용자 정보 조회 오류:", error);
         // 에러 발생 시 로그인 페이지로 이동
@@ -358,7 +333,6 @@ const SurveyManagement: React.FC = () => {
   // 설문 데이터 로드 함수
   const loadSurveys = async () => {
     if (!userSchoolId) {
-      console.log("🔍 학교 ID가 없어 설문 데이터를 로드할 수 없음");
       return;
     }
 
@@ -367,40 +341,16 @@ const SurveyManagement: React.FC = () => {
       setError(null);
 
       // 설문 상태 자동 업데이트 실행
-      console.log("🔍 설문 상태 자동 업데이트 시작");
       await SurveyService.updateAllSurveyStatuses();
-      console.log("🔍 설문 상태 자동 업데이트 완료");
 
       // 상태 업데이트 후 잠시 대기 (데이터베이스 반영 시간)
       await new Promise((resolve) => setTimeout(resolve, 1000));
-
-      console.log("🔍 설문 데이터 로드 시작:", {
-        userSchoolId,
-        statusFilter,
-        teacherInfo: {
-          role: teacherInfo?.role,
-          grade: teacherInfo?.grade_level,
-          class: teacherInfo?.class_number,
-          school: teacherInfo?.school_id,
-        },
-        user: {
-          role: user?.role,
-          grade: user?.grade,
-          class: user?.class,
-          schoolId: user?.school_id || user?.schoolId,
-        },
-      });
 
       let surveysData: SurveyWithStats[];
 
       // 사용자 권한에 따른 설문 데이터 가져오기
       if (user?.role === "homeroom_teacher" && user?.grade && user?.class) {
         // 담임선생님: 자신의 담당 학년/반의 설문만
-        console.log("🔍 담임선생님용 설문 조회:", {
-          schoolId: userSchoolId,
-          grade: user.grade,
-          class: user.class,
-        });
 
         surveysData = await SurveyService.getSurveysBySchoolGradeClass(
           userSchoolId,
@@ -408,42 +358,18 @@ const SurveyManagement: React.FC = () => {
           user.class,
         );
 
-        console.log("🔍 담임선생님용 설문 데이터 로드 완료:", {
-          schoolId: userSchoolId,
-          grade: user.grade,
-          class: user.class,
-          count: surveysData.length,
-          surveys: surveysData.map((s) => ({
-            id: s.id,
-            title: s.title,
-            status: s.status,
-          })),
-        });
       } else if (user?.role === "grade_teacher" && user?.grade) {
         // 학년담당: 해당 학년의 설문
-        console.log("🔍 학년담당용 설문 조회:", {
-          schoolId: userSchoolId,
-          grade: user.grade,
-        });
+        
 
         surveysData = await SurveyService.getSurveysBySchoolGradeClass(
           userSchoolId,
           user.grade,
         );
 
-        console.log("🔍 학년담당용 설문 데이터 로드 완료:", {
-          schoolId: userSchoolId,
-          grade: user.grade,
-          count: surveysData.length,
-          surveys: surveysData.map((s) => ({
-            id: s.id,
-            title: s.title,
-            status: s.status,
-          })),
-        });
+        
       } else if (user?.role === "school_admin") {
         // 학교 관리자: 해당 학교의 모든 설문
-        console.log("🔍 학교 관리자용 설문 조회:", { schoolId: userSchoolId });
 
         if (statusFilter !== "all") {
           surveysData = await SurveyService.getSurveysByStatus(
@@ -454,18 +380,8 @@ const SurveyManagement: React.FC = () => {
           surveysData = await SurveyService.getAllSurveys(userSchoolId);
         }
 
-        console.log("🔍 학교 관리자용 설문 데이터 로드 완료:", {
-          schoolId: userSchoolId,
-          count: surveysData.length,
-          surveys: surveysData.map((s) => ({
-            id: s.id,
-            title: s.title,
-            status: s.status,
-          })),
-        });
       } else if (user?.role === "district_admin") {
         // 교육청 관리자: 해당 교육청의 모든 학교 설문
-        console.log("🔍 교육청 관리자용 설문 조회: 전체 학교");
 
         if (statusFilter !== "all") {
           surveysData = await SurveyService.getSurveysByStatus(
@@ -476,17 +392,8 @@ const SurveyManagement: React.FC = () => {
           surveysData = await SurveyService.getAllSurveys(""); // 빈 문자열로 모든 학교의 설문 조회
         }
 
-        console.log("🔍 교육청 관리자용 설문 데이터 로드 완료:", {
-          count: surveysData.length,
-          surveys: surveysData.map((s) => ({
-            id: s.id,
-            title: s.title,
-            status: s.status,
-          })),
-        });
       } else if (user?.role === "main_admin") {
         // 시스템 관리자: 모든 설문
-        console.log("🔍 시스템 관리자용 설문 조회: 전체 시스템");
 
         if (statusFilter !== "all") {
           surveysData = await SurveyService.getSurveysByStatus(
@@ -497,17 +404,8 @@ const SurveyManagement: React.FC = () => {
           surveysData = await SurveyService.getAllSurveys("all"); // "all" 문자열로 모든 설문 조회
         }
 
-        console.log("🔍 시스템 관리자용 설문 데이터 로드 완료:", {
-          count: surveysData.length,
-          surveys: surveysData.map((s) => ({
-            id: s.id,
-            title: s.title,
-            status: s.status,
-          })),
-        });
       } else {
         // 기타 역할: 학교 ID로 기본 설문 데이터
-        console.log("🔍 기본 설문 조회:", { schoolId: userSchoolId });
 
         if (statusFilter !== "all") {
           surveysData = await SurveyService.getSurveysByStatus(
@@ -518,86 +416,10 @@ const SurveyManagement: React.FC = () => {
           surveysData = await SurveyService.getAllSurveys(userSchoolId);
         }
 
-        console.log("🔍 기본 설문 데이터 로드 완료:", {
-          schoolId: userSchoolId,
-          count: surveysData.length,
-          surveys: surveysData.map((s) => ({
-            id: s.id,
-            title: s.title,
-            status: s.status,
-          })),
-        });
       }
-
-      console.log("🔍 필터링 전 설문 데이터:", {
-        total: surveysData.length,
-        byStatus: surveysData.reduce(
-          (acc, s) => {
-            acc[s.status] = (acc[s.status] || 0) + 1;
-            return acc;
-          },
-          {} as Record<string, number>,
-        ),
-        allSurveys: surveysData.map((s) => ({
-          id: s.id,
-          title: s.title,
-          status: s.status,
-          target_grades: s.target_grades,
-          target_classes: s.target_classes,
-          created_by: s.created_by,
-          school_id: s.school_id,
-        })),
-      });
-
-      // 사용자 역할에 따른 추가 필터링 (임시로 비활성화)
-      console.log("🔍 필터링 전 사용자 정보:", {
-        currentUserId: currentUser?.id,
-        teacherRole: teacherInfo?.role,
-        teacherGrade: teacherInfo?.grade_level,
-        teacherClass: teacherInfo?.class_number,
-      });
-
-      // 임시로 모든 설문을 표시 (필터링 비활성화)
-      console.log("🔍 필터링 비활성화: 모든 설문 표시");
-
-      // 기존 필터링 로직 (주석 처리)
-      /*
-      if (currentUser?.id && teacherInfo?.role === 'homeroom_teacher') {
-        // 담임교사: 자신이 생성한 설문만 표시
-        const beforeFilterCount = surveysData.length;
-        const filteredSurveys = surveysData.filter(survey => survey.created_by === currentUser.id);
-        
-        console.log('🔍 담임교사 필터링:', { 
-          이전: beforeFilterCount, 
-          이후: filteredSurveys.length,
-          필터링된_수: beforeFilterCount - filteredSurveys.length,
-          필터링된_설문: filteredSurveys.map(s => ({ id: s.id, title: s.title, created_by: s.created_by })),
-          필터링_제외된_설문: surveysData.filter(s => s.created_by !== currentUser.id).map(s => ({ 
-            id: s.id, 
-            title: s.title, 
-            created_by: s.created_by,
-            role: '필터링 제외됨'
-          }))
-        });
-        
-        surveysData = filteredSurveys;
-      }
-      */
-
-      console.log("🔍 최종 설문 목록 설정:", {
-        count: surveysData.length,
-        surveys: surveysData.map((s) => ({
-          id: s.id,
-          title: s.title,
-          status: s.status,
-          grade: s.target_grades,
-          class: s.target_classes,
-        })),
-      });
 
       // 데이터가 비어있으면 빈 배열로 설정
       if (surveysData.length === 0) {
-        console.log("🔍 설문 데이터가 비어있음");
         setSurveys([]);
       } else {
         setSurveys(surveysData);
@@ -637,7 +459,6 @@ const SurveyManagement: React.FC = () => {
 
     const interval = setInterval(
       () => {
-        console.log("🔍 실시간 상태 업데이트 실행");
         loadSurveys();
       },
       5 * 60 * 1000,
@@ -645,116 +466,6 @@ const SurveyManagement: React.FC = () => {
 
     return () => clearInterval(interval);
   }, [userSchoolId, user]);
-
-  // const handleCreateSurvey = async (surveyData: any) => {
-  //   try {
-  //     if (!userSchoolId || !currentUser?.id) {
-  //       setError('사용자 정보를 불러올 수 없습니다. 다시 로그인해주세요.');
-  //       return;
-  //     }
-
-  //     console.log('🔍 설문 생성 데이터:', {
-  //       surveyData,
-  //       teacherInfo,
-  //       userSchoolId,
-  //       currentUser: currentUser.id
-  //     });
-
-  //     // questions 필드가 없으면 빈 배열로 설정
-  //     const questions = surveyData.questions || [];
-
-  //     const newSurvey = await SurveyService.createSurvey(
-  //       userSchoolId,
-  //       surveyData.title,
-  //       surveyData.description,
-  //       surveyData.template_id, // template_id 전달
-  //       surveyData.target_grades,
-  //       surveyData.target_classes,
-  //       surveyData.start_date,
-  //       surveyData.end_date,
-  //       currentUser.id,
-  //       questions
-  //     );
-
-  //     if (newSurvey) {
-  //       console.log('🔍 새 설문 생성 성공:', newSurvey);
-
-  //       // 새 설문을 기존 목록에 직접 추가 (즉시 UI 업데이트)
-  //       const newSurveyWithStats = {
-  //         ...newSurvey,
-  //         response_count: 0,
-  //         responseRate: 0
-  //       };
-
-  //       console.log('🔍 새 설문을 목록에 추가:', newSurveyWithStats);
-
-  //       // 기존 목록에 새 설문 추가
-  //       setSurveys(prev => {
-  //         const updatedSurveys = [newSurveyWithStats, ...prev];
-  //         console.log('🔍 설문 목록 업데이트:', {
-  //           이전_수: prev.length,
-  //           이후_수: updatedSurveys.length,
-  //           새설문: { id: newSurveyWithStats.id, title: newSurveyWithStats.title }
-  //         });
-  //         return updatedSurveys;
-  //       });
-
-  //       // 성공 메시지 표시
-  //       toast.success('설문이 성공적으로 생성되었습니다!');
-
-  //       // 새 설문 생성 알림 생성
-  //       try {
-  //         await NotificationService.createSystemNotification(
-  //           currentUser.id,
-  //           'survey_created',
-  //           {
-  //             surveyTitle: newSurvey.title,
-  //             surveyId: newSurvey.id,
-  //             targetGrades: surveyData.target_grades,
-  //             targetClasses: surveyData.target_classes
-  //           },
-  //           'success'
-  //         );
-
-  //         // 권한별 알림 생성 (학년부장, 학교 관리자 등)
-  //         if (teacherInfo?.role && userSchoolId) {
-  //           await NotificationService.createSystemNotification(
-  //             currentUser.id,
-  //             'survey_created',
-  //             {
-  //               surveyTitle: newSurvey.title,
-  //               surveyId: newSurvey.id,
-  //               targetGrades: surveyData.target_grades,
-  //               targetClasses: surveyData.target_classes
-  //             },
-  //             'success'
-  //           );
-  //         }
-  //       } catch (error) {
-  //         console.error('알림 생성 오류:', error);
-  //       }
-
-  //       // 모달 닫기
-  //       setIsCreateModalOpen(false);
-
-  //       // 백그라운드에서 설문 목록 새로고침 (데이터 동기화)
-  //       console.log('🔍 백그라운드에서 설문 목록 새로고침 시작');
-  //       setTimeout(async () => {
-  //         try {
-  //           await loadSurveys();
-  //           console.log('🔍 백그라운드 설문 목록 새로고침 완료');
-  //         } catch (error) {
-  //           console.error('🔍 백그라운드 설문 목록 새로고침 실패:', error);
-  //         }
-  //       }, 1000);
-  //     } else {
-  //       setError('설문 생성에 실패했습니다.');
-  //     }
-  //   } catch (error) {
-  //     console.error('설문 생성 오류:', error);
-  //     setError('설문 생성 중 오류가 발생했습니다.');
-  //   }
-  // };
 
   const handleEditSurvey = (survey: SurveyWithStats) => {
     setEditingSurvey(survey);
@@ -791,7 +502,6 @@ const SurveyManagement: React.FC = () => {
   // 설문 삭제 관련 함수들
   const confirmDeleteSurvey = async () => {
     try {
-      console.log("🔍 설문 삭제 시도:", { deletingSurvey });
 
       if (!deletingSurvey) {
         console.error("삭제할 설문이 없음");
@@ -799,13 +509,7 @@ const SurveyManagement: React.FC = () => {
         return;
       }
 
-      console.log("🔍 SurveyService.deleteSurvey 호출 전:", {
-        surveyId: deletingSurvey.id,
-      });
-
       const success = await SurveyService.deleteSurvey(deletingSurvey.id);
-
-      console.log("🔍 SurveyService.deleteSurvey 결과:", { success });
 
       if (success) {
         // 목록에서 삭제된 설문 제거
@@ -813,11 +517,7 @@ const SurveyManagement: React.FC = () => {
           const updatedSurveys = prev.filter(
             (survey) => survey.id !== deletingSurvey.id,
           );
-          console.log("🔍 설문 목록 업데이트:", {
-            이전: prev.length,
-            이후: updatedSurveys.length,
-            삭제된ID: deletingSurvey.id,
-          });
+          
           return updatedSurveys;
         });
 
@@ -825,7 +525,6 @@ const SurveyManagement: React.FC = () => {
         setDeletingSurvey(null);
         toast.success("설문이 성공적으로 삭제되었습니다!");
 
-        console.log("🔍 설문 삭제 완료");
       } else {
         console.error("설문 삭제 실패: success = false");
         toast.error("설문 삭제에 실패했습니다.");
@@ -849,16 +548,6 @@ const SurveyManagement: React.FC = () => {
   const handleMobileSend = async (sendOptions: any) => {
     try {
       const { survey, method, includeQR, customMessage } = sendOptions;
-
-      // TODO: 실제 모바일 발송 API 호출
-      console.log("Sending mobile survey:", {
-        surveyId: survey.id,
-        method,
-        includeQR,
-        customMessage,
-        targetGrades: survey.target_grades,
-        targetClasses: survey.target_classes,
-      });
 
       const methodMap: Record<string, string> = {
         sms: "SMS 문자",
@@ -888,14 +577,6 @@ const SurveyManagement: React.FC = () => {
 
   const handleStatusChange = async (surveyId: string, newStatus: string) => {
     try {
-      console.log("🔍 설문 상태 변경 시도:", {
-        surveyId,
-        newStatus,
-        surveyIdType: typeof surveyId,
-        surveyIdLength: surveyId?.length,
-        surveyIdValue: JSON.stringify(surveyId),
-      });
-
       // surveyId 유효성 검사
       if (
         !surveyId ||
@@ -922,27 +603,11 @@ const SurveyManagement: React.FC = () => {
         return;
       }
 
-      console.log("🔍 현재 설문 정보:", {
-        id: currentSurvey.id,
-        title: currentSurvey.title,
-        currentStatus: currentSurvey.status,
-      });
-
       // 상태가 실제로 변경되었는지 확인
       if (currentSurvey.status === newStatus) {
-        console.log("🔍 상태가 동일함, 변경 불필요:", {
-          surveyId,
-          currentStatus: currentSurvey.status,
-          newStatus,
-        });
+        
         return;
       }
-
-      // SurveyService를 통해 상태 업데이트
-      console.log("🔍 SurveyService 상태 업데이트 시도:", {
-        surveyId,
-        newStatus,
-      });
 
       const success = await SurveyService.updateSurveyStatus(
         surveyId,
@@ -962,12 +627,6 @@ const SurveyManagement: React.FC = () => {
               : survey,
           ),
         );
-
-        console.log("🔍 설문 상태 변경 성공:", {
-          surveyId,
-          oldStatus: currentSurvey.status,
-          newStatus,
-        });
 
         // 성공 메시지 표시
         const statusLabels = {
@@ -1059,15 +718,6 @@ const SurveyManagement: React.FC = () => {
 
     // 디버깅: 필터링 과정 로그
     if (searchTerm || statusFilter !== "all") {
-      console.log("🔍 설문 필터링:", {
-        surveyId: survey.id,
-        title: survey.title,
-        status: survey.status,
-        matchesSearch,
-        matchesStatus,
-        searchTerm,
-        statusFilter,
-      });
     }
 
     return matchesSearch && matchesStatus;

@@ -254,13 +254,9 @@ const Dashboard: React.FC = () => {
                 })
             : [];
 
-          console.log("✅ 설문 변경 - 최종 일별 참여 데이터:", dailyData);
           setDailyParticipationData(dailyData);
 
-          console.log(
-            "✅ 설문 변경에 따른 일별 참여 데이터 업데이트:",
-            dailyData,
-          );
+          
         }
       } catch (error) {
         console.error("❌ 설문 응답 데이터 조회 실패:", error);
@@ -272,11 +268,9 @@ const Dashboard: React.FC = () => {
   useEffect(() => {
     const loadRealData = async () => {
       try {
-        console.log("🚀 Dashboard 데이터 로딩 시작");
 
         // 1. 인증 상태 확인
         if (authLoading) {
-          console.log("⏳ 인증 로딩 중...");
           return;
         }
 
@@ -286,27 +280,13 @@ const Dashboard: React.FC = () => {
           return;
         }
 
-        console.log("✅ 인증된 사용자:", {
-          id: currentUser.id,
-          name: currentUser.name,
-          role: currentUser.role,
-          schoolId: currentUser.schoolId,
-          school_id: currentUser.school_id,
-          grade: currentUser.grade,
-          class: currentUser.class,
-        });
 
         // 2. 사용자 정보에서 학교, 학년, 반 정보 추출
         const schoolId = currentUser.school_id || currentUser.schoolId || "";
         const gradeLevel = currentUser.grade?.toString() || "1";
         const classNumber = currentUser.class?.toString() || "1";
 
-        console.log("🏫 사용자 정보 기반 설정:", {
-          schoolId,
-          gradeLevel,
-          classNumber,
-          role: currentUser.role,
-        });
+        
 
         setSchoolId(schoolId);
         setGradeLevel(gradeLevel);
@@ -325,14 +305,12 @@ const Dashboard: React.FC = () => {
             setSchoolName("알 수 없는 학교");
           } else if (schoolData) {
             setSchoolName(schoolData.name);
-            console.log("✅ 학교 이름 설정:", schoolData.name);
           }
         } else {
           setSchoolName("학교 정보 없음");
         }
 
         // 4. 학생 목록 조회 (역할에 따라 다르게 처리)
-        console.log("👥 학생 목록 조회 시작");
 
         if (!schoolId) {
           console.warn("⚠️ 학교 ID가 없어서 학생 조회를 건너뜀");
@@ -358,20 +336,16 @@ const Dashboard: React.FC = () => {
         if (currentUser.role === "school_admin") {
           // 학교관리자는 전학년 전체 데이터 조회
           studentsQuery = studentsQuery.order("grade", { ascending: true });
-          console.log("🏫 학교관리자 권한으로 전체 학생 조회");
         } else if (currentUser.role === "grade_teacher") {
           // grade_teacher인 경우 담당 학년 전체 데이터 조회
           const assignedGrade = currentUser.grade?.toString() || "1";
           studentsQuery = studentsQuery.eq("grade", assignedGrade);
-          console.log(`📚 학년부장 권한으로 ${assignedGrade}학년 학생 조회`);
         } else {
           // 담임교사인 경우 특정 학급만 조회
           studentsQuery = studentsQuery
             .eq("grade", gradeLevel)
             .eq("class", classNumber);
-          console.log(
-            `👨‍🏫 담임교사 권한으로 ${gradeLevel}학년 ${classNumber}반 학생 조회`,
-          );
+          
         }
 
         const { data: studentsData, error: studentsError } =
@@ -383,15 +357,10 @@ const Dashboard: React.FC = () => {
           return;
         }
 
-        console.log(
-          "✅ 학생 데이터 조회 성공:",
-          studentsData?.length || 0,
-          "명",
-        );
+        
         setStudents(studentsData || []);
 
         if (!studentsData || studentsData.length === 0) {
-          console.log("⚠️ 학생 데이터가 없음");
           setParticipationData({
             totalStudents: 0,
             participatedStudents: 0,
@@ -403,7 +372,6 @@ const Dashboard: React.FC = () => {
           setSurveyProjects([]);
         } else if (studentsData && studentsData.length > 0) {
           // 5. 설문 목록 조회 (active와 completed 상태만 포함)
-          console.log("🔍 설문 조회 시작:", { schoolId });
           let surveysQuery = supabase
             .from("surveys")
             .select("*")
@@ -413,39 +381,22 @@ const Dashboard: React.FC = () => {
 
           const { data: surveys, error: surveysError } = await surveysQuery;
 
-          console.log("📊 설문 조회 결과:", {
-            surveysCount: surveys?.length || 0,
-            error: surveysError,
-          });
+          
 
           if (surveysError) {
             console.error("❌ 설문 조회 실패:", surveysError);
           } else {
-            console.log("✅ 원본 설문 데이터:", surveys);
-            console.log("📊 총 설문 개수:", surveys?.length || 0);
             // 역할에 따라 설문 필터링
             const filteredSurveys =
               surveys?.filter((survey) => {
                 const targetGrades = survey.target_grades;
                 const targetClasses = survey.target_classes;
 
-                console.log(`🔍 설문 "${survey.title}" 필터링 체크:`, {
-                  userRole: currentUser.role,
-                  gradeLevel,
-                  classNumber,
-                  targetGrades,
-                  targetClasses,
-                });
+                
 
                 if (currentUser.role === "school_admin") {
                   // 학교관리자: 해당 교육청 학교의 모든 학년 반의 설문
-                  console.log(
-                    `📋 학교관리자용 설문 "${survey.title}" 매칭 결과:`,
-                    {
-                      includeAll: true,
-                      reason: "학교관리자는 학교 전체 설문 접근 가능",
-                    },
-                  );
+                  
                   return true;
                 } else if (currentUser.role === "grade_teacher") {
                   // 학년부장: 해당 교육청 학교 선생님의 학년 모든 반의 설문
@@ -453,14 +404,7 @@ const Dashboard: React.FC = () => {
                   const gradeMatch = Array.isArray(targetGrades)
                     ? targetGrades.includes(assignedGrade)
                     : targetGrades === assignedGrade;
-                  console.log(
-                    `📋 학년부장용 설문 "${survey.title}" 매칭 결과:`,
-                    {
-                      assignedGrade,
-                      gradeMatch,
-                      reason: "학년부장은 담당 학년의 모든 반 설문 접근 가능",
-                    },
-                  );
+                 
                   return gradeMatch;
                 } else if (currentUser.role === "homeroom_teacher") {
                   // 담임교사: 해당 교육청 학교 선생님의 학년 반의 설문
@@ -473,39 +417,16 @@ const Dashboard: React.FC = () => {
                     : targetClasses === classNumber;
 
                   const isMatch = gradeMatch && classMatch;
-                  console.log(
-                    `📋 담임교사용 설문 "${survey.title}" 매칭 결과:`,
-                    {
-                      gradeLevel,
-                      classNumber,
-                      gradeMatch,
-                      classMatch,
-                      isMatch,
-                      reason: "담임교사는 담당 학급 설문만 접근 가능",
-                    },
-                  );
+                 
                   return isMatch;
                 } else {
                   // 기타 역할의 경우 기본적으로 모든 설문 표시하지 않음
-                  console.log(
-                    `📋 기타 역할용 설문 "${survey.title}" 매칭 결과:`,
-                    {
-                      userRole: currentUser.role,
-                      reason: "알 수 없는 역할로 설문 접근 제한",
-                    },
-                  );
+                  
                   return false;
                 }
               }) || [];
 
-            console.log("🎯 필터링 후 설문 개수:", filteredSurveys.length);
-            console.log(
-              "📝 필터링 된 설문들:",
-              filteredSurveys.map((s) => ({
-                title: s.title,
-                status: s.status,
-              })),
-            );
+            
 
             // 설문 프로젝트 목록 설정 (더 자세한 정보 포함)
             const projects = await Promise.all(
@@ -557,7 +478,6 @@ const Dashboard: React.FC = () => {
             setSurveyProjects(projects);
 
             // 설문 템플릿 정보는 필요시에만 조회 (현재 사용하지 않음)
-            console.log("📋 설문 템플릿 정보는 현재 사용하지 않음");
 
             // 6. 첫 번째 설문 선택 및 응답 데이터 조회
             if (projects.length > 0) {
@@ -703,23 +623,18 @@ const Dashboard: React.FC = () => {
                         const day = dateObj.getDate();
                         const date = `${month}/${day}`;
 
-                        console.log(
-                          `🔍 응답 날짜 처리: ${response.submitted_at} → ${date}`,
-                        );
+                        
 
                         const existingDate = acc.find((d) => d.date === date);
                         if (existingDate) {
                           existingDate.count += 1;
-                          console.log(
-                            `✅ 기존 날짜 ${date} 업데이트: ${existingDate.count}명`,
-                          );
+                          
                         } else {
                           acc.push({
                             date,
                             count: 1,
                             cumulative: 0,
                           });
-                          console.log(`🆕 새 날짜 ${date} 추가: 1명`);
                         }
 
                         // 누적 응답수 계산
@@ -730,9 +645,7 @@ const Dashboard: React.FC = () => {
                             dayData.cumulative =
                               acc[index - 1].cumulative + dayData.count;
                           }
-                          console.log(
-                            `📊 ${dayData.date}: 응답수 ${dayData.count}명, 누적 ${dayData.cumulative}명`,
-                          );
+                          
                         });
 
                         return acc;
@@ -749,7 +662,6 @@ const Dashboard: React.FC = () => {
               }
             } else {
               // 설문이 없으면 기본 데이터만 설정
-              console.log("⚠️ 설문 데이터가 없음 - 기본 데이터 설정");
               setParticipationData({
                 totalStudents: studentsData.length,
                 participatedStudents: 0,
@@ -764,7 +676,6 @@ const Dashboard: React.FC = () => {
         }
 
         setLoading(false);
-        console.log("🎉 Dashboard 데이터 로딩 완료");
       } catch (error) {
         console.error("❌ 실제 데이터 로드 실패:", error);
         console.error("❌ 에러 상세:", {

@@ -100,7 +100,6 @@ const Contact: React.FC = () => {
       // 임시 성공 처리
       await new Promise((resolve) => setTimeout(resolve, 2000)); // 로딩 시뮬레이션
 
-      console.log("Contact form submitted:", formData);
       setSubmitted(true);
     } catch (error) {
       console.error("Contact form submission failed:", error);

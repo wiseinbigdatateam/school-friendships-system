@@ -106,8 +106,6 @@ const IntegratedAnalysis: React.FC = () => {
     if (!teacherInfo) return;
 
     try {
-      console.log("🔍 통합 분석 - 설문 조회 시작:", teacherInfo);
-      
       let query = supabase
         .from("surveys")
         .select(`
@@ -145,10 +143,8 @@ const IntegratedAnalysis: React.FC = () => {
         if (filteredSurveys.length > 0) {
           setSurveys(filteredSurveys);
           setSelectedSurvey(filteredSurveys[0]);
-          console.log("✅ 통합 분석 - 설문 조회 완료:", filteredSurveys.length, "개");
         } else {
           setSurveys([]);
-          console.log("⚠️ 통합 분석 - 조회된 설문 없음");
         }
         return;
       }
@@ -163,10 +159,8 @@ const IntegratedAnalysis: React.FC = () => {
       if (data && data.length > 0) {
         setSurveys(data);
         setSelectedSurvey(data[0]);
-        console.log("✅ 통합 분석 - 설문 조회 완료:", data.length, "개");
       } else {
         setSurveys([]);
-        console.log("⚠️ 통합 분석 - 조회된 설문 없음");
       }
     } catch (error) {
       console.error("❌ 통합 분석 - 설문 조회 오류:", error);
@@ -184,7 +178,6 @@ const IntegratedAnalysis: React.FC = () => {
       }
 
       const user = JSON.parse(userStr);
-      console.log("👤 통합 분석 - 사용자 정보:", user);
 
       // 사용자 상세 정보 조회
       const { data: teacherData, error } = await supabase
@@ -200,7 +193,6 @@ const IntegratedAnalysis: React.FC = () => {
       }
 
       setTeacherInfo(teacherData);
-      console.log("✅ 통합 분석 - 사용자 정보 설정 완료:", teacherData);
     } catch (error) {
       console.error("❌ 통합 분석 - 사용자 정보 로드 오류:", error);
     } finally {
@@ -212,7 +204,6 @@ const IntegratedAnalysis: React.FC = () => {
   const performClassAnalysis = async (survey: Survey) => {
     try {
       setAnalysisLoading(true);
-      console.log("🔍 반 전체 분석 시작:", survey.title);
 
       // 설문 응답 데이터 조회
       const { data: responses, error: responseError } = await supabase
@@ -268,7 +259,6 @@ const IntegratedAnalysis: React.FC = () => {
         currentView: "class"
       }));
 
-      console.log("✅ 반 전체 분석 완료:", classAnalysis);
     } catch (error) {
       console.error("❌ 반 전체 분석 오류:", error);
     } finally {
@@ -280,7 +270,6 @@ const IntegratedAnalysis: React.FC = () => {
   const performIndividualAnalysis = async (studentId: string) => {
     try {
       setAnalysisLoading(true);
-      console.log("🔍 개별 학생 분석 시작:", studentId);
 
       const student = analysisState.classAnalysis?.students.find(s => s.id === studentId);
       if (!student) return;

@@ -34,14 +34,6 @@ export class DashboardService {
   // 대시보드 전체 데이터 조회
   static async getDashboardData(schoolId: string, teacherInfo?: { grade_level?: string; class_number?: string; role?: string }): Promise<DashboardData> {
     try {
-      // 디버깅: teacherInfo 로그
-      console.log('🔍 DashboardService.getDashboardData 호출:', {
-        schoolId,
-        teacherInfo,
-        isHomeroomTeacher: teacherInfo?.role === 'homeroom_teacher',
-        hasGradeLevel: !!teacherInfo?.grade_level,
-        hasClassNumber: !!teacherInfo?.class_number
-      });
       // 병렬로 여러 데이터 조회
       const [
         studentsResult,
@@ -54,12 +46,6 @@ export class DashboardService {
         // 전체 학생 수 (담임인 경우 담당 학년/반만)
         (() => {
           const isHomeroomQuery = teacherInfo?.role === 'homeroom_teacher' && teacherInfo.grade_level && teacherInfo.class_number;
-          console.log('🔍 학생 조회 쿼리:', {
-            isHomeroomQuery,
-            grade: teacherInfo?.grade_level,
-            class: teacherInfo?.class_number,
-            schoolId
-          });
           
           return isHomeroomQuery ?
             supabase
@@ -173,16 +159,6 @@ export class DashboardService {
           const recommendations = analysis.recommendations as any;
           const completeData = recommendations?.complete_analysis_data;
           
-          console.log('🔍 네트워크 분석 결과 디버깅:', {
-            analysisId: analysis.id,
-            surveyId: analysis.survey_id,
-            calculatedAt: analysis.calculated_at,
-            recommendationsKeys: Object.keys(recommendations || {}),
-            completeDataKeys: Object.keys(completeData || {}),
-            nodesCount: completeData?.nodes?.length || 0,
-            sampleNode: completeData?.nodes?.[0]
-          });
-          
           if (completeData?.nodes) {
             let highRiskCount = 0;
             let mediumRiskCount = 0;
@@ -190,25 +166,9 @@ export class DashboardService {
             // 권한별로 학생 필터링
             if (teacherInfo?.role === 'homeroom_teacher' && teacherInfo.grade_level && teacherInfo.class_number) {
               // 담임인 경우 담당 학년/반 학생만
-              console.log('🔍 담임교사 필터링:', {
-                grade: teacherInfo.grade_level,
-                class: teacherInfo.class_number,
-                totalNodes: completeData.nodes.length
-              });
+              
               
               completeData.nodes.forEach((node: any, index: number) => {
-                console.log(`🔍 노드 ${index}:`, {
-                  id: node.id,
-                  name: node.name,
-                  grade: node.grade,
-                  class: node.class,
-                  centrality: node.centrality,
-                  matchesFilter: node.grade === teacherInfo.grade_level && node.class === teacherInfo.class_number,
-                  gradeType: typeof node.grade,
-                  classType: typeof node.class,
-                  teacherGradeType: typeof teacherInfo.grade_level,
-                  teacherClassType: typeof teacherInfo.class_number
-                });
                 
                 // 타입 변환을 통한 비교
                 const nodeGrade = parseInt(String(node.grade)) || node.grade;
@@ -220,39 +180,26 @@ export class DashboardService {
                   const centrality = node.centrality || 0;
                   if (centrality < 0.3) {
                     highRiskCount++;
-                    console.log(`🚨 주의학생 발견: ${node.name} (중심성: ${centrality})`);
                   } else if (centrality < 0.6) {
                     mediumRiskCount++;
-                    console.log(`⚠️ 관찰중인 학생 발견: ${node.name} (중심성: ${centrality})`);
                   }
                 } else {
-                  console.log(`❌ 필터 불일치: ${node.name} (${nodeGrade}학년 ${nodeClass}반 vs ${teacherGrade}학년 ${teacherClass}반)`);
                 }
               });
             } else {
               // 다른 역할: 전체 학생 대상
-              console.log('🔍 전체 학생 대상 필터링:', {
-                role: teacherInfo?.role,
-                totalNodes: completeData.nodes.length
-              });
+             
               
               completeData.nodes.forEach((node: any, index: number) => {
                 const centrality = node.centrality || 0;
                 if (centrality < 0.3) {
                   highRiskCount++;
-                  console.log(`🚨 주의학생 발견: ${node.name} (중심성: ${centrality})`);
                 } else if (centrality < 0.6) {
                   mediumRiskCount++;
-                  console.log(`⚠️ 관찰중인 학생 발견: ${node.name} (중심성: ${centrality})`);
                 }
               });
             }
             
-            console.log('🔍 최종 위험도 카운트:', {
-              highRisk: highRiskCount,
-              mediumRisk: mediumRiskCount,
-              totalNodes: completeData.nodes.length
-            });
             
             // 고위험 학생 감지 시 알림 생성 (한 번만)
             if (highRiskCount > 0) {
@@ -276,9 +223,7 @@ export class DashboardService {
                     );
                   }
                   
-                  console.log('🔔 고위험 학생 알림 생성 완료:', { count: highRiskCount });
                 } else {
-                  console.log('🔔 고위험 학생 알림이 이미 존재하여 생성하지 않음');
                 }
               } catch (error) {
                 console.error('고위험 학생 알림 생성 오류:', error);
@@ -288,16 +233,10 @@ export class DashboardService {
             highRiskStudentsResult = { count: highRiskCount, error: null };
             mediumRiskStudentsResult = { count: mediumRiskCount, error: null };
           } else {
-            console.log('🔍 completeData.nodes가 없음:', {
-              completeData,
-              recommendations
-            });
+            
           }
         } else {
-          console.log('🔍 네트워크 분석 결과가 없음:', {
-            completeAnalysis,
-            analysisError
-          });
+          
         }
       } catch (error) {
         console.error('위험도별 학생 수 계산 오류:', error);
@@ -339,21 +278,10 @@ export class DashboardService {
           const totalStudentsInClass = studentsResult.count || 0;
           const respondedStudents = surveyResponses?.length || 0;
           
-          // 디버깅 로그 추가
-          console.log('🔍 진행 중인 설문 답변률 계산:', {
-            schoolId,
-            grade: teacherInfo.grade_level,
-            class: teacherInfo.class_number,
-            totalStudentsInClass,
-            respondedStudents,
-            surveyResponses: surveyResponses?.length || 0,
-            surveyResponsesData: surveyResponses
-          });
           
                   activeSurveyResponseRate = totalStudentsInClass > 0 ? 
           Math.round((respondedStudents / totalStudentsInClass) * 100) : 0;
         
-        console.log('🔍 최종 계산된 답변률:', activeSurveyResponseRate);
         } else {
           // 학교 관리자인 경우 전체 학교의 진행 중인 설문에 대한 응답률만
           const { data: surveyResponses } = await supabase
@@ -369,19 +297,10 @@ export class DashboardService {
           const totalStudentsInSchool = studentsResult.count || 0;
           const respondedStudents = surveyResponses?.length || 0;
           
-          // 디버깅 로그 추가
-          console.log('🔍 학교 전체 진행 중인 설문 답변률 계산:', {
-            schoolId,
-            totalStudentsInSchool,
-            respondedStudents,
-            surveyResponses: surveyResponses?.length || 0,
-            surveyResponsesData: surveyResponses
-          });
           
           activeSurveyResponseRate = totalStudentsInSchool > 0 ? 
             Math.round((respondedStudents / totalStudentsInSchool) * 100) : 0;
           
-          console.log('🔍 최종 계산된 답변률 (학교 전체):', activeSurveyResponseRate);
         }
       } catch (error) {
         console.error('진행 중인 설문 답변률 계산 오류:', error);
@@ -594,37 +513,6 @@ export class DashboardService {
     }
   }
 
-  // 설문 응답에서 친구 수 계산 (더 이상 사용되지 않음 - 네트워크 분석 결과 기반으로 대체)
-  // private static countFriendsFromResponse(responses: any): number {
-  //   try {
-  //     if (!responses || typeof responses !== 'object') return 0;
-  //     
-  //     let totalFriends = 0;
-  //     
-  //     // responses 객체의 각 질문을 순회
-  //     Object.values(responses).forEach((questionResponse: any) => {
-  //       if (Array.isArray(questionResponse)) {
-  //         // 배열인 경우 (친구 선택 응답)
-  //         totalFriends += questionResponse.length;
-  //       } else if (questionResponse && typeof questionResponse === 'object') {
-  //         // 객체인 경우 (복잡한 응답 구조)
-  //         Object.values(questionResponse).forEach((value: any) => {
-  //           if (Array.isArray(value)) {
-  //             if (Array.isArray(value)) {
-  //               totalFriends += value.length;
-  //             }
-  //           });
-  //         });
-  //       }
-  //     });
-  //     
-  //     return totalFriends;
-  //   } catch (error) {
-  //     console.error('친구 수 계산 오류:', error);
-  //     return 0;
-  //     return 0;
-  //   }
-  // }
 
   // 설문 진행 상황 조회
   static async getSurveyProgress(schoolId: string): Promise<{

@@ -167,7 +167,6 @@ const GradeAnalysis: React.FC = () => {
     
     try {
       setAnalysisLoading(true);
-      console.log(`🔍 학급별 분석 시작: ${survey.title}`);
       
       // 통합 서비스에서 학급별 분석 결과 조회
       const classAnalysis = await unifiedNetworkAnalysisService.getClassAnalysis(
@@ -212,7 +211,6 @@ const GradeAnalysis: React.FC = () => {
       };
       
       setGradeData(convertedGradeData);
-      console.log(`✅ 학급별 분석 완료: ${survey.title}`);
       
     } catch (error) {
       console.error("❌ 학급별 분석 오류:", error);

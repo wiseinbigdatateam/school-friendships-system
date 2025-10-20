@@ -84,23 +84,18 @@ class NetworkAnalysisService {
    */
   async analyzeNetwork(surveyId: string): Promise<NetworkAnalysisResult> {
     try {
-      console.log('🔍 네트워크 분석 시작:', surveyId);
 
       // 1. 설문 응답 데이터 가져오기
       const surveyResponses = await this.getSurveyResponses(surveyId);
-      console.log('📊 설문 응답 데이터:', surveyResponses.length);
 
       // 2. 학생 정보 가져오기
       const students = await this.getStudents(surveyId);
-      console.log('👥 학생 데이터:', students.length);
 
       // 3. 네트워크 데이터 생성
       const networkData = this.createNetworkData(surveyResponses, students);
-      console.log('🕸️ 네트워크 데이터:', networkData);
 
       // 4. 네트워크 분석 수행
       const analysisResult = this.performNetworkAnalysis(networkData, students);
-      console.log('📈 분석 결과:', analysisResult);
 
       // 5. 분석 결과 저장
       await this.saveAnalysis(surveyId, analysisResult);
@@ -268,22 +263,17 @@ class NetworkAnalysisService {
       const templateQuestions = surveyData?.survey_templates?.questions as any;
       const templateMetadata = surveyData?.survey_templates?.metadata as any;
       
-      console.log('🔍 질문 구조 분석 시작:');
-      console.log('📋 설문 템플릿 질문들:', templateQuestions);
       
       // 질문별 관계 유형 매핑 (템플릿 메타데이터에서 추출)
       const questionRelationshipMapping: { [key: string]: string } = {};
       
       if (templateQuestions) {
-        console.log('🎯 질문별 관계 유형 매핑 과정:');
-        console.log('='.repeat(50));
         
         // 질문이 배열 형태인 경우 처리
         if (Array.isArray(templateQuestions)) {
           templateQuestions.forEach((question, index) => {
             const questionText = typeof question === 'string' ? question : question?.question || '';
             const questionKey = `q${index + 1}`;
-            console.log(`\n📝 질문 ${questionKey}: "${questionText}"`);
             
             let mappedType = '기타';
             let reason = '기본값';
@@ -304,14 +294,11 @@ class NetworkAnalysisService {
             }
             
             questionRelationshipMapping[questionKey] = mappedType;
-            console.log(`   ✅ 매핑 결과: ${mappedType}`);
-            console.log(`   📌 매핑 이유: ${reason}`);
           });
         } else {
           // 객체 형태인 경우 기존 로직 사용
           Object.keys(templateQuestions).forEach((questionKey, index) => {
             const questionText = templateQuestions[questionKey]?.question || '';
-            console.log(`\n📝 질문 ${questionKey}: "${questionText}"`);
             
             let mappedType = '기타';
             let reason = '기본값';
@@ -332,25 +319,15 @@ class NetworkAnalysisService {
             }
             
             questionRelationshipMapping[questionKey] = mappedType;
-            console.log(`   ✅ 매핑 결과: ${mappedType}`);
-            console.log(`   📌 매핑 이유: ${reason}`);
           });
         }
         
-        console.log('\n📊 최종 질문-관계유형 매핑:');
-        console.log(questionRelationshipMapping);
-        console.log('='.repeat(50));
       } else {
-        console.log('⚠️ 설문 템플릿 질문 정보를 찾을 수 없습니다.');
       }
 
       // 5. survey_data 생성 (network_analysis.py 형태)
       const survey_data: Array<[string, string, string]> = [];
       const studentMap = new Map(students?.map(s => [s.id, s]) || []);
-
-      console.log('\n🔄 응답 데이터 처리 시작:');
-      console.log(`📊 총 응답 수: ${responses?.length || 0}개`);
-      console.log('='.repeat(50));
 
       responses?.forEach((response, responseIndex) => {
         if (!response.student_id || !response.responses) return;
@@ -359,41 +336,26 @@ class NetworkAnalysisService {
           ? JSON.parse(response.responses) 
           : response.responses;
 
-        console.log(`\n👤 응답자 ${responseIndex + 1}: ${response.student_id}`);
-        console.log(`📝 응답 데이터:`, responsesData);
-
         // 각 질문별 응답 처리
         Object.entries(responsesData).forEach(([questionKey, answer]: [string, any]) => {
           const relationshipType = questionRelationshipMapping[questionKey] || '기타';
           
-          console.log(`   🔍 질문 ${questionKey} 처리:`);
-          console.log(`      📋 질문 유형: ${relationshipType}`);
-          console.log(`      💬 응답 내용:`, answer);
           
           if (Array.isArray(answer)) {
             // 여러 친구 선택한 경우
-            console.log(`      ✅ 배열 형태 응답 (${answer.length}개 선택)`);
             answer.forEach((friendId: string, friendIndex) => {
               if (friendId && friendId !== response.student_id && studentMap.has(friendId)) {
                 survey_data.push([response.student_id!, friendId, relationshipType]);
-                console.log(`         ${friendIndex + 1}. ${response.student_id} → ${friendId} (${relationshipType})`);
               } else {
-                console.log(`         ${friendIndex + 1}. ${friendId} (무시: 유효하지 않은 ID 또는 자기 자신)`);
               }
             });
           } else if (typeof answer === 'string' && answer !== response.student_id && studentMap.has(answer)) {
             // 단일 친구 선택한 경우
             survey_data.push([response.student_id!, answer, relationshipType]);
-            console.log(`      ✅ 단일 선택: ${response.student_id} → ${answer} (${relationshipType})`);
           } else {
-            console.log(`      ⚠️ 무시된 응답: ${answer} (유효하지 않음)`);
           }
         });
       });
-
-      console.log('\n📈 데이터 생성 완료:');
-      console.log(`   - 생성된 관계 수: ${survey_data.length}개`);
-      console.log('='.repeat(50));
 
       // 6. student_info 생성
       const student_info = students?.map(student => ({
@@ -403,20 +365,12 @@ class NetworkAnalysisService {
         class: student.class
       })) || [];
 
-      console.log('📊 Python용 데이터 생성 완료:');
-      console.log(`   - 학생 수: ${student_info.length}명`);
-      console.log(`   - 관계 수: ${survey_data.length}개`);
-      
       const relationshipDistribution = this.getRelationshipTypeDistribution(survey_data);
-      console.log('\n📊 관계 유형별 분포:');
       Object.entries(relationshipDistribution).forEach(([type, count]) => {
         const percentage = ((count / survey_data.length) * 100).toFixed(1);
-        console.log(`   - ${type}: ${count}개 (${percentage}%)`);
       });
       
-      console.log('\n🎯 매핑된 관계 유형들:');
       Object.keys(questionRelationshipMapping).forEach(questionKey => {
-        console.log(`   - ${questionKey}: ${questionRelationshipMapping[questionKey]}`);
       });
 
       return {
@@ -1066,7 +1020,6 @@ class NetworkAnalysisService {
         throw error;
       }
 
-      console.log('✅ 분석 결과가 저장되었습니다.');
     } catch (error) {
       console.error('분석 결과 저장 실패:', error);
       throw error;
@@ -1112,7 +1065,6 @@ class NetworkAnalysisService {
         throw error;
       }
 
-      console.log('✅ 개별 분석 결과가 저장되었습니다.');
     } catch (error) {
       console.error('개별 분석 결과 저장 실패:', error);
       throw error;

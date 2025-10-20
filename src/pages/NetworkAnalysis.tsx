@@ -83,11 +83,7 @@ const NetworkAnalysis: React.FC = () => {
 
   // analysisResults 변경 감지
   useEffect(() => {
-    console.log("🔍 analysisResults 변경됨:", {
-      hasResults: !!analysisResults,
-      nodesCount: analysisResults?.nodes.length || 0,
-      edgesCount: analysisResults?.edges.length || 0,
-    });
+    
   }, [analysisResults]);
 
   const [isAnalyzing, setIsAnalyzing] = useState(false);
@@ -222,19 +218,12 @@ const NetworkAnalysis: React.FC = () => {
 
   // 설문 및 학생 데이터 가져오기
   useEffect(() => {
-    console.log("🔍 useEffect 실행:", { userSchoolId, teacherInfo });
 
     if (userSchoolId && teacherInfo) {
-      console.log("🔍 조건 충족, 데이터 가져오기 시작");
       fetchSurveys();
       fetchStudents();
     } else {
-      console.log("🔍 조건 불충족:", {
-        userSchoolId: !!userSchoolId,
-        teacherInfo: !!teacherInfo,
-        userSchoolIdValue: userSchoolId,
-        teacherInfoValue: teacherInfo,
-      });
+      
     }
   }, [userSchoolId, teacherInfo]);
 
@@ -244,7 +233,6 @@ const NetworkAnalysis: React.FC = () => {
     surveyId: string,
   ): Promise<NetworkAnalysisResult | null> => {
     try {
-      console.log("🔍 저장된 네트워크 분석 결과 불러오기:", surveyId);
 
       // 전체 분석 결과를 저장하는 JSON 필드에서 조회
       const { data: savedAnalysis, error } = await supabase
@@ -260,18 +248,14 @@ const NetworkAnalysis: React.FC = () => {
       }
 
       if (!savedAnalysis) {
-        console.log("🔍 저장된 분석 결과가 없습니다");
         return null;
       }
-
-      console.log("🔍 저장된 전체 분석 결과:", savedAnalysis);
 
       // recommendations에서 전체 분석 데이터 추출
       const recommendations = savedAnalysis.recommendations as any;
       const completeData = recommendations?.complete_analysis_data;
 
       if (!completeData) {
-        console.log("🔍 전체 분석 데이터가 recommendations에 없습니다");
         return null;
       }
 
@@ -292,7 +276,6 @@ const NetworkAnalysis: React.FC = () => {
         friendship_type_distribution: completeData.friendship_type_distribution || {},
       };
 
-      console.log("🔍 변환된 분석 결과:", result);
       return result;
     } catch (error) {
       console.error("🔍 저장된 분석 결과 불러오기 오류:", error);
@@ -302,38 +285,18 @@ const NetworkAnalysis: React.FC = () => {
 
   const fetchCurrentUser = async () => {
     try {
-      console.log("🔍 사용자 정보 가져오기 시작");
-
       // 설문운영과 동일한 방식으로 wiseon_user와 wiseon_auth_token 사용
       const userStr = localStorage.getItem("wiseon_user");
       const authToken = localStorage.getItem("wiseon_auth_token");
 
-      console.log("🔍 로컬 스토리지 확인:", {
-        wiseon_user: !!userStr,
-        wiseon_auth_token: !!authToken,
-        wiseon_user_length: userStr?.length,
-        auth_token_length: authToken?.length,
-      });
-
       if (!userStr || !authToken) {
-        console.log("🔍 로그인 정보가 없습니다. 로그인 페이지로 이동합니다.");
-        console.log("🔍 로컬 스토리지 전체 내용:", Object.keys(localStorage));
         window.location.href = "/login";
         return;
       }
 
       const user = JSON.parse(userStr);
-      console.log("🔍 wiseon_user에서 파싱된 사용자 정보:", user);
-      console.log("🔍 사용자 정보 구조:", {
-        id: user.id,
-        school_id: user.school_id,
-        grade_level: user.grade_level,
-        class_number: user.class_number,
-        role: user.role,
-      });
 
       // 사용자의 학교 정보 조회
-      console.log("🔍 Supabase 사용자 정보 조회 시작:", { userId: user.id });
       const { data: userData, error: userError } = await supabase
         .from("users")
         .select("*")
@@ -342,34 +305,18 @@ const NetworkAnalysis: React.FC = () => {
 
       if (userError) {
         console.error("🔍 사용자 정보 조회 오류:", userError);
-        console.log("🔍 오류 상세:", {
-          code: userError.code,
-          message: userError.message,
-          details: userError.details,
-          hint: userError.hint,
-        });
+        
         window.location.href = "/login";
         return;
       }
 
-      console.log("🔍 Supabase에서 가져온 사용자 정보:", userData);
-      console.log("🔍 Supabase 사용자 정보 구조:", {
-        id: userData.id,
-        school_id: userData.school_id,
-        grade_level: userData.grade_level,
-        class_number: userData.class_number,
-        role: userData.role,
-      });
-
       // 학교 ID 설정
       if (userData.school_id) {
         setUserSchoolId(userData.school_id);
-        console.log("🔍 학교 ID 설정 완료:", userData.school_id);
       } else {
         // 기본 학교 ID (개발용)
         const defaultSchoolId = "00000000-0000-0000-0000-000000000011";
         setUserSchoolId(defaultSchoolId);
-        console.log("🔍 기본 학교 ID 설정 완료:", defaultSchoolId);
       }
 
       // teacherInfo 설정
@@ -382,16 +329,6 @@ const NetworkAnalysis: React.FC = () => {
       };
 
       setTeacherInfo(teacherInfoData);
-      console.log("🔍 교사 정보 설정 완료:", teacherInfoData);
-      console.log("🔍 설정된 정보 요약:", {
-        사용자_ID: teacherInfoData.id,
-        학교_ID: teacherInfoData.school_id,
-        담당_학년: teacherInfoData.grade_level,
-        담당_반: teacherInfoData.class_number,
-        역할: teacherInfoData.role,
-      });
-
-      console.log("🔍 fetchCurrentUser 완료 - 상태 업데이트 예정");
     } catch (error) {
       console.error("🔍 사용자 정보 가져오기 오류:", error);
       if (error instanceof Error) {
@@ -429,7 +366,6 @@ const NetworkAnalysis: React.FC = () => {
         .map((template: any) => template.id);
 
       if (friendshipTemplateIds.length === 0) {
-        console.log("No friendship surveys found");
         setSurveys([]);
         return;
       }
@@ -463,19 +399,16 @@ const NetworkAnalysis: React.FC = () => {
 
   const fetchStudents = async () => {
     if (!userSchoolId || !teacherInfo) {
-      console.log("🔍 학생 조회 조건 불충족:", { userSchoolId, teacherInfo });
       return;
     }
 
     try {
-      console.log("🔍 학생 데이터 조회 시작");
 
       let query = supabase.from("students").select("*").eq("is_active", true);
 
       // 학교별 필터링
       if (teacherInfo.role === "district_admin") {
         // 교육청 관리자: 모든 학교 학생 조회 (필터링 없음)
-        console.log("🔍 교육청 관리자: 모든 학교 학생 조회");
       } else {
         // 다른 역할: 해당 학교 학생만 조회
         query = query.eq("current_school_id", userSchoolId);
@@ -488,23 +421,14 @@ const NetworkAnalysis: React.FC = () => {
           .eq("grade", teacherInfo.grade_level.toString())
           .eq("class", teacherInfo.class_number.toString());
 
-        console.log("🔍 담임교사용 학생 조회 조건:", {
-          grade: teacherInfo.grade_level.toString(),
-          class: teacherInfo.class_number.toString(),
-        });
       } else if (teacherInfo.role === "grade_teacher") {
         // 학년담당: 해당 학년 전체
         query = query.eq("grade", teacherInfo.grade_level.toString());
 
-        console.log("🔍 학년담당용 학생 조회 조건:", {
-          grade: teacherInfo.grade_level.toString(),
-        });
       } else if (teacherInfo.role === "school_admin") {
         // 학교관리자: 해당 학교 전체 (추가 필터링 없음)
-        console.log("🔍 학교관리자용 학생 조회: 해당 학교 전체");
       } else if (teacherInfo.role === "district_admin") {
         // 교육청관리자: 모든 학교 (추가 필터링 없음)
-        console.log("🔍 교육청관리자용 학생 조회: 모든 학교");
       }
 
       const { data, error } = await query;
@@ -513,8 +437,6 @@ const NetworkAnalysis: React.FC = () => {
         console.error("🔍 학생 데이터 조회 오류:", error);
         return;
       }
-
-      console.log("🔍 전체 학생 데이터:", data);
 
       const convertedStudents: Student[] = (data || []).map((student) => ({
         id: student.id,
@@ -525,15 +447,8 @@ const NetworkAnalysis: React.FC = () => {
       }));
 
       setStudents(convertedStudents);
-      console.log("🔍 학생 데이터 설정:", convertedStudents);
 
       if (convertedStudents.length === 0) {
-        console.log("🔍 현재 권한에 해당하는 학생이 없습니다");
-        console.log("🔍 권한 정보:", {
-          role: teacherInfo.role,
-          grade_level: teacherInfo.grade_level,
-          class_number: teacherInfo.class_number,
-        });
       }
     } catch (error) {
       console.error("🔍 학생 데이터 조회 오류:", error);
@@ -636,16 +551,10 @@ const NetworkAnalysis: React.FC = () => {
       setIsAnalyzing(true);
       setAnalysisError(null);
 
-      console.log("🐍 Python 네트워크 분석 시작:", selectedSurvey.id);
-      console.log("=".repeat(60));
 
       // Python 스크립트용 데이터 준비
-      console.log("🔍 1단계: 설문 데이터 변환 및 관계 유형 매핑");
       const pythonData = await networkAnalysisService.convertToPythonFormat(selectedSurvey.id);
       
-      console.log("📊 Python용 데이터 준비 완료:");
-      console.log(`   - 설문 데이터: ${pythonData.survey_data.length}개 관계`);
-      console.log(`   - 학생 정보: ${pythonData.student_info.length}명`);
       
       // 관계 유형별 분포 표시
       const relationshipDistribution = pythonData.survey_data.reduce((acc, [source, target, relType]) => {
@@ -653,14 +562,11 @@ const NetworkAnalysis: React.FC = () => {
         return acc;
       }, {} as Record<string, number>);
       
-      console.log("📈 관계 유형별 분포:");
       Object.entries(relationshipDistribution).forEach(([type, count]) => {
         const percentage = ((count / pythonData.survey_data.length) * 100).toFixed(1);
-        console.log(`   - ${type}: ${count}개 (${percentage}%)`);
       });
 
       // Python API 호출
-      console.log("\n🚀 2단계: Python API 호출");
       const response = await fetch('http://localhost:3001/api/network-analysis/run', {
         method: 'POST',
         headers: {
@@ -683,33 +589,16 @@ const NetworkAnalysis: React.FC = () => {
         throw new Error(result.error || 'Python 분석 실패');
       }
 
-      console.log("\n🐍 Python 분석 결과 수신 완료");
-      console.log("📊 분석 결과 요약:");
-      console.log(`   - 총 학생 수: ${result.data.network_stats?.total_students || 0}명`);
-      console.log(`   - 총 관계 수: ${result.data.network_stats?.total_relationships || 0}개`);
-      console.log(`   - 네트워크 밀도: ${result.data.network_stats?.density?.toFixed(3) || 0}`);
-      console.log(`   - 커뮤니티 수: ${result.data.communities?.length || 0}개`);
 
       // Python 결과를 React 형식으로 변환
-      console.log("\n🔄 3단계: 결과 데이터 변환");
       const analysisResults = convertPythonResultToReactFormat(result.data);
-      console.log("✅ 데이터 변환 완료");
 
       // 분석 결과를 DB에 저장
       await saveNetworkAnalysisToDB(selectedSurvey.id, analysisResults);
 
       setAnalysisResults(analysisResults);
       
-      console.log("\n🎉 4단계: 분석 완료 및 UI 업데이트");
-      console.log("=".repeat(60));
-      console.log("✅ Python 네트워크 분석 완료!");
-      console.log(`✅ 총 ${analysisResults.nodes.length}명의 학생 분석 완료`);
-      console.log(`✅ 총 ${analysisResults.edges.length}개의 관계 분석 완료`);
-      console.log(`✅ ${analysisResults.communities.length}개의 커뮤니티 탐지 완료`);
-      console.log(`✅ 네트워크 밀도: ${analysisResults.metrics.density.toFixed(3)}`);
-      console.log("=".repeat(60));
       
-      toast.success("🐍 Python 네트워크 분석이 완료되었습니다!");
 
       // 네트워크 분석 완료 알림 생성
       try {
@@ -745,7 +634,6 @@ const NetworkAnalysis: React.FC = () => {
         console.error("네트워크 분석 완료 알림 생성 오류:", error);
       }
 
-      console.log("🔍 최종 분석 결과:", analysisResults);
     } catch (error) {
       console.error("🐍 Python 네트워크 분석 오류:", error);
       const errorMessage = error instanceof Error ? error.message : String(error);
@@ -762,7 +650,6 @@ const NetworkAnalysis: React.FC = () => {
     analysisResults: NetworkAnalysisResult,
   ): Promise<void> => {
     try {
-      console.log("🔍 DB 저장 시작:", surveyId);
 
       // 기존 분석 결과가 있다면 삭제
       const { error: deleteError } = await supabase
@@ -773,7 +660,6 @@ const NetworkAnalysis: React.FC = () => {
       if (deleteError) {
         console.error("🔍 기존 분석 결과 삭제 오류:", deleteError);
       } else {
-        console.log("🔍 기존 분석 결과 삭제 완료");
       }
 
       // 전체 분석 결과를 하나의 레코드로 저장
@@ -796,7 +682,6 @@ const NetworkAnalysis: React.FC = () => {
         },
       };
 
-      console.log("🔍 저장할 데이터:", completeAnalysisRecord);
 
       // 전체 분석 결과 저장
       const { error: insertError } = await supabase
@@ -808,7 +693,6 @@ const NetworkAnalysis: React.FC = () => {
         throw new Error("전체 분석 결과를 DB에 저장할 수 없습니다.");
       }
 
-      console.log("🔍 전체 네트워크 분석 결과가 DB에 저장되었습니다.");
       toast.success("전체 분석 결과가 DB에 저장되었습니다!");
     } catch (error) {
       console.error("🔍 DB 저장 오류:", error);
@@ -1056,14 +940,11 @@ const NetworkAnalysis: React.FC = () => {
                           survey.id,
                         );
                         if (savedResults) {
-                          console.log(
-                            "🔍 설문 선택 시 저장된 분석 결과를 불러왔습니다",
-                          );
+                          
                           setAnalysisResults(savedResults);
                           toast.success("저장된 분석 결과를 불러왔습니다!");
                         }
                       } catch (error) {
-                        console.log("🔍 저장된 분석 결과가 없습니다");
                       }
                     }}
                   >
@@ -1195,7 +1076,6 @@ const NetworkAnalysis: React.FC = () => {
                         setIsAnalyzing(true);
                         setAnalysisError(null);
 
-                        console.log("🔍 분석 결과를 새로 생성합니다");
 
                         // Python 백엔드 호출 (시뮬레이션)
                         const mockAnalysisResults =
@@ -1882,12 +1762,6 @@ const NetworkAnalysis: React.FC = () => {
                       key={node.id}
                       className="cursor-pointer rounded-lg border border-gray-200 p-3 transition-shadow hover:shadow-md"
                       onClick={() => {
-                        console.log("🔍 학생 섹션 클릭:", {
-                          studentName: student.name,
-                          nodeId: node.id,
-                          connections: node.connection_count,
-                        });
-
                         setSelectedStudentModal({
                           isOpen: true,
                           student,
@@ -2082,7 +1956,6 @@ const NetworkAnalysis: React.FC = () => {
                   width={900}
                   height={550}
                   onNodeClick={(node) => {
-                    console.log("🔍 노드 클릭:", node);
                     const student = students.find((s) => s.id === node.id);
                     if (student) {
                       toast.success(`${student.name} 선택됨`);
@@ -2263,11 +2136,6 @@ const NetworkAnalysis: React.FC = () => {
                   </div>
                   <button
                     onClick={() => {
-                      console.log("🔍 모달 닫기:", {
-                        studentName: selectedStudentModal.student?.name,
-                        analysisResultsNodes: analysisResults?.nodes.length,
-                      });
-
                       setSelectedStudentModal({
                         isOpen: false,
                         student: null,

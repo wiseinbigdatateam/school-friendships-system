@@ -9,7 +9,6 @@ export class SurveyService {
   // 모든 설문 조회
   static async getAllSurveys(schoolId: string): Promise<SurveyWithStats[]> {
     try {
-      console.log('🔍 SurveyService.getAllSurveys 호출:', { schoolId });
       
       let query = supabase
         .from('surveys')
@@ -21,18 +20,14 @@ export class SurveyService {
 
       // schoolId가 유효한 경우에만 필터링 적용
       if (schoolId && schoolId !== '' && schoolId !== 'undefined' && schoolId !== 'null' && schoolId !== 'all') {
-        console.log('🔍 학교 ID 필터링 적용:', { schoolId });
         query = query.eq('school_id', schoolId);
       } else {
-        console.log('🔍 학교 ID 필터링 제외 (전체 설문 조회):', { schoolId });
       }
 
       const { data, error } = await query;
 
-      console.log('🔍 Supabase 조회 결과:', { data, error });
 
       if (error) {
-        console.error('Error fetching surveys:', error);
         throw error;
       }
 
@@ -43,7 +38,6 @@ export class SurveyService {
         responseRate: 0 // TODO: 대상 학생 수 대비 응답률 계산
       }));
 
-      console.log('🔍 응답 수 계산 후 설문 데이터:', surveysWithStats);
 
       return surveysWithStats as SurveyWithStats[];
     } catch (error) {
@@ -58,7 +52,6 @@ export class SurveyService {
     status: 'waiting' | 'active' | 'completed' | 'archived'
   ): Promise<SurveyWithStats[]> {
     try {
-      console.log('🔍 SurveyService.getSurveysByStatus 호출:', { schoolId, status });
       
       let query = supabase
         .from('surveys')
@@ -71,10 +64,8 @@ export class SurveyService {
 
       // schoolId가 유효한 경우에만 필터링 적용
       if (schoolId && schoolId !== '' && schoolId !== 'undefined' && schoolId !== 'null' && schoolId !== 'all') {
-        console.log('🔍 학교 ID 필터링 적용:', { schoolId });
         query = query.eq('school_id', schoolId);
       } else {
-        console.log('🔍 학교 ID 필터링 제외 (전체 설문 조회):', { schoolId });
       }
 
       const { data, error } = await query;
@@ -104,14 +95,6 @@ export class SurveyService {
     classNumber?: string
   ): Promise<SurveyWithStats[]> {
     try {
-      console.log('🔍 SurveyService.getSurveysBySchoolGradeClass 호출:', { 
-        schoolId, 
-        gradeLevel, 
-        classNumber,
-        schoolIdType: typeof schoolId,
-        gradeLevelType: typeof gradeLevel,
-        classNumberType: typeof classNumber
-      });
       
       let query = supabase
         .from('surveys')
@@ -123,47 +106,21 @@ export class SurveyService {
 
       // 학교 ID 유효성 검사 및 필터링
       if (schoolId && schoolId !== '' && schoolId !== 'undefined' && schoolId !== 'null') {
-        console.log('🔍 학교 ID 필터링 적용:', { schoolId });
         query = query.eq('school_id', schoolId);
       } else {
-        console.log('🔍 학교 ID 필터링 제외 (전체 설문 조회):', { schoolId });
       }
-
-      console.log('🔍 기본 쿼리 구성:', { schoolId, query: 'surveys 테이블에서 school_id로 필터링' });
 
       // 학년 필터링
       if (gradeLevel && gradeLevel !== 'undefined' && gradeLevel !== 'null') {
-        console.log('🔍 학년 필터링 추가:', { gradeLevel });
         query = query.contains('target_grades', [gradeLevel]);
       }
 
       // 반 필터링
       if (classNumber && classNumber !== 'undefined' && classNumber !== 'null') {
-        console.log('🔍 반 필터링 추가:', { classNumber });
         query = query.contains('target_classes', [classNumber]);
       }
 
-      console.log('🔍 최종 쿼리 실행 전:', { 
-        schoolId, 
-        gradeLevel: gradeLevel || '없음', 
-        classNumber: classNumber || '없음' 
-      });
-
       const { data, error } = await query;
-
-      console.log('🔍 Supabase 조회 결과:', { 
-        data: data ? `${data.length}개 설문` : 'null', 
-        error,
-        rawData: data?.map(s => ({ 
-          id: s.id, 
-          title: s.title, 
-          status: s.status, 
-          target_grades: s.target_grades, 
-          target_classes: s.target_classes,
-          school_id: s.school_id,
-          created_by: s.created_by
-        }))
-      });
 
       if (error) {
         console.error('🔍 설문 조회 오류:', error);
@@ -175,18 +132,6 @@ export class SurveyService {
         response_count: (survey as any).survey_responses?.[0]?.count || 0,
         responseRate: 0
       }));
-
-      console.log('🔍 응답 수 계산 후 설문 데이터:', {
-        count: surveysWithStats?.length || 0,
-        surveys: surveysWithStats?.map(s => ({ 
-          id: s.id, 
-          title: s.title, 
-          status: s.status,
-          target_grades: s.target_grades,
-          target_classes: s.target_classes,
-          response_count: s.response_count
-        }))
-      });
 
       return surveysWithStats as SurveyWithStats[];
     } catch (error) {
@@ -209,19 +154,6 @@ export class SurveyService {
     questions?: any[]
   ): Promise<Tables<'surveys'> | null> {
     try {
-      console.log('🔍 SurveyService.createSurvey 호출:', {
-        schoolId,
-        title,
-        description,
-        templateId,
-        targetGrades,
-        targetClasses,
-        startDate,
-        endDate,
-        createdBy,
-        questions
-      });
-
       const { data, error } = await supabase
         .from('surveys')
         .insert({
@@ -240,14 +172,12 @@ export class SurveyService {
         .select()
         .single();
 
-      console.log('🔍 Supabase insert 결과:', { data, error });
 
       if (error) {
         console.error('Error creating survey:', error);
         throw error;
       }
 
-      console.log('🔍 설문 생성 성공:', data);
       return data;
     } catch (error) {
       console.error('SurveyService.createSurvey error:', error);
@@ -258,7 +188,6 @@ export class SurveyService {
   // 설문 상태 업데이트
   static async updateSurveyStatus(surveyId: string, newStatus: string): Promise<boolean> {
     try {
-      console.log('🔍 SurveyService.updateSurveyStatus 호출:', { surveyId, newStatus });
       
       const { error } = await supabase
         .from('surveys')
@@ -273,7 +202,6 @@ export class SurveyService {
         throw error;
       }
       
-      console.log('🔍 설문 상태 업데이트 성공:', { surveyId, newStatus });
       return true;
     } catch (error) {
       console.error('SurveyService.updateSurveyStatus error:', error);
@@ -309,7 +237,6 @@ export class SurveyService {
   // 설문 삭제
   static async deleteSurvey(surveyId: string): Promise<boolean> {
     try {
-      console.log('🔍 SurveyService.deleteSurvey 호출:', { surveyId });
       
       // 먼저 설문 응답 데이터 삭제
       const { error: responseError } = await supabase
@@ -333,7 +260,6 @@ export class SurveyService {
         throw surveyError;
       }
 
-      console.log('🔍 설문 삭제 성공:', { surveyId });
       return true;
     } catch (error) {
       console.error('SurveyService.deleteSurvey error:', error);
@@ -451,7 +377,6 @@ export class SurveyService {
         throw error;
       }
 
-      console.log('🔍 설문 상태 자동 업데이트 완료 (날짜 기한)');
     } catch (error) {
       console.error('SurveyService.updateSurveyStatusByDate error:', error);
       throw error;
@@ -476,7 +401,6 @@ export class SurveyService {
       
       if (responseRate >= 90 && survey.status !== 'completed') {
         await this.updateSurveyStatus(surveyId, 'completed');
-        console.log(`🔍 설문 ${surveyId} 응답 완료로 상태 변경: ${responseRate.toFixed(1)}%`);
       }
     } catch (error) {
       console.error('SurveyService.updateSurveyStatusByCompletion error:', error);
@@ -489,7 +413,6 @@ export class SurveyService {
     try {
       // school_id가 null이면 0 반환
       if (!survey.school_id) {
-        console.log('🔍 school_id가 null이므로 대상 학생 수를 0으로 반환');
         return 0;
       }
 
@@ -525,7 +448,6 @@ export class SurveyService {
   // 모든 설문 상태 자동 업데이트
   static async updateAllSurveyStatuses(): Promise<SurveyWithStats[]> {
     try {
-      console.log('🔍 설문 상태 자동 업데이트 시작');
       
       // 모든 설문 조회 (waiting, active 상태만)
       const { data: surveys, error: fetchError } = await supabase
@@ -567,7 +489,6 @@ export class SurveyService {
 
       // 상태 변경이 필요한 설문들 업데이트
       if (updates.length > 0) {
-        console.log('🔍 상태 변경이 필요한 설문들:', updates);
         
         for (const update of updates) {
           const { error: updateError } = await supabase
@@ -578,11 +499,9 @@ export class SurveyService {
           if (updateError) {
             console.error(`설문 ${update.id} 상태 업데이트 오류:`, updateError);
           } else {
-            console.log(`설문 ${update.id} 상태 업데이트 완료: ${update.status}`);
           }
         }
       } else {
-        console.log('🔍 상태 변경이 필요한 설문이 없습니다.');
       }
       
       // 활성화된 설문들의 응답 완료 체크
@@ -591,7 +510,6 @@ export class SurveyService {
         await this.updateSurveyStatusByCompletion(survey.id);
       }
       
-      console.log('🔍 모든 설문 상태 자동 업데이트 완료');
       
       // 업데이트된 모든 설문 데이터 반환
       return await this.getAllSurveys('');

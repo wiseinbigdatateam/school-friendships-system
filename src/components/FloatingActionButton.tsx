@@ -31,7 +31,6 @@ const FloatingActionButton: React.FC<FloatingActionButtonProps> = ({
 
   const handleChat = () => {
     // 기본 채팅 동작 (콘솔에 메시지 출력)
-    console.log('채팅 기능이 호출되었습니다.');
     onChatClick?.();
   };
 

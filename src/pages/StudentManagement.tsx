@@ -75,7 +75,6 @@ const StudentManagement: React.FC = () => {
 
     try {
       setAnalysisLoading(true);
-      console.log("🔍 통합 분석 데이터 로드 시작");
 
       // 최신 설문 ID 찾기
       const { data: surveys, error: surveyError } = await supabase
@@ -87,12 +86,10 @@ const StudentManagement: React.FC = () => {
         .limit(1);
 
       if (surveyError || !surveys || surveys.length === 0) {
-        console.log("완료된 설문이 없습니다.");
         return;
       }
 
       const latestSurvey = surveys[0];
-      console.log(`📊 최신 설문 사용: ${latestSurvey.title}`);
 
       // 각 학생에 대한 개별 분석 수행
       const analysisMap = new Map<string, IndividualAnalysisResult>();
@@ -111,7 +108,6 @@ const StudentManagement: React.FC = () => {
       }
 
       setUnifiedAnalysisData(analysisMap);
-      console.log(`✅ 통합 분석 데이터 로드 완료: ${analysisMap.size}명`);
     } catch (error) {
       console.error("❌ 통합 분석 데이터 로드 오류:", error);
     } finally {
@@ -183,7 +179,6 @@ const StudentManagement: React.FC = () => {
       const authToken = localStorage.getItem("wiseon_auth_token");
 
       if (!userStr || !authToken) {
-        console.log("🔍 로그인 정보가 없습니다. 로그인 페이지로 이동합니다.");
         window.location.href = "/login";
         return;
       }
@@ -226,7 +221,6 @@ const StudentManagement: React.FC = () => {
 
           if (!schoolError && schoolData) {
             setSchoolName(schoolData.name);
-            console.log("🔍 학교 이름 조회 완료:", schoolData.name);
           }
         } catch (schoolError) {
           console.error("학교 이름 조회 오류:", schoolError);
@@ -234,10 +228,6 @@ const StudentManagement: React.FC = () => {
         }
       }
 
-      console.log("🔍 StudentManagement 사용자 정보 설정 완료:", {
-        user,
-        teacherData,
-      });
     } catch (error) {
       console.error("사용자 정보 조회 오류:", error);
       // 에러 발생 시 로그인 페이지로 이동
@@ -248,11 +238,6 @@ const StudentManagement: React.FC = () => {
   const fetchStudents = async () => {
     try {
       setLoading(true);
-
-      console.log("fetchStudents - teacherInfo:", teacherInfo);
-      console.log("fetchStudents - role:", teacherInfo?.role);
-      console.log("fetchStudents - grade_level:", teacherInfo?.grade_level);
-      console.log("fetchStudents - class_number:", teacherInfo?.class_number);
 
       // 권한별 학생 조회
       let query = supabase
@@ -268,10 +253,8 @@ const StudentManagement: React.FC = () => {
       // 학교별 필터링
       if (teacherInfo?.role === "district_admin") {
         // 교육청 관리자: 모든 학교 학생 조회 (필터링 없음)
-        console.log("교육청 관리자: 모든 학교 학생 조회");
       } else if (teacherInfo?.school_id) {
         // 다른 역할: 해당 학교 학생만 조회
-        console.log("학교별 필터링 적용:", teacherInfo.school_id);
         query = query.eq("current_school_id", teacherInfo.school_id);
       }
 
@@ -281,14 +264,7 @@ const StudentManagement: React.FC = () => {
         teacherInfo.grade_level &&
         teacherInfo.class_number
       ) {
-        // 담임교사: 담당 학년/반만
-        console.log(
-          "담임교사 필터링 적용:",
-          teacherInfo.grade_level,
-          "학년",
-          teacherInfo.class_number,
-          "반",
-        );
+        
         query = query
           .eq("grade", teacherInfo.grade_level)
           .eq("class", teacherInfo.class_number);
@@ -296,15 +272,9 @@ const StudentManagement: React.FC = () => {
         teacherInfo?.role === "grade_teacher" &&
         teacherInfo.grade_level
       ) {
-        // 학년 부장: 해당 학년만
-        console.log("학년 부장 필터링 적용:", teacherInfo.grade_level, "학년");
         query = query.eq("grade", teacherInfo.grade_level);
       } else if (teacherInfo?.role === "school_admin") {
-        // 학교 관리자: 해당 학교 전체 (추가 필터링 없음)
-        console.log("학교 관리자: 해당 학교 전체 학생 조회");
       } else if (teacherInfo?.role === "district_admin") {
-        // 교육청 관리자: 모든 학교 (추가 필터링 없음)
-        console.log("교육청 관리자: 모든 학교 학생 조회");
       }
 
       const { data: studentsData, error: studentsError } = await query
@@ -314,13 +284,7 @@ const StudentManagement: React.FC = () => {
 
       if (studentsError) throw studentsError;
 
-      console.log("조회된 학생 수:", studentsData?.length || 0);
       if (studentsData && studentsData.length > 0) {
-        console.log("첫 번째 학생 정보:", studentsData[0]);
-        console.log(
-          "학생들의 학년/반 분포:",
-          studentsData.map((s) => `${s.grade}학년${s.class}반`),
-        );
       }
 
       // 네트워크 분석 결과 조회 (지도 리포트와 동일한 방식)
@@ -1059,62 +1023,6 @@ const StudentManagement: React.FC = () => {
             updated_at: new Date().toISOString(),
           };
 
-          // 디버깅을 위한 로그
-          console.log(`학생 ${student["이름"]} 데이터 준비:`, studentData);
-
-          // 데이터 타입 검증
-          console.log("데이터 타입 검증:");
-          console.log("- name:", typeof studentData.name, studentData.name);
-          console.log("- grade:", typeof studentData.grade, studentData.grade);
-          console.log("- class:", typeof studentData.class, studentData.class);
-          console.log(
-            "- student_number:",
-            typeof studentData.student_number,
-            studentData.student_number,
-          );
-          console.log(
-            "- gender:",
-            typeof studentData.gender,
-            studentData.gender,
-          );
-          console.log(
-            "- birth_date:",
-            typeof studentData.birth_date,
-            studentData.birth_date,
-            "(원본:",
-            student["생년월일"],
-            ")",
-          );
-          console.log(
-            "- enrolled_at:",
-            typeof studentData.enrolled_at,
-            studentData.enrolled_at,
-            "(원본:",
-            student["입학일"],
-            ")",
-          );
-          console.log(
-            "- is_active:",
-            typeof studentData.is_active,
-            studentData.is_active,
-          );
-          console.log("- phone:", typeof studentData.phone, studentData.phone);
-          console.log(
-            "- parent_contact:",
-            typeof studentData.parent_contact,
-            studentData.parent_contact,
-          );
-          console.log(
-            "- created_at:",
-            typeof studentData.created_at,
-            studentData.created_at,
-          );
-          console.log(
-            "- updated_at:",
-            typeof studentData.updated_at,
-            studentData.updated_at,
-          );
-
           // Supabase에 학생 데이터 삽입
           const { data: newStudent, error: insertError } = await supabase
             .from("students")
@@ -1223,9 +1131,6 @@ const StudentManagement: React.FC = () => {
 
   const handleViewDetails = (student: Student) => {
     try {
-      console.log("🔍 상세보기 열기:", student);
-      console.log("🔍 parent_contact 데이터:", student.parent_contact);
-      console.log("🔍 parent_contact 타입:", typeof student.parent_contact);
       setSelectedStudent(student);
       setDetailModalOpen(true);
     } catch (error) {
