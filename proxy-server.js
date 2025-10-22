@@ -8,7 +8,7 @@ const fs = require('fs');
 require('dotenv').config();
 
 const app = express();
-const PORT = 3001;
+const PORT = 8091;
 
 // CORS 설정
 app.use(cors());

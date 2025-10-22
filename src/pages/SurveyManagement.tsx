@@ -71,7 +71,7 @@ const SurveyItem: React.FC<{
           {/* 상태 변경 드롭다운 */}
           <select
             value={survey.status}
-            onChange={(e) => handleStatusChange(e.target.value)}
+            onChange={(e) => onStatusChange(survey.id, e.target.value)}
             disabled={isStatusChanging}
             className={`rounded-full border-0 px-2 py-1 text-xs font-medium transition-all focus:ring-2 focus:ring-blue-500 ${
               isStatusChanging
@@ -83,27 +83,19 @@ const SurveyItem: React.FC<{
             {new Date() < new Date(survey.start_date) && (
               <option value="waiting">대기중</option>
             )}
-            {/* 시작일이 지났고 종료일이 지나지 않은 경우: 진행중만 표시 (대기중 주석 처리) */}
+            {/* 시작일이 지났고 종료일이 지나지 않은 경우 */}
             {new Date() >= new Date(survey.start_date) && new Date() <= new Date(survey.end_date) && (
               <>
-                {/* 기간이 남아있을 때 대기중 주석 처리 */}
-                {/* <option value="waiting">대기중</option> */}
                 <option value="active">진행중</option>
+                <option value="completed">완료</option>
               </>
             )}
             {/* 종료일이 지난 경우 */}
             {new Date() > new Date(survey.end_date) && (
               <>
-                {/* 완료 상태일 때는 대기중, 진행한 옵션 주석 처리 */}
-                {survey.status === 'completed' ? (
-                  <option value="completed">완료</option>
-                ) : (
-                  <>
-                    <option value="waiting">대기중</option>
-                    <option value="active">진행중</option>
-                    <option value="completed">완료</option>
-                  </>
-                )}
+                <option value="waiting">대기중</option>
+                <option value="active">진행중</option>
+                <option value="completed">완료</option>
               </>
             )}
           </select>
@@ -340,11 +332,24 @@ const SurveyManagement: React.FC = () => {
       setLoading(true);
       setError(null);
 
-      // 설문 상태 자동 업데이트 실행
+      // 설문 상태 자동 업데이트 실행 (날짜 기반 + 응답 완료율 기반)
       await SurveyService.updateAllSurveyStatuses();
 
       // 상태 업데이트 후 잠시 대기 (데이터베이스 반영 시간)
       await new Promise((resolve) => setTimeout(resolve, 1000));
+
+      // 추가로 모든 활성 설문에 대해 응답 완료율 체크 수행
+      const { data: activeSurveys, error: activeError } = await supabase
+        .from('surveys')
+        .select('id, status')
+        .eq('status', 'active')
+        .eq('school_id', userSchoolId);
+
+      if (!activeError && activeSurveys) {
+        for (const survey of activeSurveys) {
+          await SurveyService.updateSurveyStatusByCompletion(survey.id);
+        }
+      }
 
       let surveysData: SurveyWithStats[];
 
@@ -461,8 +466,8 @@ const SurveyManagement: React.FC = () => {
       () => {
         loadSurveys();
       },
-      5 * 60 * 1000,
-    ); // 5분마다
+      30 * 1000,
+    ); // 30초마다
 
     return () => clearInterval(interval);
   }, [userSchoolId, user]);
@@ -609,24 +614,17 @@ const SurveyManagement: React.FC = () => {
         return;
       }
 
+      // 응답 완료율 체크 (모든 상태 변경 시)
+      await SurveyService.updateSurveyStatusByCompletion(surveyId);
+
       const success = await SurveyService.updateSurveyStatus(
         surveyId,
         newStatus,
       );
 
       if (success) {
-        // 상태 변경 후 목록 즉시 업데이트
-        setSurveys((prev) =>
-          prev.map((survey) =>
-            survey.id === surveyId
-              ? {
-                  ...survey,
-                  status: newStatus,
-                  updated_at: new Date().toISOString(),
-                }
-              : survey,
-          ),
-        );
+        // 상태 변경 후 최신 데이터 다시 조회하여 UI 업데이트
+        await loadSurveys();
 
         // 성공 메시지 표시
         const statusLabels = {

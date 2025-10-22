@@ -13,15 +13,6 @@ const Header: React.FC<HeaderProps> = ({ logo, navigationItems }) => {
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [showNotificationMenu, setShowNotificationMenu] = useState(false);
 
-  // 알림 상태 변경 감지 로그
-  useEffect(() => {
-    console.log('🔔 [Header] 알림 상태 변경:', {
-      총알림: notifications.length,
-      읽지않은알림: notifications.filter(n => !n.is_read).length,
-      unreadCount: unreadCount
-    });
-  }, [notifications, unreadCount]);
-
   // 드롭다운 메뉴 참조
   const userMenuRef = useRef<HTMLDivElement>(null);
   const notificationMenuRef = useRef<HTMLDivElement>(null);
@@ -65,10 +56,20 @@ const Header: React.FC<HeaderProps> = ({ logo, navigationItems }) => {
   const getFilteredNavigationItems = () => {
     if (!user) return navigationItems;
 
+    // 메인 관리자는 App.tsx에서 이미 필터링된 네비게이션을 받으므로 그대로 사용
+    if (user.role === "main_admin") {
+      return navigationItems;
+    }
+
     return navigationItems.filter((item) => {
       // 담임교사는 데이터이관, 어드민, 설정 메뉴를 볼 수 없음
       if (user.role === "homeroom_teacher") {
         return !["transfer", "admin", "settings"].includes(item.id);
+      }
+
+      // 학급부장은 제한된 메뉴만 볼 수 있음
+      if (user.role === "grade_teacher") {
+        return ["grade-dashboard", "notifications"].includes(item.id);
       }
 
       // 다른 역할들은 모든 메뉴에 접근 가능
@@ -81,6 +82,18 @@ const Header: React.FC<HeaderProps> = ({ logo, navigationItems }) => {
   };
 
   const handleNavigationClick = (href: string) => {
+    // 학급부장이 특정 페이지에 접근하려고 할 때 학년 모니터링으로 리다이렉트
+    if (user?.role === 'grade_teacher') {
+      // 학급부장이 접근할 수 있는 페이지들
+      const allowedPaths = ['/grade-dashboard', '/notifications'];
+      
+      if (!allowedPaths.some(path => href.startsWith(path))) {
+        navigate('/grade-dashboard');
+        setActiveDropdown(null);
+        return;
+      }
+    }
+    
     navigate(href);
     setActiveDropdown(null);
   };
@@ -153,8 +166,23 @@ const Header: React.FC<HeaderProps> = ({ logo, navigationItems }) => {
 
           {/* 설문관리 네비게이션 */}
           <nav className="hidden items-center space-x-6 md:flex">
-            {/* 학년부장 또는 학교관리자인 경우 제한된 메뉴만 표시 */}
-            {user?.role === "grade_teacher" || user?.role === "school_admin" ? (
+            {/* 메인 관리자인 경우 어드민 관리 메뉴만 표시 */}
+            {user?.role === "main_admin" ? (
+              <>
+                <div className="relative">
+                  <button
+                    onClick={() => handleNavigationClick("/admin")}
+                    className={`rounded-md px-3 py-2 text-sm font-medium transition-colors ${
+                      isCurrentPath("/admin")
+                        ? "bg-blue-50 text-blue-600"
+                        : "text-gray-700 hover:bg-gray-50 hover:text-blue-600"
+                    }`}
+                  >
+                    어드민 관리
+                  </button>
+                </div>
+              </>
+            ) : user?.role === "grade_teacher" || user?.role === "school_admin" ? (
               <>
                 {/* 모니터링 */}
                 <div className="relative">
@@ -171,7 +199,7 @@ const Header: React.FC<HeaderProps> = ({ logo, navigationItems }) => {
                 </div>
 
                 {/* 교우 관계 분석 - 역할에 따라 다른 페이지로 이동 */}
-                <div className="relative">
+                {/* <div className="relative">
                   <button
                     onClick={() =>
                       handleNavigationClick(
@@ -189,7 +217,7 @@ const Header: React.FC<HeaderProps> = ({ logo, navigationItems }) => {
                   >
                     학습별 분석결과
                   </button>
-                </div>
+                </div> */}
               </>
             ) : (
               <>
@@ -269,107 +297,113 @@ const Header: React.FC<HeaderProps> = ({ logo, navigationItems }) => {
                   )}
                 </div>
 
-                {/* 교우 관계 분석 */}
-                <div className="relative">
-                  <button
-                    onClick={() => handleDropdownToggle("analysis")}
-                    className={`flex items-center space-x-1 rounded-md px-3 py-2 text-sm font-medium transition-colors ${
-                      isCurrentPath("/network-analysis-new") ||
-                      isCurrentPath("/class-survey")
-                        ? "bg-blue-50 text-blue-600"
-                        : "text-gray-700 hover:bg-gray-50 hover:text-blue-600"
-                    }`}
-                  >
-                    <span>교우 관계 분석</span>
-                    <svg
-                      className={`h-4 w-4 transition-transform ${
-                        activeDropdown === "analysis" ? "rotate-180" : ""
+                {/* 교우 관계 분석 - 학급부장에게는 숨김 */}
+                {(user?.role as string) !== 'grade_teacher' && (
+                  <div className="relative">
+                    <button
+                      onClick={() => handleDropdownToggle("analysis")}
+                      className={`flex items-center space-x-1 rounded-md px-3 py-2 text-sm font-medium transition-colors ${
+                        isCurrentPath("/network-analysis-new") ||
+                        isCurrentPath("/class-survey")
+                          ? "bg-blue-50 text-blue-600"
+                          : "text-gray-700 hover:bg-gray-50 hover:text-blue-600"
                       }`}
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
                     >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M19 9l-7 7-7-7"
-                      />
-                    </svg>
-                  </button>
+                      <span>교우 관계 분석</span>
+                      <svg
+                        className={`h-4 w-4 transition-transform ${
+                          activeDropdown === "analysis" ? "rotate-180" : ""
+                        }`}
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M19 9l-7 7-7-7"
+                        />
+                      </svg>
+                    </button>
 
-                  {/* 드롭다운 메뉴 */}
-                  {activeDropdown === "analysis" && (
-                    <div className="absolute left-0 top-full z-50 mt-1 w-48 rounded-md border border-gray-200 bg-white shadow-lg">
-                      <div className="py-1">
-                        <button
-                          onClick={() =>
-                            handleNavigationClick("/network-analysis-new")
-                          }
-                          className={`block w-full px-4 py-2 text-left text-sm transition-colors ${
-                            isCurrentPath("/network-analysis-new")
-                              ? "bg-blue-50 text-blue-600"
-                              : "text-gray-700 hover:bg-gray-50 hover:text-gray-900"
-                          }`}
-                        >
-                          학급별 분석결과
-                        </button>
-                        {/* <button
-                          onClick={() =>
-                            handleNavigationClick("/individual-analysis")
-                          }
-                          className={`block w-full px-4 py-2 text-left text-sm transition-colors ${
-                            isCurrentPath("/individual-analysis")
-                              ? "bg-blue-50 text-blue-600"
-                              : "text-gray-700 hover:bg-gray-50 hover:text-gray-900"
-                          }`}
-                        >
-                          학생별 결과분석
-                        </button> */}
-                        <button
-                          onClick={() => handleNavigationClick("/class-survey")}
-                          className={`block w-full px-4 py-2 text-left text-sm transition-colors ${
-                            isCurrentPath("/class-survey")
-                              ? "bg-blue-50 text-blue-600"
-                              : "text-gray-700 hover:bg-gray-50 hover:text-gray-900"
-                          }`}
-                        >
-                          학급별 조사분석
-                        </button>
+                    {/* 드롭다운 메뉴 */}
+                    {activeDropdown === "analysis" && (
+                      <div className="absolute left-0 top-full z-50 mt-1 w-48 rounded-md border border-gray-200 bg-white shadow-lg">
+                        <div className="py-1">
+                          <button
+                            onClick={() =>
+                              handleNavigationClick("/network-analysis-new")
+                            }
+                            className={`block w-full px-4 py-2 text-left text-sm transition-colors ${
+                              isCurrentPath("/network-analysis-new")
+                                ? "bg-blue-50 text-blue-600"
+                                : "text-gray-700 hover:bg-gray-50 hover:text-gray-900"
+                            }`}
+                          >
+                            학급별 분석결과
+                          </button>
+                          {/* <button
+                            onClick={() =>
+                              handleNavigationClick("/individual-analysis")
+                            }
+                            className={`block w-full px-4 py-2 text-left text-sm transition-colors ${
+                              isCurrentPath("/individual-analysis")
+                                ? "bg-blue-50 text-blue-600"
+                                : "text-gray-700 hover:bg-gray-50 hover:text-gray-900"
+                            }`}
+                          >
+                            학생별 결과분석
+                          </button> */}
+                          <button
+                            onClick={() => handleNavigationClick("/class-survey")}
+                            className={`block w-full px-4 py-2 text-left text-sm transition-colors ${
+                              isCurrentPath("/class-survey")
+                                ? "bg-blue-50 text-blue-600"
+                                : "text-gray-700 hover:bg-gray-50 hover:text-gray-900"
+                            }`}
+                          >
+                            학급별 조사분석
+                          </button>
+                        </div>
                       </div>
-                    </div>
-                  )}
-                </div>
+                    )}
+                  </div>
+                )}
 
-                {/* 학생별 AI분석 */}
-                <div className="relative">
-                  <button
-                    onClick={() =>
-                      handleNavigationClick("/individual-analysis")
-                    }
-                    className={`rounded-md px-3 py-2 text-sm font-medium transition-colors ${
-                      isCurrentPath("/individual-analysis")
-                        ? "bg-blue-50 text-blue-600"
-                        : "text-gray-700 hover:bg-gray-50 hover:text-blue-600"
-                    }`}
-                  >
-                    학생별 AI분석
-                  </button>
-                </div>
+                {/* 학생별 AI분석 - 학급부장에게는 숨김 */}
+                {(user?.role as string) !== 'grade_teacher' && (
+                  <div className="relative">
+                    <button
+                      onClick={() =>
+                        handleNavigationClick("/individual-analysis")
+                      }
+                      className={`rounded-md px-3 py-2 text-sm font-medium transition-colors ${
+                        isCurrentPath("/individual-analysis")
+                          ? "bg-blue-50 text-blue-600"
+                          : "text-gray-700 hover:bg-gray-50 hover:text-blue-600"
+                      }`}
+                    >
+                      학생별 AI분석
+                    </button>
+                  </div>
+                )}
 
-                {/* 학생 등록/관리 */}
-                <div className="relative">
-                  <button
-                    onClick={() => handleNavigationClick("/student-management")}
-                    className={`rounded-md px-3 py-2 text-sm font-medium transition-colors ${
-                      isCurrentPath("/student-management")
-                        ? "bg-blue-50 text-blue-600"
-                        : "text-gray-700 hover:bg-gray-50 hover:text-blue-600"
-                    }`}
-                  >
-                    학생 등록/관리
-                  </button>
-                </div>
+                {/* 학생 등록/관리 - 학급부장에게는 숨김 */}
+                {(user?.role as string) !== 'grade_teacher' && (
+                  <div className="relative">
+                    <button
+                      onClick={() => handleNavigationClick("/student-management")}
+                      className={`rounded-md px-3 py-2 text-sm font-medium transition-colors ${
+                        isCurrentPath("/student-management")
+                          ? "bg-blue-50 text-blue-600"
+                          : "text-gray-700 hover:bg-gray-50 hover:text-blue-600"
+                      }`}
+                    >
+                      학생 등록/관리
+                    </button>
+                  </div>
+                )}
               </>
             )}
           </nav>

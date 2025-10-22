@@ -316,7 +316,7 @@ class IndividualNetworkAnalyzer:
             'short_term_goals': [],
             'long_term_goals': [],
             'monitoring_points': [],
-            'intervention_level': 'none'
+            'intervention_level': '관찰'
         }
         
         # 고립 위험도에 따른 즉시 조치
@@ -326,7 +326,7 @@ class IndividualNetworkAnalyzer:
             logger.error(f"isolation_risk 처리 오류: {e}")
             isolation_level = '보통'
         if isolation_level == '높음':
-            recommendations['intervention_level'] = 'urgent'
+            recommendations['intervention_level'] = '긴급'
             recommendations['immediate_actions'] = [
                 "상담사 또는 전문가와의 즉시 상담 연계",
                 "소규모 그룹 활동 참여 유도",
@@ -334,7 +334,7 @@ class IndividualNetworkAnalyzer:
                 "학부모와의 긴급 상담 실시"
             ]
         elif isolation_level == '보통':
-            recommendations['intervention_level'] = 'moderate'
+            recommendations['intervention_level'] = '주의'
             recommendations['immediate_actions'] = [
                 "교사와의 정기적인 상담 일정 수립",
                 "관심사 기반 동아리 활동 권장",
@@ -399,14 +399,14 @@ class IndividualNetworkAnalyzer:
             ]
         
         # 모니터링 포인트 설정
-        if recommendations['intervention_level'] == 'urgent':
+        if recommendations['intervention_level'] == '긴급':
             recommendations['monitoring_points'] = [
                 "주간 상담 및 관계 개선 상황 점검",
                 "새로운 친구 관계 형성 여부 확인",
                 "정서적 안정성 및 학교 적응도 평가",
                 "학부모와의 정기적인 소통"
             ]
-        elif recommendations['intervention_level'] == 'moderate':
+        elif recommendations['intervention_level'] == '주의':
             recommendations['monitoring_points'] = [
                 "월간 네트워크 변화 추이 모니터링",
                 "사회적 참여도 및 활동 참여 빈도 점검",

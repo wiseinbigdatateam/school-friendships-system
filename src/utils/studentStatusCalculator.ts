@@ -13,6 +13,10 @@ export interface StudentMetrics {
   socialInfluence: string;      // 사회적 영향력 (높음/보통/낮음)
   totalStudents: number;        // 전체 학생 수
   communityId?: number;         // 커뮤니티 ID
+  // 실제 설문 응답 데이터 추가
+  satisfactionScore?: number;   // 실제 만족도 점수 (0-1)
+  violenceScore?: number;       // 실제 폭력 경험 점수 (0-1)
+  surveyResponses?: Array<{question: string; answer: string; category?: string}>; // 실제 설문 응답
 }
 
 export interface CurrentStatus {
@@ -20,6 +24,7 @@ export interface CurrentStatus {
   teacherRelationship: string;  // 교사와의 관계
   peerRelationship: string;     // 또래 관계
   networkParticipation: string; // 네트워크 참여도
+  violenceExperience: string;   // 학교폭력 경험
 }
 
 export interface NetworkStability {
@@ -42,13 +47,21 @@ export interface MonitoringPoints {
 }
 
 /**
- * 현재 상태 계산
+ * 현재 상태 계산 (실제 설문 응답 우선 반영)
  */
 export const calculateCurrentStatus = (metrics: StudentMetrics): CurrentStatus => {
   // 1. 학교생활 만족도
-  // - 네트워크 밀도와 사회적 영향력 기반
-  // - 높은 밀도 + 높은 영향력 = 매우 높음
+  // - 실제 설문 응답 우선 사용, 없으면 네트워크 메트릭 기반
   const schoolSatisfaction = (() => {
+    // 실제 만족도 점수가 있으면 우선 사용
+    if (metrics.satisfactionScore !== undefined) {
+      if (metrics.satisfactionScore >= 0.8) return "매우 높음";
+      if (metrics.satisfactionScore >= 0.6) return "높음";
+      if (metrics.satisfactionScore >= 0.4) return "보통";
+      return "낮음";
+    }
+    
+    // 설문 응답이 없으면 네트워크 메트릭 사용
     if (metrics.networkDensity > 0.6 && metrics.socialInfluence === "높음") {
       return "매우 높음";
     }
@@ -62,9 +75,23 @@ export const calculateCurrentStatus = (metrics: StudentMetrics): CurrentStatus =
   })();
 
   // 2. 교사와의 관계
-  // - 중심성 점수와 고립 위험도 기반
-  // - 높은 중심성 + 낮은 고립 위험 = 매우 좋음
+  // - 실제 설문 응답에서 "선생님과 이야기하는 것이 편하다" 항목 우선 확인
   const teacherRelationship = (() => {
+    // 실제 설문 응답 확인
+    if (metrics.surveyResponses) {
+      const teacherQuestion = metrics.surveyResponses.find(r => 
+        r.question.includes('선생님') && r.question.includes('이야기')
+      );
+      
+      if (teacherQuestion) {
+        const answer = teacherQuestion.answer.toLowerCase();
+        if (answer === '예' || answer.includes('매우')) return "매우 좋음";
+        if (answer === '보통') return "좋음";
+        if (answer === '아니오' || answer.includes('불편')) return "개선 필요";
+      }
+    }
+    
+    // 설문 응답이 없으면 네트워크 메트릭 사용
     if (metrics.centrality > 0.6 && metrics.isolationRisk === "낮음") {
       return "매우 좋음";
     }
@@ -78,9 +105,31 @@ export const calculateCurrentStatus = (metrics: StudentMetrics): CurrentStatus =
   })();
 
   // 3. 또래 관계
-  // - 친구 수와 네트워크 밀도 기반
-  // - 전체 학생 수 대비 비율 고려
+  // - 실제 설문 응답 우선, 없으면 친구 수와 네트워크 밀도 기반
   const peerRelationship = (() => {
+    // 실제 설문 응답 확인
+    if (metrics.surveyResponses) {
+      const friendQuestion = metrics.surveyResponses.find(r => 
+        r.question.includes('친구') && r.question.includes('논다')
+      );
+      
+      if (friendQuestion) {
+        const answer = friendQuestion.answer.toLowerCase();
+        const hasManyFriends = metrics.friendCount >= 5;
+        
+        if (answer === '예' || answer.includes('매우')) {
+          return hasManyFriends ? "매우 활발" : "활발";
+        }
+        if (answer === '보통') {
+          return "보통";
+        }
+        if (answer === '아니오') {
+          return metrics.friendCount >= 3 ? "제한적" : "고립";
+        }
+      }
+    }
+    
+    // 설문 응답이 없으면 친구 수 기반
     const friendRatio = metrics.friendCount / Math.max(metrics.totalStudents - 1, 1);
     
     if (metrics.friendCount >= 5 && friendRatio > 0.3) {
@@ -108,11 +157,26 @@ export const calculateCurrentStatus = (metrics: StudentMetrics): CurrentStatus =
     return "매우 낮음";
   })();
 
+  // 5. 학교폭력 경험
+  // - 실제 설문 응답 우선 사용
+  const violenceExperience = (() => {
+    if (metrics.violenceScore !== undefined) {
+      if (metrics.violenceScore === 0) return "전혀 없음";
+      if (metrics.violenceScore < 0.3) return "가끔 있음";
+      if (metrics.violenceScore < 0.7) return "자주 있음";
+      return "매우 심각함";
+    }
+    
+    // 설문 응답이 없으면 기본값
+    return "파악 필요";
+  })();
+
   return {
     schoolSatisfaction,
     teacherRelationship,
     peerRelationship,
     networkParticipation,
+    violenceExperience,
   };
 };
 
@@ -137,7 +201,7 @@ export const calculateNetworkStability = (
 };
 
 /**
- * 개선방안 생성 (Python 분석 결과가 없을 때)
+ * 개선방안 생성 (실제 설문 응답 반영)
  */
 export const generateRecommendationPlan = (metrics: StudentMetrics): RecommendationPlan => {
   const immediate: string[] = [];
@@ -145,17 +209,38 @@ export const generateRecommendationPlan = (metrics: StudentMetrics): Recommendat
   const longTerm: string[] = [];
   let interventionLevel = "관찰";
 
+  // 폭력 경험이 있으면 최우선 조치
+  if (metrics.violenceScore && metrics.violenceScore >= 0.5) {
+    interventionLevel = "긴급";
+    immediate.push("학교폭력 전담 상담교사와 즉시 상담");
+    immediate.push("피해 상황 정확한 파악 및 기록");
+    immediate.push("학부모 면담 및 보호 조치 협의");
+    immediate.push("가해 학생 파악 및 분리 조치");
+  } else if (metrics.violenceScore && metrics.violenceScore > 0) {
+    interventionLevel = "주의";
+    immediate.push("학생과 1:1 면담으로 상황 파악");
+    immediate.push("또래 관계 변화 집중 관찰");
+    immediate.push("학교폭력 예방 교육 강화");
+  }
+  
+  // 만족도가 낮으면 추가 조치
+  if (metrics.satisfactionScore !== undefined && metrics.satisfactionScore < 0.4) {
+    if (interventionLevel === "관찰") interventionLevel = "주의";
+    immediate.push("학교생활 부적응 원인 파악 상담");
+    immediate.push("긍정적 학교 경험 제공 (칭찬, 역할 부여)");
+  }
+
   // 고립 위험도에 따른 즉시 조치
-  if (metrics.isolationRisk === "높음") {
+  if (metrics.isolationRisk === "높음" && interventionLevel === "관찰") {
     interventionLevel = "긴급";
     immediate.push("담임교사 1:1 상담 진행");
     immediate.push("또래 멘토링 프로그램 배정");
     immediate.push("학급 내 역할 부여 (청소, 심부름 등)");
-  } else if (metrics.isolationRisk === "보통") {
+  } else if (metrics.isolationRisk === "보통" && interventionLevel === "관찰") {
     interventionLevel = "주의";
     immediate.push("그룹 활동 참여 독려");
     immediate.push("관심사 기반 동아리 활동 권장");
-  } else {
+  } else if (interventionLevel === "관찰") {
     immediate.push("현재 관계 유지 및 강화");
     immediate.push("리더십 역할 기회 제공");
   }

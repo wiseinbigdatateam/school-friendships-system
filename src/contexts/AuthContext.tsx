@@ -161,6 +161,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     localStorage.removeItem('wiseon_user');
     localStorage.removeItem('wiseon_auth_token');
     localStorage.removeItem('wiseon_token_expiry');
+    localStorage.removeItem('wiseon_previous_login'); // 이전 로그인 기록도 삭제
     
     setUser(null);
     

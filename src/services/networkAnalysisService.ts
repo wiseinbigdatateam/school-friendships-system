@@ -84,18 +84,24 @@ class NetworkAnalysisService {
    */
   async analyzeNetwork(surveyId: string): Promise<NetworkAnalysisResult> {
     try {
+      console.log('🔍 네트워크 분석 시작:', surveyId);
 
       // 1. 설문 응답 데이터 가져오기
       const surveyResponses = await this.getSurveyResponses(surveyId);
+      console.log('📋 설문 응답 개수:', surveyResponses.length);
 
       // 2. 학생 정보 가져오기
       const students = await this.getStudents(surveyId);
+      console.log('👥 학생 수:', students.length);
 
       // 3. 네트워크 데이터 생성
       const networkData = this.createNetworkData(surveyResponses, students);
+      console.log('🔗 네트워크 엣지 수:', networkData.edges.length);
+      console.log('👤 네트워크 노드 수:', networkData.nodes.length);
 
       // 4. 네트워크 분석 수행
       const analysisResult = this.performNetworkAnalysis(networkData, students);
+      console.log('✅ 네트워크 분석 완료:', analysisResult);
 
       // 5. 분석 결과 저장
       await this.saveAnalysis(surveyId, analysisResult);

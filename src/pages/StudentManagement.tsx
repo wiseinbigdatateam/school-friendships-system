@@ -9,6 +9,8 @@ import {
   XMarkIcon,
   ChevronUpIcon,
   ChevronDownIcon,
+  PlusIcon,
+  TrashIcon,
 } from "@heroicons/react/24/outline/index.js";
 import { unifiedNetworkAnalysisService } from "../services/unifiedNetworkAnalysisService";
 import { IndividualAnalysisResult } from "../types/unifiedNetworkTypes";
@@ -49,6 +51,9 @@ const StudentManagement: React.FC = () => {
   const [detailModalOpen, setDetailModalOpen] = useState(false);
   const [memoModalOpen, setMemoModalOpen] = useState(false);
   const [editMemoModalOpen, setEditMemoModalOpen] = useState(false);
+  const [addStudentModalOpen, setAddStudentModalOpen] = useState(false);
+  const [deleteStudentModalOpen, setDeleteStudentModalOpen] = useState(false);
+  const [studentToDelete, setStudentToDelete] = useState<Student | null>(null);
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
   const [selectedMemo, setSelectedMemo] = useState<TeacherMemo | null>(null);
   const [newMemoContent, setNewMemoContent] = useState("");
@@ -57,6 +62,21 @@ const StudentManagement: React.FC = () => {
   const [uploadProgress, setUploadProgress] = useState(0);
   const [uploadTotal, setUploadTotal] = useState(0);
   const [activeTab, setActiveTab] = useState("memo");
+
+  // 학생 추가 폼 상태
+  const [newStudent, setNewStudent] = useState({
+    name: "",
+    grade: "",
+    class: "",
+    student_number: "",
+    gender: "male",
+    birth_date: "",
+    phone: "",
+    mother_name: "",
+    mother_phone: "",
+    father_name: "",
+    father_phone: "",
+  });
 
   // 담임 정보 및 정렬 관련 상태
   const [currentUser, setCurrentUser] = useState<any>(null);
@@ -129,6 +149,17 @@ const StudentManagement: React.FC = () => {
       loadUnifiedAnalysisData();
     }
   }, [students]);
+
+  // 담임선생님 정보가 로드되면 학생 추가 폼의 학년/반을 자동 설정
+  useEffect(() => {
+    if (teacherInfo?.grade_level && teacherInfo?.class_number) {
+      setNewStudent(prev => ({
+        ...prev,
+        grade: teacherInfo.grade_level,
+        class: teacherInfo.class_number,
+      }));
+    }
+  }, [teacherInfo]);
 
   // 권한별 접근 제어
   const canAccessPage = () => {
@@ -1364,6 +1395,139 @@ const StudentManagement: React.FC = () => {
     setSelectedMemo(null);
   };
 
+  const closeAddStudentModal = () => {
+    setAddStudentModalOpen(false);
+    setNewStudent({
+      name: "",
+      grade: teacherInfo?.grade_level || "",
+      class: teacherInfo?.class_number || "",
+      student_number: "",
+      gender: "male",
+      birth_date: "",
+      phone: "",
+      mother_name: "",
+      mother_phone: "",
+      father_name: "",
+      father_phone: "",
+    });
+  };
+
+  const closeDeleteStudentModal = () => {
+    setDeleteStudentModalOpen(false);
+    setStudentToDelete(null);
+  };
+
+  // 학생 추가 함수
+  const handleAddStudent = async () => {
+    if (!newStudent.name || !newStudent.grade || !newStudent.class) {
+      toast.error("이름, 학년, 반은 필수 입력 항목입니다.");
+      return;
+    }
+
+    if (!teacherInfo?.school_id) {
+      toast.error("학교 정보를 찾을 수 없습니다.");
+      return;
+    }
+
+    try {
+      // 학생 번호 자동 생성 (기존 학생들의 최대 번호 + 1)
+      let studentNumber = newStudent.student_number;
+      if (!studentNumber) {
+        const existingNumbers = students
+          .map(s => parseInt(s.student_number))
+          .filter(n => !isNaN(n));
+        const maxNumber = existingNumbers.length > 0 ? Math.max(...existingNumbers) : 0;
+        studentNumber = String(maxNumber + 1).padStart(3, "0");
+      } else {
+        studentNumber = String(parseInt(studentNumber)).padStart(3, "0");
+      }
+
+      const studentData = {
+        name: newStudent.name,
+        grade: newStudent.grade,
+        class: newStudent.class,
+        student_number: studentNumber,
+        gender: newStudent.gender,
+        birth_date: newStudent.birth_date || new Date().toISOString().split("T")[0],
+        enrolled_at: new Date().toISOString().split("T")[0],
+        is_active: true,
+        phone: newStudent.phone || null,
+        current_school_id: teacherInfo.school_id,
+        parent_consent: false,
+        parent_contact: (newStudent.mother_name || newStudent.mother_phone || 
+                       newStudent.father_name || newStudent.father_phone) ? {
+          mother_name: newStudent.mother_name || null,
+          mother_phone: newStudent.mother_phone || null,
+          father_name: newStudent.father_name || null,
+          father_phone: newStudent.father_phone || null,
+        } : null,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      };
+
+      const { data: addedStudent, error } = await supabase
+        .from("students")
+        .insert([studentData])
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      // 로컬 상태에 새 학생 추가
+      const newStudentData: Student = {
+        id: addedStudent.id,
+        name: addedStudent.name,
+        grade: addedStudent.grade,
+        class: addedStudent.class,
+        student_number: addedStudent.student_number,
+        gender: addedStudent.gender,
+        birth_date: addedStudent.birth_date,
+        phone: addedStudent.phone,
+        enrolled_at: addedStudent.enrolled_at,
+        parent_consent: addedStudent.parent_consent || false,
+        parent_contact: addedStudent.parent_contact,
+        network_metrics: null,
+        teacher_memos: [],
+        intervention_logs: [],
+      };
+
+      setStudents(prev => [...prev, newStudentData]);
+      toast.success(`${newStudent.name} 학생이 성공적으로 추가되었습니다.`);
+      closeAddStudentModal();
+    } catch (error) {
+      console.error("학생 추가 오류:", error);
+      toast.error("학생 추가 중 오류가 발생했습니다.");
+    }
+  };
+
+  // 학생 삭제 함수
+  const handleDeleteStudent = async (student: Student) => {
+    setStudentToDelete(student);
+    setDeleteStudentModalOpen(true);
+  };
+
+  // 학생 삭제 확인 함수
+  const confirmDeleteStudent = async () => {
+    if (!studentToDelete) return;
+
+    try {
+      const { error } = await supabase
+        .from("students")
+        .update({ is_active: false })
+        .eq("id", studentToDelete.id);
+
+      if (error) throw error;
+
+      // 로컬 상태에서 학생 제거
+      setStudents(prev => prev.filter(s => s.id !== studentToDelete.id));
+      toast.success(`${studentToDelete.name} 학생이 삭제되었습니다.`);
+      closeDeleteStudentModal();
+    } catch (error) {
+      console.error("학생 삭제 오류:", error);
+      toast.error("학생 삭제 중 오류가 발생했습니다.");
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-gray-50">
@@ -1721,7 +1885,7 @@ const StudentManagement: React.FC = () => {
             <h3 className="mb-2 text-lg font-medium text-gray-900">
               학생이 없습니다
             </h3>
-            <p className="text-gray-500">검색 조건을 변경해보세요.</p>
+            <p className="text-gray-500">아래의 "학생 추가" 버튼을 클릭하여 학생을 등록해보세요.</p>
           </div>
         ) : (
           sortedStudents.map((student) => (
@@ -1743,16 +1907,28 @@ const StudentManagement: React.FC = () => {
                   </p>
                 </div>
 
-                {/* 학부모 동의 상태 */}
-                <div className="flex items-center gap-1">
-                  <div
-                    className={`h-2 w-2 rounded-full ${
-                      student.parent_consent ? "bg-green-500" : "bg-red-500"
-                    }`}
-                  ></div>
-                  <span className="text-xs text-gray-500">
-                    {student.parent_consent ? "동의" : "미동의"}
-                  </span>
+                {/* 학부모 동의 상태 및 삭제 버튼 */}
+                <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-1">
+                    <div
+                      className={`h-2 w-2 rounded-full ${
+                        student.parent_consent ? "bg-green-500" : "bg-red-500"
+                      }`}
+                    ></div>
+                    <span className="text-xs text-gray-500">
+                      {student.parent_consent ? "동의" : "미동의"}
+                    </span>
+                  </div>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleDeleteStudent(student);
+                    }}
+                    className="text-red-400 transition-colors hover:text-red-600"
+                    title="학생 삭제"
+                  >
+                    <TrashIcon className="h-4 w-4" />
+                  </button>
                 </div>
               </div>
 
@@ -1780,6 +1956,17 @@ const StudentManagement: React.FC = () => {
             </div>
           ))
         )}
+
+        {/* 학생 추가 카드 - 마지막에 배치 */}
+        <div
+          onClick={() => setAddStudentModalOpen(true)}
+          className="flex flex-col items-center justify-center gap-3 rounded-lg border-2 border-dashed border-gray-300 bg-white p-8 transition-colors hover:border-blue-400 hover:bg-blue-50 cursor-pointer"
+        >
+          <div className="flex h-12 w-12 items-center justify-center rounded-full bg-blue-100">
+            <PlusIcon className="h-6 w-6 text-blue-600" />
+          </div>
+          <p className="text-sm font-medium text-blue-600">학생 추가</p>
+        </div>
       </div>
 
       {/* 상세보기 모달 */}
@@ -2143,6 +2330,324 @@ const StudentManagement: React.FC = () => {
                     닫기
                   </button>
                 </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 학생 추가 모달 */}
+      {addStudentModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4">
+          <div className="w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-lg bg-white">
+            {/* 모달 헤더 */}
+            <div className="flex items-center justify-between border-b border-gray-200 p-6">
+              <div>
+                <h2 className="text-xl font-bold text-gray-900">새 학생 추가</h2>
+                {teacherInfo?.grade_level && teacherInfo?.class_number && (
+                  <p className="text-sm text-gray-600 mt-1">
+                    {teacherInfo.grade_level}학년 {teacherInfo.class_number}반 담임
+                  </p>
+                )}
+              </div>
+              <button
+                onClick={closeAddStudentModal}
+                className="text-gray-400 transition-colors hover:text-gray-600"
+              >
+                <XMarkIcon className="h-6 w-6" />
+              </button>
+            </div>
+
+            {/* 모달 내용 */}
+            <div className="p-6">
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                {/* 기본 정보 */}
+                <div className="space-y-4">
+                  <h3 className="text-lg font-semibold text-gray-900">기본 정보</h3>
+                  
+                  <div>
+                    <label className="mb-1 block text-sm font-medium text-gray-700">
+                      이름 *
+                    </label>
+                    <input
+                      type="text"
+                      value={newStudent.name}
+                      onChange={(e) => setNewStudent(prev => ({ ...prev, name: e.target.value }))}
+                      className="w-full rounded-md border border-gray-300 px-3 py-2 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      placeholder="학생 이름"
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <label className="mb-1 block text-sm font-medium text-gray-700">
+                        학년 *
+                      </label>
+                      <div className="relative">
+                        <input
+                          type="text"
+                          value={newStudent.grade ? `${newStudent.grade}학년` : ""}
+                          readOnly
+                          className="w-full rounded-md border border-gray-300 bg-gray-50 px-3 py-2 text-gray-600"
+                        />
+                        <div className="absolute right-2 top-2 text-xs text-blue-600">
+                          담임
+                        </div>
+                      </div>
+                    </div>
+                    <div>
+                      <label className="mb-1 block text-sm font-medium text-gray-700">
+                        반 *
+                      </label>
+                      <div className="relative">
+                        <input
+                          type="text"
+                          value={newStudent.class ? `${newStudent.class}반` : ""}
+                          readOnly
+                          className="w-full rounded-md border border-gray-300 bg-gray-50 px-3 py-2 text-gray-600"
+                        />
+                        <div className="absolute right-2 top-2 text-xs text-blue-600">
+                          담임
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="mb-1 block text-sm font-medium text-gray-700">
+                      학생 번호
+                    </label>
+                    <input
+                      type="text"
+                      value={newStudent.student_number}
+                      onChange={(e) => setNewStudent(prev => ({ ...prev, student_number: e.target.value }))}
+                      className="w-full rounded-md border border-gray-300 px-3 py-2 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      placeholder="자동 생성 (비워두면 자동)"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="mb-1 block text-sm font-medium text-gray-700">
+                      성별
+                    </label>
+                    <div className="flex gap-4">
+                      <label className="flex items-center">
+                        <input
+                          type="radio"
+                          name="gender"
+                          value="male"
+                          checked={newStudent.gender === "male"}
+                          onChange={(e) => setNewStudent(prev => ({ ...prev, gender: e.target.value }))}
+                          className="mr-2"
+                        />
+                        남자
+                      </label>
+                      <label className="flex items-center">
+                        <input
+                          type="radio"
+                          name="gender"
+                          value="female"
+                          checked={newStudent.gender === "female"}
+                          onChange={(e) => setNewStudent(prev => ({ ...prev, gender: e.target.value }))}
+                          className="mr-2"
+                        />
+                        여자
+                      </label>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="mb-1 block text-sm font-medium text-gray-700">
+                      생년월일
+                    </label>
+                    <input
+                      type="date"
+                      value={newStudent.birth_date}
+                      onChange={(e) => setNewStudent(prev => ({ ...prev, birth_date: e.target.value }))}
+                      className="w-full rounded-md border border-gray-300 px-3 py-2 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="mb-1 block text-sm font-medium text-gray-700">
+                      휴대폰 번호
+                    </label>
+                    <input
+                      type="tel"
+                      value={newStudent.phone}
+                      onChange={(e) => setNewStudent(prev => ({ ...prev, phone: e.target.value }))}
+                      className="w-full rounded-md border border-gray-300 px-3 py-2 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      placeholder="010-1234-5678"
+                    />
+                  </div>
+                </div>
+
+                {/* 학부모 정보 */}
+                <div className="space-y-4">
+                  <h3 className="text-lg font-semibold text-gray-900">학부모 정보</h3>
+                  
+                  <div>
+                    <label className="mb-1 block text-sm font-medium text-gray-700">
+                      어머니 이름
+                    </label>
+                    <input
+                      type="text"
+                      value={newStudent.mother_name}
+                      onChange={(e) => setNewStudent(prev => ({ ...prev, mother_name: e.target.value }))}
+                      className="w-full rounded-md border border-gray-300 px-3 py-2 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      placeholder="어머니 이름"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="mb-1 block text-sm font-medium text-gray-700">
+                      어머니 전화번호
+                    </label>
+                    <input
+                      type="tel"
+                      value={newStudent.mother_phone}
+                      onChange={(e) => setNewStudent(prev => ({ ...prev, mother_phone: e.target.value }))}
+                      className="w-full rounded-md border border-gray-300 px-3 py-2 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      placeholder="010-1234-5678"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="mb-1 block text-sm font-medium text-gray-700">
+                      아버지 이름
+                    </label>
+                    <input
+                      type="text"
+                      value={newStudent.father_name}
+                      onChange={(e) => setNewStudent(prev => ({ ...prev, father_name: e.target.value }))}
+                      className="w-full rounded-md border border-gray-300 px-3 py-2 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      placeholder="아버지 이름"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="mb-1 block text-sm font-medium text-gray-700">
+                      아버지 전화번호
+                    </label>
+                    <input
+                      type="tel"
+                      value={newStudent.father_phone}
+                      onChange={(e) => setNewStudent(prev => ({ ...prev, father_phone: e.target.value }))}
+                      className="w-full rounded-md border border-gray-300 px-3 py-2 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      placeholder="010-1234-5678"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div className="mt-6 flex justify-end space-x-3">
+                <button
+                  onClick={closeAddStudentModal}
+                  className="rounded-md bg-gray-100 px-4 py-2 text-gray-700 transition-colors hover:bg-gray-200"
+                >
+                  취소
+                </button>
+                <button
+                  onClick={handleAddStudent}
+                  className="rounded-md bg-[#3F80EA] px-4 py-2 text-white transition-colors hover:bg-blue-600"
+                >
+                  학생 추가
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 학생 삭제 확인 모달 */}
+      {deleteStudentModalOpen && studentToDelete && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4">
+          <div className="w-full max-w-md rounded-lg bg-white">
+            {/* 모달 헤더 */}
+            <div className="flex items-center justify-between border-b border-gray-200 p-6">
+              <h2 className="text-xl font-bold text-gray-900">학생 삭제 확인</h2>
+              <button
+                onClick={closeDeleteStudentModal}
+                className="text-gray-400 transition-colors hover:text-gray-600"
+              >
+                <XMarkIcon className="h-6 w-6" />
+              </button>
+            </div>
+
+            {/* 모달 내용 */}
+            <div className="p-6">
+              <div className="mb-4">
+                <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-red-100">
+                  <svg
+                    className="h-6 w-6 text-red-600"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.732-.833-2.464 0L4.732 15.5c-.77.833.192 2.5 1.732 2.5z"
+                    />
+                  </svg>
+                </div>
+                <h3 className="mb-2 text-lg font-semibold text-gray-900">
+                  정말로 삭제하시겠습니까?
+                </h3>
+                <p className="text-gray-600">
+                  <strong>{studentToDelete.name}</strong> 학생을 삭제하면 다음 정보들이 함께 삭제됩니다:
+                </p>
+              </div>
+
+              <div className="mb-6 rounded-lg bg-gray-50 p-4">
+                <ul className="space-y-2 text-sm text-gray-700">
+                  <li className="flex items-center">
+                    <svg className="mr-2 h-4 w-4 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                    </svg>
+                    학생 기본 정보
+                  </li>
+                  <li className="flex items-center">
+                    <svg className="mr-2 h-4 w-4 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                    </svg>
+                    상담 기록 ({studentToDelete.teacher_memos?.length || 0}개)
+                  </li>
+                  <li className="flex items-center">
+                    <svg className="mr-2 h-4 w-4 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                    </svg>
+                    학부모 연락처 정보
+                  </li>
+                  <li className="flex items-center">
+                    <svg className="mr-2 h-4 w-4 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                    </svg>
+                    네트워크 분석 데이터
+                  </li>
+                </ul>
+              </div>
+
+              <div className="mb-4 rounded-lg bg-red-50 p-3">
+                <p className="text-sm text-red-800">
+                  <strong>⚠️ 주의:</strong> 이 작업은 되돌릴 수 없습니다. 삭제된 학생의 모든 데이터는 복구할 수 없습니다.
+                </p>
+              </div>
+
+              <div className="flex justify-end space-x-3">
+                <button
+                  onClick={closeDeleteStudentModal}
+                  className="rounded-md bg-gray-100 px-4 py-2 text-gray-700 transition-colors hover:bg-gray-200"
+                >
+                  취소
+                </button>
+                <button
+                  onClick={confirmDeleteStudent}
+                  className="rounded-md bg-red-600 px-4 py-2 text-white transition-colors hover:bg-red-700"
+                >
+                  삭제하기
+                </button>
               </div>
             </div>
           </div>

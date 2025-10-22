@@ -7,6 +7,7 @@ import {
   generateFallbackReport,
   StudentAnalysisData,
   GeneratedReport,
+  TokenUsage,
 } from "../services/chatgptService";
 import { AIReportService } from "../services/aiReportService";
 import AIReportDisplay from "../components/AIReportDisplay";
@@ -162,7 +163,10 @@ const IndividualAnalysis: React.FC = () => {
   const [networkLoading, setNetworkLoading] = useState(false);
   const [activeTab, setActiveTab] = useState<"core" | "ai" | "python">("core");
   const [aiReport, setAiReport] = useState<GeneratedReport | null>(null);
+  const [tokenUsage, setTokenUsage] = useState<TokenUsage | undefined>(undefined);
   const [aiReportLoading, setAiReportLoading] = useState(false);
+  const [aiReportCreatedAt, setAiReportCreatedAt] = useState<string | null>(null);
+  const [isReportFromDB, setIsReportFromDB] = useState(false); // DB에서 불러온 리포트인지 여부
   const [pythonAnalysisResult, setPythonAnalysisResult] =
     useState<PythonAnalysisResult | null>(null);
   const [pythonAnalysisLoading, setPythonAnalysisLoading] = useState(false);
@@ -180,6 +184,254 @@ const IndividualAnalysis: React.FC = () => {
     useState<NetworkAnalysisData | null>(null);
   const [networkAnalysisLoading, setNetworkAnalysisLoading] = useState(false);
   const [showPrintPreview, setShowPrintPreview] = useState(false);
+  
+  // 핵심결과 탭용 설문 응답 데이터
+  const [coreTabSurveyData, setCoreTabSurveyData] = useState<any[]>([]);
+  const [coreTabSatisfaction, setCoreTabSatisfaction] = useState<number>(0.5);
+  const [coreTabViolence, setCoreTabViolence] = useState<number>(0);
+
+  // 개별 학생의 설문 응답 데이터 수집 함수
+  const getStudentSurveyResponses = async (studentId: string, surveyId: string) => {
+    try {
+      // 설문 템플릿과 함께 응답 조회
+      const { data: surveyData, error: surveyError } = await supabase
+        .from('surveys')
+        .select(`
+          *,
+          survey_templates!surveys_template_id_fkey(
+            id,
+            name,
+            metadata
+          )
+        `)
+        .eq('id', surveyId)
+        .single();
+
+      if (surveyError) {
+        console.warn('설문 정보 조회 오류:', surveyError);
+        return [];
+      }
+
+      const { data, error } = await supabase
+        .from('survey_responses')
+        .select('responses')
+        .eq('student_id', studentId)
+        .eq('survey_id', surveyId)
+        .single();
+
+      if (error || !data) {
+        console.warn('설문 응답 데이터 없음:', error?.message);
+        return [];
+      }
+
+      // 설문 응답을 질문-답변 형태로 변환
+      const responses = data.responses;
+      
+      console.log('🔍 원본 응답 데이터:', responses);
+      
+      // 템플릿 메타데이터에서 질문 카테고리 가져오기
+      const metadata = surveyData?.survey_templates?.metadata as any;
+      const questionCategories = metadata?.questionCategories || [];
+      
+      console.log('✅ 질문 카테고리 배열:', questionCategories);
+      
+      // 응답 데이터를 배열로 변환
+      const responseArray: Array<{question: string; answer: string; category: string}> = [];
+      
+      Object.entries(responses || {}).forEach(([key, value]) => {
+        // key는 'q1', 'q2', ... 형태
+        const questionIndex = parseInt(key.replace('q', '')) - 1;
+        
+        // metadata에서 카테고리 가져오기
+        let category = 'general';
+        if (questionCategories[questionIndex]) {
+          const rawCategory = questionCategories[questionIndex];
+          // 카테고리 매핑: '만족도' → 'satisfaction', '학교폭력' → 'violence'
+          if (rawCategory === '만족도') {
+            category = 'satisfaction';
+          } else if (rawCategory === '학교폭력') {
+            category = 'violence';
+          } else if (rawCategory === '교우관계') {
+            category = 'friendship';
+          } else {
+            category = rawCategory;
+          }
+        }
+        
+        const question = `Q${questionIndex + 1}. 질문`;
+        
+        // 배열인 경우 (친구 선택) -> 학생 이름으로 변환
+        let answerText = '';
+        if (Array.isArray(value)) {
+          // 친구 ID를 이름으로 변환
+          const friendNames = value.map(friendId => {
+            const friend = students.find(s => s.id === friendId);
+            return friend ? friend.name : friendId;
+          }).filter(Boolean);
+          answerText = friendNames.length > 0 ? friendNames.join(', ') : '선택 없음';
+        } else {
+          // 단일 응답인 경우 학생 이름으로 변환 시도
+          const friend = students.find(s => s.id === String(value));
+          answerText = friend ? friend.name : String(value);
+        }
+        
+        console.log(`  Q${questionIndex + 1}: "${question}" → "${answerText}" [${category}]`);
+        
+        responseArray.push({
+          question,
+          answer: answerText,
+          category
+        });
+      });
+
+      console.log('✅ 변환된 응답 배열:', responseArray);
+      
+      return responseArray;
+    } catch (error) {
+      console.error('설문 응답 수집 오류:', error);
+      return [];
+    }
+  };
+
+  // 만족도 점수 계산 함수 (개선된 버전)
+  const calculateSatisfactionScore = (responses: any[]) => {
+    if (!responses.length) {
+      console.warn('⚠️ 설문 응답이 없습니다. 기본값 0.5 반환');
+      return 0.5;
+    }
+    
+    // Q2-Q5: 만족도 관련 질문 (친구 선택 제외)
+    // 친구 선택 질문(배열 답변)은 제외하고, 단일 답변(예/아니오/보통)만 필터링
+    const satisfactionQuestions = responses.filter((r, idx) => {
+      // 답변이 "예", "아니오", "보통" 중 하나인 것만 (친구 이름 제외)
+      const answer = String(r.answer).trim();
+      const isValidAnswer = answer === '예' || 
+                           answer === '아니오' || 
+                           answer === '보통' ||
+                           answer.includes('그렇다') ||
+                           answer.includes('매우') ||
+                           (answer.length < 15 && !answer.includes(',') && !answer.includes('-'));
+      
+      // 만족도 관련 키워드 체크 (OR 조건) - 친구 "선택" 질문은 제외
+      const q = r.question.toLowerCase();
+      const isSatisfactionQuestion = (
+        (q.includes('친구') && q.includes('논다')) ||
+        (q.includes('즐겁') && q.includes('참여')) ||
+        (q.includes('학교') && q.includes('오고 싶')) ||
+        (q.includes('선생님') && q.includes('이야기')) ||
+        r.category === 'satisfaction'
+      ) && !q.includes('누구') && !q.includes('선택');
+      
+      return isValidAnswer && isSatisfactionQuestion;
+    });
+    
+    console.log('📝 만족도 질문 필터링 결과:', {
+      전체응답수: responses.length,
+      만족도질문수: satisfactionQuestions.length,
+      필터링된질문들: satisfactionQuestions.map(q => ({ 
+        질문: q.question.substring(0, 30), 
+        답변: q.answer 
+      }))
+    });
+    
+    if (!satisfactionQuestions.length) {
+      console.warn('⚠️ 만족도 질문이 없습니다. 기본값 0.5 반환');
+      console.log('전체 응답 내용:', responses);
+      return 0.5;
+    }
+    
+    let totalScore = 0;
+    let validQuestions = 0;
+    
+    satisfactionQuestions.forEach(q => {
+      const answer = String(q.answer).toLowerCase().trim();
+      let questionScore = 0.5; // 기본값
+      
+      // 긍정 응답
+      if (answer === '예' || answer === 'yes' || answer.includes('매우') || answer === '그렇다') {
+        questionScore = 1.0;
+      } 
+      // 중립 응답
+      else if (answer === '보통' || answer.includes('보통') || answer === 'so-so') {
+        questionScore = 0.5;
+      } 
+      // 부정 응답
+      else if (answer === '아니오' || answer === 'no' || answer.includes('그렇지 않') || answer.includes('아니')) {
+        questionScore = 0;
+      }
+      
+      console.log(`  - ${q.question.substring(0, 30)}...: "${q.answer}" → ${questionScore}점`);
+      
+      totalScore += questionScore;
+      validQuestions++;
+    });
+    
+    const finalScore = validQuestions > 0 ? totalScore / validQuestions : 0.5;
+    console.log(`✅ 최종 만족도 점수: ${(finalScore * 100).toFixed(1)}% (${validQuestions}개 질문)`);
+    
+    return Math.min(finalScore, 1);
+  };
+
+  // 폭력 경험 점수 계산 함수 (개선된 버전)
+  const calculateViolenceScore = (responses: any[]) => {
+    if (!responses.length) {
+      console.warn('⚠️ 설문 응답이 없습니다. 폭력경험 기본값 0 반환');
+      return 0;
+    }
+    
+    // 폭력 경험 관련 질문들 필터링 (Q6-Q8)
+    const violenceQuestions = responses.filter(r => {
+      const q = r.question.toLowerCase();
+      return q.includes('때리') || q.includes('발로') || q.includes('밀치') ||
+             q.includes('욕') || q.includes('놀린') ||
+             q.includes('따돌') || q.includes('괴롭') ||
+             r.category === 'violence' || 
+             r.category === 'bullying';
+    });
+    
+    console.log('📝 폭력경험 질문 수:', violenceQuestions.length, '/', responses.length);
+    
+    if (!violenceQuestions.length) {
+      console.warn('⚠️ 폭력경험 질문이 없습니다. 기본값 0 반환');
+      return 0;
+    }
+    
+    let totalScore = 0;
+    let validQuestions = 0;
+    
+    violenceQuestions.forEach(q => {
+      const answer = String(q.answer).toLowerCase().trim();
+      let questionScore = 0;
+      
+      // 폭력 없음
+      if (answer === '전혀 없다' || answer.includes('없다') || answer === '아니오' || answer === 'no') {
+        questionScore = 0;
+      } 
+      // 가끔 경험
+      else if (answer === '가끔 있다' || answer.includes('가끔') || answer.includes('한두번') || answer.includes('1-2번')) {
+        questionScore = 0.5;
+      } 
+      // 자주 경험
+      else if (answer === '자주 있다' || answer.includes('자주') || answer.includes('여러번') || answer === '예' || answer === 'yes') {
+        questionScore = 1.0;
+      }
+      // 알 수 없는 응답은 안전하게 0으로 처리
+      else {
+        console.warn(`⚠️ 알 수 없는 폭력경험 응답: "${q.answer}"`);
+        questionScore = 0;
+      }
+      
+      console.log(`  - ${q.question.substring(0, 30)}...: "${q.answer}" → ${questionScore}점`);
+      
+      totalScore += questionScore;
+      validQuestions++;
+    });
+    
+    const finalScore = validQuestions > 0 ? totalScore / validQuestions : 0;
+    console.log(`✅ 최종 폭력경험 점수: ${(finalScore * 100).toFixed(1)}% (${validQuestions}개 질문)`);
+    
+    return Math.min(finalScore, 1);
+  };
 
   // 통합 서비스를 사용한 개별 학생 분석
   const performUnifiedIndividualAnalysis = useCallback(
@@ -353,6 +605,41 @@ const IndividualAnalysis: React.FC = () => {
     }
   }, [selectedSurvey, performNetworkAnalysis]);
 
+  // 핵심결과 탭용 설문 응답 데이터 로드
+  useEffect(() => {
+    const loadCoreTabSurveyData = async () => {
+      if (selectedStudent && selectedSurvey) {
+        console.log('🔄 핵심결과 탭 - 설문 응답 로드 시작:', { 
+          학생ID: selectedStudent, 
+          설문ID: selectedSurvey.id 
+        });
+        
+        const data = await getStudentSurveyResponses(selectedStudent, selectedSurvey.id);
+        
+        console.log('📋 핵심결과 탭 - 로드된 설문 응답:', data);
+        
+        const satisfaction = calculateSatisfactionScore(data);
+        const violence = calculateViolenceScore(data);
+        
+        console.log('📊 핵심결과 탭 - 계산된 점수:', {
+          만족도: `${(satisfaction * 100).toFixed(1)}%`,
+          폭력경험: `${(violence * 100).toFixed(1)}%`
+        });
+        
+        setCoreTabSurveyData(data);
+        setCoreTabSatisfaction(satisfaction);
+        setCoreTabViolence(violence);
+      } else {
+        // 초기화
+        setCoreTabSurveyData([]);
+        setCoreTabSatisfaction(0.5);
+        setCoreTabViolence(0);
+      }
+    };
+    
+    loadCoreTabSurveyData();
+  }, [selectedStudent, selectedSurvey, activeTab]);
+
   const fetchCurrentUser = async () => {
     try {
       // 로컬 스토리지에서 사용자 정보 확인
@@ -392,7 +679,7 @@ const IndividualAnalysis: React.FC = () => {
         return;
       }
 
-   
+
       // 먼저 설문 템플릿에서 카테고리가 "교우관계" 또는 "종합조사"인 것 찾기
       const { data: templates, error: templateError } = await supabase
         .from("survey_templates")
@@ -891,6 +1178,8 @@ const IndividualAnalysis: React.FC = () => {
           return "평균적인 학생"; // 기본값
         };
 
+        console.log(`🔍 개별 네트워크 생성: 학생=${selectedStudentData.name}, 친구수=${selectedFriends.size}`);
+
         // 선택된 학생 추가
         individualNetworkData.push({
           id: selectedStudentData.id,
@@ -937,6 +1226,7 @@ const IndividualAnalysis: React.FC = () => {
       // 개별 네트워크 데이터 생성
       generateIndividualNetworkData(selectedStudent, selectedSurvey.id)
         .then((data) => {
+          console.log('✅ individualNetworkData state 설정:', data);
           setIndividualNetworkData(data);
         })
         .catch((error) => {
@@ -1412,6 +1702,17 @@ const IndividualAnalysis: React.FC = () => {
     }
   }, [aiReport, selectedStudentData, selectedSurvey]);
 
+  // 24시간 경과 여부 확인 함수
+  const canRegenerateReport = useCallback(() => {
+    if (!aiReportCreatedAt) return true; // 생성된 리포트가 없으면 생성 가능
+    
+    const createdTime = new Date(aiReportCreatedAt);
+    const now = new Date();
+    const hoursPassed = (now.getTime() - createdTime.getTime()) / (1000 * 60 * 60);
+    
+    return hoursPassed >= 24;
+  }, [aiReportCreatedAt]);
+
   // AI 리포트 생성 함수
   const generateAIReport = useCallback(async () => {
     if (
@@ -1432,10 +1733,15 @@ const IndividualAnalysis: React.FC = () => {
 
       if (existingReport) {
         // 기존 리포트가 있으면 DB에서 로드
+        console.log('✅ 저장된 AI 리포트 발견. DB에서 불러옵니다.');
         setAiReport(existingReport.report_data || null);
+        setAiReportCreatedAt(existingReport.created_at || null);
+        setIsReportFromDB(true); // DB에서 불러온 것으로 표시
         setAiReportLoading(false);
         return;
       }
+
+      console.log('📝 새 AI 리포트 생성 시작...');
 
       // 네트워크 분석 결과에서 데이터 추출 - 더 구체적인 메트릭 사용
       const centerStudent = individualNetworkData.find((s) => s.isCenter);
@@ -1512,6 +1818,33 @@ const IndividualAnalysis: React.FC = () => {
               : "높음";
       }
 
+      // 개별 학생의 실제 설문 응답 데이터 수집
+      const surveyResponses = await getStudentSurveyResponses(selectedStudentData.id, selectedSurvey.id);
+      console.log('📋 수집된 설문 응답:', surveyResponses);
+      console.log('📋 설문 응답 상세:', JSON.stringify(surveyResponses, null, 2));
+      
+      // 네트워크 특성 데이터 수집
+      const networkCharacteristics = {
+        madeChoices: centerStudent?.friendCount || 0,
+        receivedChoices: individualNetworkData.filter(s => s.friends && s.friends.includes(selectedStudentData.id)).length,
+        networkPosition: networkMetrics?.network_position || "평균적인 학생",
+        communityMembers: individualNetworkData
+          .filter(s => s.community === communityId && s.id !== selectedStudentData.id)
+          .map(s => s.name)
+      };
+      
+      console.log('🔍 네트워크 특성:', networkCharacteristics);
+
+      const satisfactionScore = calculateSatisfactionScore(surveyResponses);
+      const violenceScore = calculateViolenceScore(surveyResponses);
+      
+      console.log('📊 계산된 점수:', {
+        만족도: `${(satisfactionScore * 100).toFixed(1)}%`,
+        폭력경험: `${(violenceScore * 100).toFixed(1)}%`,
+        친구수: centerStudent?.friendCount || 0,
+        중심성: `${(refinedCentrality * 100).toFixed(1)}%`
+      });
+
       const analysisData: StudentAnalysisData = {
         studentName: selectedStudentData.name,
         grade: parseInt(selectedStudentData.grade),
@@ -1522,27 +1855,45 @@ const IndividualAnalysis: React.FC = () => {
         isolationRisk: isolationRisk,
         friendshipDevelopment: friendshipDevelopment,
         communityIntegration: communityIntegration,
+        satisfaction: satisfactionScore,
+        violenceExperience: violenceScore,
+        surveyResponses: surveyResponses,
+        networkCharacteristics: networkCharacteristics
       };
 
       // 추가 설문 데이터 수집 (다른 설문들의 내용도 참조)
       const additionalSurveyData = await prepareAdditionalSurveyData();
 
       // ChatGPT API 호출
-      const report = await generateStudentGuidanceReport(
+      const result = await generateStudentGuidanceReport(
         analysisData,
         additionalSurveyData,
       );
 
-      // DB에 저장
-      await AIReportService.saveAIReport(
+      // 리포트를 먼저 표시
+      setAiReport(result.report);
+      setTokenUsage(result.tokenUsage);
+      setIsReportFromDB(false); // 새로 생성된 것으로 표시
+
+      // DB에 저장 시도 (실패해도 리포트는 표시됨)
+      try {
+        const savedReport = await AIReportService.saveAIReport(
         selectedStudentData.id,
         selectedSurvey.id,
-        report,
-      );
-
-      setAiReport(report);
+          result.report,
+          result.tokenUsage,
+        );
+        // 저장 성공 시 생성 시간 저장
+        if (savedReport && savedReport.created_at) {
+          setAiReportCreatedAt(savedReport.created_at);
+          setIsReportFromDB(true); // DB에 저장 후 DB 상태로 변경
+          console.log('✅ AI 리포트 DB 저장 완료!');
+        }
+      } catch (saveError) {
+        // DB 저장 실패해도 무시 (리포트는 이미 표시됨)
+        console.error('⚠️ AI 리포트 DB 저장 실패:', saveError);
+      }
     } catch (error) {
-      console.error("AI 리포트 생성 오류:", error);
 
       // 대체 리포트 생성 (오류 메시지 없이)
       const centerStudent = individualNetworkData.find((s) => s.isCenter);
@@ -1550,6 +1901,28 @@ const IndividualAnalysis: React.FC = () => {
         ? centerStudent.friendCount /
           Math.max(individualNetworkData.length - 1, 1)
         : 0;
+
+      // 대체 리포트용 데이터도 개별화
+      const surveyResponses = await getStudentSurveyResponses(selectedStudentData.id, selectedSurvey.id);
+      console.log('📋 대체 리포트 - 설문 응답:', surveyResponses);
+      
+      const networkCharacteristics = {
+        madeChoices: centerStudent?.friendCount || 0,
+        receivedChoices: individualNetworkData.filter(s => s.friends && s.friends.includes(selectedStudentData.id)).length,
+        networkPosition: "평균적인 학생",
+        communityMembers: individualNetworkData
+          .filter(s => s.community === 0 && s.id !== selectedStudentData.id)
+          .map(s => s.name)
+      };
+
+      const satisfactionScore = calculateSatisfactionScore(surveyResponses);
+      const violenceScore = calculateViolenceScore(surveyResponses);
+      
+      console.log('📊 대체 리포트 - 계산된 점수:', {
+        만족도: `${(satisfactionScore * 100).toFixed(1)}%`,
+        폭력경험: `${(violenceScore * 100).toFixed(1)}%`,
+        친구수: centerStudent?.friendCount || 0
+      });
 
       const analysisData: StudentAnalysisData = {
         studentName: selectedStudentData.name,
@@ -1564,24 +1937,39 @@ const IndividualAnalysis: React.FC = () => {
           centrality < 0.3 ? "개선 필요" : centrality < 0.6 ? "보통" : "양호",
         communityIntegration:
           centrality < 0.3 ? "낮음" : centrality < 0.6 ? "보통" : "높음",
+        satisfaction: satisfactionScore,
+        violenceExperience: violenceScore,
+        surveyResponses: surveyResponses,
+        networkCharacteristics: networkCharacteristics
       };
 
-      const fallbackReport = generateFallbackReport(analysisData);
+      const fallbackResult = generateFallbackReport(analysisData);
 
-      // 대체 리포트도 DB에 저장
+      // 리포트를 먼저 표시
+      setAiReport(fallbackResult.report);
+      setTokenUsage(fallbackResult.tokenUsage);
+      setIsReportFromDB(false); // 새로 생성된 것으로 표시
+
+      // 대체 리포트도 DB에 저장 시도 (실패해도 무시)
       if (selectedSurvey) {
         try {
-          await AIReportService.saveAIReport(
+          const savedReport = await AIReportService.saveAIReport(
             selectedStudentData.id,
             selectedSurvey.id,
-            fallbackReport,
+            fallbackResult.report,
+            fallbackResult.tokenUsage,
           );
+          // 저장 성공 시 생성 시간 저장
+          if (savedReport && savedReport.created_at) {
+            setAiReportCreatedAt(savedReport.created_at);
+            setIsReportFromDB(true); // DB에 저장 후 DB 상태로 변경
+            console.log('✅ 대체 리포트 DB 저장 완료!');
+          }
         } catch (saveError) {
-          console.error("대체 리포트 저장 오류:", saveError);
+          // DB 저장 실패해도 무시 (리포트는 이미 표시됨)
+          console.error('⚠️ 대체 리포트 DB 저장 실패:', saveError);
         }
       }
-
-      setAiReport(fallbackReport);
     } finally {
       setAiReportLoading(false);
     }
@@ -1662,6 +2050,8 @@ const IndividualAnalysis: React.FC = () => {
       // 학생이 변경되면 기존 AI 리포트를 초기화하고 새로 생성
       if (selectedStudent) {
         setAiReport(null);
+        setAiReportCreatedAt(null);
+        setIsReportFromDB(false); // 상태 초기화
         generateAIReport();
       }
     }
@@ -1942,10 +2332,14 @@ const IndividualAnalysis: React.FC = () => {
                                 </svg>
                                 <span>파일로 출력</span>
                               </button>
+                              {/* 재생성 버튼 - 24시간 후에만 표시 */}
+                              {canRegenerateReport() && (
                               <button
                                 onClick={async () => {
                                   // 기존 리포트 삭제 후 재생성
                                   setAiReport(null);
+                                    setAiReportCreatedAt(null);
+                                    setIsReportFromDB(false); // 상태 초기화
                                   setAiReportLoading(true);
 
                                   try {
@@ -1981,10 +2375,90 @@ const IndividualAnalysis: React.FC = () => {
                                 </svg>
                                 <span>리포트 재생성</span>
                               </button>
+                              )}
+                              {/* 24시간 이내인 경우 안내 메시지 */}
+                              {!canRegenerateReport() && aiReportCreatedAt && (
+                                <div className="flex items-center space-x-2 rounded-lg bg-gray-100 px-4 py-2 text-sm text-gray-600">
+                                  <svg
+                                    className="h-4 w-4"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    viewBox="0 0 24 24"
+                                  >
+                                    <path
+                                      strokeLinecap="round"
+                                      strokeLinejoin="round"
+                                      strokeWidth={2}
+                                      d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+                                    />
+                                  </svg>
+                                  <span>
+                                    리포트 재생성은 24시간 후 가능합니다
+                                    (생성: {new Date(aiReportCreatedAt).toLocaleString('ko-KR', { 
+                                      month: 'short', 
+                                      day: 'numeric', 
+                                      hour: '2-digit', 
+                                      minute: '2-digit' 
+                                    })})
+                                  </span>
+                                </div>
+                              )}
                             </div>
 
+                            {/* DB 상태 표시 뱃지 */}
+                            {isReportFromDB && (
+                              <div className="flex items-center space-x-2 rounded-lg bg-green-50 border border-green-200 px-4 py-3">
+                                <svg
+                                  className="h-5 w-5 text-green-600"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  viewBox="0 0 24 24"
+                                >
+                                  <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    strokeWidth={2}
+                                    d="M5 13l4 4L19 7"
+                                  />
+                                </svg>
+                                <span className="text-sm font-medium text-green-800">
+                                  💾 데이터베이스에서 불러온 리포트
+                                </span>
+                                {aiReportCreatedAt && (
+                                  <span className="text-xs text-green-600">
+                                    (생성: {new Date(aiReportCreatedAt).toLocaleString('ko-KR', { 
+                                      month: 'short', 
+                                      day: 'numeric', 
+                                      hour: '2-digit', 
+                                      minute: '2-digit' 
+                                    })})
+                                  </span>
+                                )}
+                              </div>
+                            )}
+                            {!isReportFromDB && (
+                              <div className="flex items-center space-x-2 rounded-lg bg-blue-50 border border-blue-200 px-4 py-3">
+                                <svg
+                                  className="h-5 w-5 text-blue-600"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  viewBox="0 0 24 24"
+                                >
+                                  <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    strokeWidth={2}
+                                    d="M13 10V3L4 14h7v7l9-11h-7z"
+                                  />
+                                </svg>
+                                <span className="text-sm font-medium text-blue-800">
+                                  ✨ 새로 생성된 리포트
+                                </span>
+                              </div>
+                            )}
+
                             {/* AI 리포트 표시 */}
-                            <AIReportDisplay aiReport={aiReport} />
+                            <AIReportDisplay aiReport={aiReport} tokenUsage={tokenUsage} />
 
                             {/* 실용적인 활용 예시 섹션 */}
                             <div className="mt-8 space-y-6">
@@ -3117,9 +3591,14 @@ const IndividualAnalysis: React.FC = () => {
                       ) : individualNetworkData.length > 0 ? (
                         <div className="space-y-6">
                           {(() => {
+                            console.log('📊 UI 렌더링 - individualNetworkData:', individualNetworkData);
+                            
                             const centerStudent = individualNetworkData.find(
                               (s) => s.isCenter,
                             );
+                            
+                            console.log('🎯 중심 학생 찾기:', centerStudent);
+                            
                             const totalStudents = individualNetworkData.length;
                             const maxPossibleConnections = totalStudents - 1;
 
@@ -3129,20 +3608,48 @@ const IndividualAnalysis: React.FC = () => {
                                 Math.max(maxPossibleConnections, 1)
                               : 0;
                             let friendCount = centerStudent?.friendCount || 0;
+                            
+                            console.log('📈 초기 계산값:', {친구수: friendCount, 중심성: centrality});
                             let networkDensity = 0;
                             let isolationRiskLevel = "보통";
                             let socialInfluenceLevel = "보통";
                             let communityId = 0;
+                            
+                            // 친구 수 기반 학생 유형 분류
                             let friendshipType = "평균적인 학생";
+                            if (friendCount === 0) {
+                              friendshipType = "외톨이형";
+                            } else if (friendCount <= 2) {
+                              friendshipType = "소수 친구 학생";
+                            } else if (friendCount <= 5) {
+                              friendshipType = "평균적인 학생";
+                            } else if (friendCount <= 8) {
+                              friendshipType = "친구 많은 학생";
+                            } else {
+                              friendshipType = "사교 스타";
+                            }
+                            
                             let recommendations = null;
 
-                            // 통합 분석 결과가 있으면 실제 데이터 사용
+                            // 통합 분석 결과가 있으면 실제 데이터 사용 (단, individualNetworkData가 더 정확하면 우선 사용)
                             if (unifiedAnalysisResult) {
-                              // 중앙성 메트릭 사용
-                              centrality =
-                                unifiedAnalysisResult.centralityMetrics.degree;
-                              friendCount =
-                                unifiedAnalysisResult.student.connection_count;
+                              console.log('⚠️ unifiedAnalysisResult 발견:', {
+                                connection_count: unifiedAnalysisResult.student.connection_count,
+                                degree: unifiedAnalysisResult.centralityMetrics.degree
+                              });
+                              
+                              // individualNetworkData의 값이 더 정확하므로, unifiedAnalysisResult가 0이면 무시
+                              const unifiedFriendCount = unifiedAnalysisResult.student.connection_count;
+                              const unifiedCentrality = unifiedAnalysisResult.centralityMetrics.degree;
+                              
+                              // unifiedAnalysisResult가 유효한 값을 가지고 있을 때만 사용
+                              if (unifiedFriendCount > 0 || unifiedCentrality > 0) {
+                                centrality = unifiedCentrality;
+                                friendCount = unifiedFriendCount;
+                                console.log('✅ unifiedAnalysisResult 값 사용');
+                              } else {
+                                console.log('⚠️ unifiedAnalysisResult가 0이므로 individualNetworkData 값 유지');
+                              }
 
                               // 격리 위험도 사용
                               isolationRiskLevel =
@@ -3168,9 +3675,24 @@ const IndividualAnalysis: React.FC = () => {
                               communityId =
                                 unifiedAnalysisResult.communityMembership;
 
-                              // 친구관계 유형 사용
+                              // 친구관계 유형 사용 (실제 친구 수로 재계산)
                               friendshipType =
                                 unifiedAnalysisResult.student.friendship_type;
+                              
+                              console.log('🔄 unifiedAnalysisResult 적용 후:', {친구수: friendCount, 중심성: centrality});
+                              
+                              // 친구 수 기반으로 재검증 (통합 분석 결과가 부정확할 수 있음)
+                              if (friendCount === 0) {
+                                friendshipType = "외톨이형";
+                              } else if (friendCount <= 2) {
+                                friendshipType = "소수 친구 학생";
+                              } else if (friendCount <= 5) {
+                                friendshipType = "평균적인 학생";
+                              } else if (friendCount <= 8) {
+                                friendshipType = "친구 많은 학생";
+                              } else {
+                                friendshipType = "사교 스타";
+                              }
 
                               // 추천사항 사용
                               recommendations =
@@ -3218,13 +3740,23 @@ const IndividualAnalysis: React.FC = () => {
                                 ? `연결된 ${connectedStudents.length}명 (커뮤니티 ${communityId})`
                                 : "연결된 학생 없음";
 
+                            // 디버깅 로그
+                            console.log('👤 개인별 요약 - 학생 정보:', {
+                              학생명: selectedStudentData?.name,
+                              친구수: friendCount,
+                              중심성: `${(centrality * 100).toFixed(1)}%`,
+                              학생유형: friendshipType,
+                              만족도: `${(coreTabSatisfaction * 100).toFixed(1)}%`,
+                              폭력경험: `${(coreTabViolence * 100).toFixed(1)}%`
+                            });
+
                             return (
                               <div>
                                 <h3 className="mb-4 text-lg font-medium text-gray-900">
                                   개인별 요약 :{" "}
                                   <span className="text-md mb-2 bg-gradient-to-t from-yellow-200 from-50% to-transparent to-50% font-medium text-gray-800">
                                     {friendshipType} ({socialInfluenceLevel}{" "}
-                                    영향력)
+                                    영향력) - 친구 {friendCount}명
                                   </span>
                                 </h3>
 
@@ -3255,9 +3787,10 @@ const IndividualAnalysis: React.FC = () => {
                                               pyStatus.peer_relationship,
                                             networkParticipation:
                                               pyStatus.network_participation,
+                                            violenceExperience: (pyStatus as any).violence_experience || "파악 필요",
                                           };
                                         } else {
-                                          // 유틸리티 함수로 계산
+                                          // 유틸리티 함수로 계산 (실제 설문 응답 포함)
                                           const metrics: StudentMetrics = {
                                             centrality,
                                             friendCount,
@@ -3267,6 +3800,9 @@ const IndividualAnalysis: React.FC = () => {
                                               socialInfluenceLevel,
                                             totalStudents,
                                             communityId,
+                                            satisfactionScore: coreTabSatisfaction,
+                                            violenceScore: coreTabViolence,
+                                            surveyResponses: coreTabSurveyData
                                           };
                                           currentStatus =
                                             calculateCurrentStatus(metrics);
@@ -3293,6 +3829,10 @@ const IndividualAnalysis: React.FC = () => {
                                               {
                                                 currentStatus.networkParticipation
                                               }
+                                            </li>
+                                            <li>
+                                              • 학교폭력 경험:{" "}
+                                              {currentStatus.violenceExperience}
                                             </li>
                                           </>
                                         );
@@ -3345,8 +3885,19 @@ const IndividualAnalysis: React.FC = () => {
                                               recommendations.long_term_goals ||
                                               [],
                                             interventionLevel:
-                                              recommendations.intervention_level ||
-                                              "관찰",
+                                              (() => {
+                                                const level = recommendations.intervention_level || "관찰";
+                                                // 영어 개입 수준을 한글로 변환
+                                                const levelMap: { [key: string]: string } = {
+                                                  "observation": "관찰",
+                                                  "attention": "주의", 
+                                                  "urgent": "긴급",
+                                                  "emergency": "긴급",
+                                                  "monitoring": "관찰",
+                                                  "intervention": "주의"
+                                                };
+                                                return levelMap[level.toLowerCase()] || level;
+                                              })(),
                                           };
                                         } else {
                                           const metrics: StudentMetrics = {
@@ -3358,6 +3909,9 @@ const IndividualAnalysis: React.FC = () => {
                                               socialInfluenceLevel,
                                             totalStudents,
                                             communityId,
+                                            satisfactionScore: coreTabSatisfaction,
+                                            violenceScore: coreTabViolence,
+                                            surveyResponses: coreTabSurveyData
                                           };
                                           recommendationPlan =
                                             generateRecommendationPlan(metrics);
@@ -3450,6 +4004,9 @@ const IndividualAnalysis: React.FC = () => {
                                               socialInfluenceLevel,
                                             totalStudents,
                                             communityId,
+                                            satisfactionScore: coreTabSatisfaction,
+                                            violenceScore: coreTabViolence,
+                                            surveyResponses: coreTabSurveyData
                                           };
                                           monitoringPoints =
                                             generateMonitoringPoints(

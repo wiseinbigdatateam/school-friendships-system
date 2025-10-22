@@ -75,13 +75,17 @@ const NetworkChartComponent: React.FC<NetworkChartComponentProps> = ({
 
   // 실제 네트워크 데이터 사용
   const getNetworkData = (data: NetworkAnalysisData) => {
+    console.log('🔄 getNetworkData 호출됨:', data);
     return data;
   };
 
   useEffect(() => {
+    console.log('📊 NetworkChartComponent - chartData 받음:', chartData);
     if (chartData && chartData.length > 0) {
+      console.log('✅ chartData[0]:', chartData[0]);
       setFirstGraphData(chartData[0]);
       if (chartData.length > 1) {
+        console.log('✅ chartData[1]:', chartData[1]);
         setSecondGraphData(chartData[1]);
       } else {
         setSecondGraphData(null);
@@ -90,6 +94,7 @@ const NetworkChartComponent: React.FC<NetworkChartComponentProps> = ({
   }, [chartData]);
 
   if (!firstGraphData) {
+    console.log('⚠️ firstGraphData가 없음!');
     return (
       <div className="py-8 text-center">
         <div className="mx-auto mb-4 h-8 w-8 animate-spin rounded-full border-b-2 border-blue-600"></div>
@@ -97,6 +102,8 @@ const NetworkChartComponent: React.FC<NetworkChartComponentProps> = ({
       </div>
     );
   }
+
+  console.log('🎯 렌더링 시작 - activeTab:', activeTab, 'firstGraphData:', firstGraphData);
 
   return (
     <div className="space-y-6">

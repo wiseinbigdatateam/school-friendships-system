@@ -62,6 +62,50 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
+  // 역할에 따른 기본 대시보드 리다이렉트
+  if (location.pathname === '/dashboard') {
+    if (user.role === 'grade_teacher') {
+      return <Navigate to="/grade-dashboard" replace />;
+    }
+    // 담임선생님(homeroom_teacher)은 /dashboard에 그대로 머물러도 됨
+  }
+
+  // 담임선생님이 학년부장 전용 페이지에 접근하려고 할 때 권한 없음 메시지 표시
+  if (user.role === 'homeroom_teacher' && location.pathname.startsWith('/grade-dashboard')) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center max-w-md mx-auto">
+          <div className="bg-white rounded-lg shadow-lg p-8">
+            <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <svg className="w-8 h-8 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.732-.833-2.464 0L4.732 15.5c-.77.833.192 2.5 1.732 2.5z" />
+              </svg>
+            </div>
+            <h2 className="text-xl font-semibold text-gray-900 mb-2">접근 권한이 없습니다</h2>
+            <p className="text-gray-600 mb-6">
+              학년부장 전용 페이지입니다.<br />
+              담임선생님은 해당 페이지에 접근할 수 없습니다.
+            </p>
+            <button
+              onClick={() => window.history.back()}
+              className="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-lg transition-colors"
+            >
+              이전 페이지로 돌아가기
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // 학년부장이 허용되지 않은 페이지에 접근하려고 할 때 학년 대시보드로 리다이렉트
+  if (user.role === 'grade_teacher' && 
+      !location.pathname.startsWith('/grade-dashboard') && 
+      !location.pathname.startsWith('/notifications') &&
+      location.pathname !== '/dashboard') {
+    return <Navigate to="/grade-dashboard" replace />;
+  }
+
   // 필요한 역할 권한 확인
   if (requiredRole) {
     

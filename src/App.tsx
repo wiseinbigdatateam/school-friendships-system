@@ -38,89 +38,138 @@ const Settings = lazy(() => import("./pages/Settings"));
 const AccountSettings = lazy(() => import("./pages/AccountSettings"));
 const ProfileSettings = lazy(() => import("./pages/ProfileSettings"));
 const Notifications = lazy(() => import("./pages/Notifications"));
+const GradeTeacherDashboard = lazy(() => import("./pages/GradeTeacherDashboard"));
 
 // 보호된 레이아웃 컴포넌트
 const ProtectedLayout: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
-  const navigationItems = [
-    {
-      id: "dashboard",
-      label: "대시보드",
-      href: "/dashboard",
-      isActive: true,
-      icon: "home",
-    },
-    {
-      id: "surveys",
-      label: "설문 관리",
-      href: "/surveys",
-      hasDropdown: true,
-      icon: "clipboard",
-      children: [
+  // 사용자 역할에 따른 네비게이션 아이템 설정
+  const getNavigationItems = () => {
+    const userStr = localStorage.getItem("wiseon_user");
+    if (!userStr) return [];
+
+    try {
+      const user = JSON.parse(userStr);
+      
+      // 학급부장(grade_teacher)인 경우 제한된 네비게이션
+      if (user.role === 'grade_teacher') {
+        return [
+          {
+            id: "grade-dashboard",
+            label: "학년 모니터링",
+            href: "/grade-dashboard",
+            isActive: true,
+            icon: "home",
+          },
+          {
+            id: "notifications",
+            label: "알림",
+            href: "/notifications",
+            icon: "bell",
+          },
+        ];
+      }
+
+      // 메인 관리자(main_admin)인 경우 어드민 전용 네비게이션
+      if (user.role === 'main_admin') {
+        return [
+          {
+            id: "admin",
+            label: "어드민 관리",
+            href: "/admin",
+            isActive: true,
+            icon: "home",
+          },
+        ];
+      }
+
+      // 다른 역할의 경우 전체 네비게이션
+      return [
         {
-          id: "survey-templates",
-          label: "설문 템플릿",
-          href: "/survey-templates",
-          icon: "template",
+          id: "dashboard",
+          label: "대시보드",
+          href: "/dashboard",
+          isActive: true,
+          icon: "home",
         },
         {
-          id: "survey-management",
-          label: "설문 운영",
-          href: "/survey-management",
-          icon: "settings",
+          id: "surveys",
+          label: "설문 관리",
+          href: "/surveys",
+          hasDropdown: true,
+          icon: "clipboard",
+          children: [
+            {
+              id: "survey-templates",
+              label: "설문 템플릿",
+              href: "/survey-templates",
+              icon: "template",
+            },
+            {
+              id: "survey-management",
+              label: "설문 운영",
+              href: "/survey-management",
+              icon: "settings",
+            },
+          ],
         },
-      ],
-    },
-    {
-      id: "network",
-      label: "교우관계 분석",
-      href: "/network",
-      icon: "network",
-    },
-    {
-      id: "integrated-analysis",
-      label: "통합 교우관계 분석",
-      href: "/integrated-analysis",
-      icon: "network",
-    },
-    {
-      id: "network-comparison",
-      label: "교우관계 비교",
-      href: "/network-comparison",
-      icon: "compare",
-    },
-    {
-      id: "reports",
-      label: "AI리포트",
-      href: "/reports",
-      icon: "document",
-    },
-    {
-      id: "students",
-      label: "학생 관리",
-      href: "/students",
-      icon: "users",
-    },
-    {
-      id: "transfer",
-      label: "데이터 이관",
-      href: "/transfer",
-      icon: "transfer",
-    },
-    {
-      id: "admin",
-      label: "어드민",
-      href: "/admin",
-      icon: "admin",
-    },
-    {
-      id: "settings",
-      label: "설정",
-      href: "/settings",
-      icon: "cog",
-    },
-  ];
+        {
+          id: "network",
+          label: "교우관계 분석",
+          href: "/network",
+          icon: "network",
+        },
+        {
+          id: "integrated-analysis",
+          label: "통합 교우관계 분석",
+          href: "/integrated-analysis",
+          icon: "network",
+        },
+        {
+          id: "network-comparison",
+          label: "교우관계 비교",
+          href: "/network-comparison",
+          icon: "compare",
+        },
+        {
+          id: "reports",
+          label: "AI리포트",
+          href: "/reports",
+          icon: "document",
+        },
+        {
+          id: "students",
+          label: "학생 관리",
+          href: "/students",
+          icon: "users",
+        },
+        {
+          id: "transfer",
+          label: "데이터 이관",
+          href: "/transfer",
+          icon: "transfer",
+        },
+        {
+          id: "admin",
+          label: "어드민",
+          href: "/admin",
+          icon: "admin",
+        },
+        {
+          id: "settings",
+          label: "설정",
+          href: "/settings",
+          icon: "cog",
+        },
+      ];
+    } catch (error) {
+      console.error("사용자 정보 파싱 오류:", error);
+      return [];
+    }
+  };
+
+  const navigationItems = getNavigationItems();
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -193,6 +242,30 @@ const App: React.FC = () => {
               <ProtectedRoute>
                 <ProtectedLayout>
                   <Dashboard />
+                </ProtectedLayout>
+              </ProtectedRoute>
+            }
+          />
+
+          {/* 학년부장 전용 대시보드 */}
+          <Route
+            path="/grade-dashboard"
+            element={
+              <ProtectedRoute requiredRole="grade_teacher">
+                <ProtectedLayout>
+                  <GradeTeacherDashboard />
+                </ProtectedLayout>
+              </ProtectedRoute>
+            }
+          />
+
+          {/* 메인 관리자 전용 페이지 */}
+          <Route
+            path="/admin"
+            element={
+              <ProtectedRoute requiredRole="main_admin">
+                <ProtectedLayout>
+                  <Admin />
                 </ProtectedLayout>
               </ProtectedRoute>
             }

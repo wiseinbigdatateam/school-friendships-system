@@ -15,7 +15,7 @@ interface LoginFormData {
 const Login: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { login, loading: authLoading, isAuthenticated } = useAuth();
+  const { login, loading: authLoading, isAuthenticated, user } = useAuth();
 
   const [formData, setFormData] = useState<LoginFormData>({
     email: "",
@@ -31,13 +31,48 @@ const Login: React.FC = () => {
     "service" | "privacy" | null
   >(null);
 
-  // 이미 로그인된 경우 대시보드로 리다이렉트
+  // 이미 로그인된 경우 역할에 따라 대시보드로 리다이렉트
   React.useEffect(() => {
     if (isAuthenticated && !authLoading) {
-      const from = (location.state as any)?.from?.pathname || "/dashboard";
-      navigate(from, { replace: true });
+      // 로그아웃 후 다시 로그인한 경우를 감지 (이전 로그인 기록이 없으면 로그아웃 후 재로그인)
+      const isAfterLogout = !localStorage.getItem('wiseon_previous_login');
+      
+      // 이전 로그인 기록 저장
+      localStorage.setItem('wiseon_previous_login', 'true');
+      
+      // 로그아웃 후 다시 로그인한 경우 무조건 역할에 따른 기본 페이지로 이동
+      if (isAfterLogout) {
+        if (user?.role === 'main_admin') {
+          navigate("/admin", { replace: true });
+        } else if (user?.role === 'grade_teacher') {
+          navigate("/grade-dashboard", { replace: true });
+        } else if (user?.role === 'homeroom_teacher') {
+          navigate("/dashboard", { replace: true });
+        } else {
+          navigate("/dashboard", { replace: true });
+        }
+        return;
+      }
+      
+      // 일반적인 경우 (이미 로그인된 상태에서 페이지 새로고침 등)
+      const from = (location.state as any)?.from?.pathname;
+      
+      if (from) {
+        navigate(from, { replace: true });
+      } else {
+        // 역할에 따라 기본 대시보드 결정
+        if (user?.role === 'main_admin') {
+          navigate("/admin", { replace: true });
+        } else if (user?.role === 'grade_teacher') {
+          navigate("/grade-dashboard", { replace: true });
+        } else if (user?.role === 'homeroom_teacher') {
+          navigate("/dashboard", { replace: true });
+        } else {
+          navigate("/dashboard", { replace: true });
+        }
+      }
     }
-  }, [isAuthenticated, authLoading, navigate, location]);
+  }, [isAuthenticated, authLoading, navigate, location, user]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -63,9 +98,27 @@ const Login: React.FC = () => {
       // AuthContext의 login 함수 사용
       await login(formData.email, formData.password);
 
-      // 로그인 성공 시 원래 가려던 페이지 또는 대시보드로 이동
-      const from = (location.state as any)?.from?.pathname || "/dashboard";
-      navigate(from, { replace: true });
+      // 로그인 성공 후 사용자 정보를 다시 가져와서 리다이렉트
+      const userData = localStorage.getItem('wiseon_user');
+      if (userData) {
+        const user = JSON.parse(userData);
+        const from = (location.state as any)?.from?.pathname;
+        
+        if (from) {
+          navigate(from, { replace: true });
+        } else {
+          // 역할에 따라 기본 대시보드 결정
+          if (user.role === 'main_admin') {
+            navigate("/admin", { replace: true });
+          } else if (user.role === 'grade_teacher') {
+            navigate("/grade-dashboard", { replace: true });
+          } else if (user.role === 'homeroom_teacher') {
+            navigate("/dashboard", { replace: true });
+          } else {
+            navigate("/dashboard", { replace: true });
+          }
+        }
+      }
     } catch (error) {
       setError(
         error instanceof Error ? error.message : "로그인에 실패했습니다.",
@@ -230,9 +283,21 @@ const Login: React.FC = () => {
                 </button>
                 <p>-</p>
                 (담임교사)
+                
+              </div>
+              <div className="flex w-full gap-1 bg-sky-100 p-1 text-sm text-blue-700">
+                📧{" "}
+                <button
+                  onClick={handleDemoHeadLogin}
+                  className="underline hover:text-blue-800"
+                >
+                  test_head@school.com
+                </button>
+                <p>-</p>
+                (학년부장)
+                
               </div>
               {/* <div className="rounded bg-blue-100 px-2 py-1">
-                    <strong>
                       📧{" "}
                       <button
                         onClick={handleDemoHeadLogin}
@@ -240,10 +305,9 @@ const Login: React.FC = () => {
                       >
                         test_head@school.com
                       </button>
-                    </strong>{" "}
-                    - (학년부장)
-                  </div>
-                  <div className="rounded bg-blue-100 px-2 py-1">
+                    <p>-</p> (학년부장)
+                  </div> */}
+                 {/*  <div className="rounded bg-blue-100 px-2 py-1">
                     <strong>
                       📧{" "}
                       <button

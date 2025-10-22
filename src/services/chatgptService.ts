@@ -1,4 +1,4 @@
-const OPENAI_API_KEY = process.env.REACT_APP_OPENAI_API_KEY || '';
+const OPENAI_API_KEY = process.env.REACT_APP_OPENAI_API_KEY || localStorage.getItem('openai_api_key') || '';
 const OPENAI_API_URL = 'https://api.openai.com/v1/chat/completions';
 
 // API 사용량 추적 (로컬 스토리지에 저장)
@@ -22,22 +22,155 @@ export const getApiUsageCount = () => {
 export const incrementApiUsageCount = () => {
   const currentCount = getApiUsageCount();
   const newCount = currentCount + 1;
+  
+  // 상세한 사용량 추적
+  const usageData = localStorage.getItem('openai_api_usage');
+  let usage = usageData ? JSON.parse(usageData) : {
+    count: 0,
+    hourlyCount: 0,
+    lastUsed: new Date().toISOString(),
+    rateLimited: false,
+    rateLimitTime: null
+  };
+  
+  const now = new Date();
+  const lastUsed = new Date(usage.lastUsed);
+  const oneHourAgo = new Date(now.getTime() - 60 * 60 * 1000);
+  
+  // 시간당 사용량 리셋
+  if (lastUsed < oneHourAgo) {
+    usage.hourlyCount = 0;
+  }
+  
+  usage.count = newCount;
+  usage.hourlyCount = (usage.hourlyCount || 0) + 1;
+  usage.lastUsed = now.toISOString();
+  
   localStorage.setItem(STORAGE_KEY, newCount.toString());
+  localStorage.setItem('openai_api_usage', JSON.stringify(usage));
+  
   return newCount;
 };
 
 export const resetApiUsageCount = () => {
   localStorage.setItem(STORAGE_KEY, '0');
   localStorage.setItem(STORAGE_DATE_KEY, new Date().toDateString());
+  localStorage.removeItem('openai_api_usage');
+};
+
+// Rate Limit 상태만 초기화하는 함수
+export const resetRateLimit = () => {
+  const usageData = localStorage.getItem('openai_api_usage');
+  if (usageData) {
+    try {
+      const usage = JSON.parse(usageData);
+      usage.rateLimited = false;
+      usage.rateLimitTime = null;
+      localStorage.setItem('openai_api_usage', JSON.stringify(usage));
+    } catch (error) {
+      console.error('Rate Limit 초기화 오류:', error);
+    }
+  } else {
+    // 사용량 데이터가 없으면 새로 생성
+    localStorage.setItem('openai_api_usage', JSON.stringify({
+      count: 0,
+      hourlyCount: 0,
+      lastUsed: new Date().toISOString(),
+      rateLimited: false,
+      rateLimitTime: null
+    }));
+  }
+};
+
+// 완전 초기화 함수 (모든 제한 해제)
+export const forceResetAll = () => {
+  localStorage.setItem(STORAGE_KEY, '0');
+  localStorage.setItem(STORAGE_DATE_KEY, new Date().toDateString());
+  localStorage.setItem('openai_api_usage', JSON.stringify({
+    count: 0,
+    hourlyCount: 0,
+    lastUsed: new Date().toISOString(),
+    rateLimited: false,
+    rateLimitTime: null
+  }));
+};
+
+// 토큰 사용량 계산 함수
+export const calculateTokenUsage = (promptTokens: number, completionTokens: number): TokenUsage => {
+  const totalTokens = promptTokens + completionTokens;
+  
+  // GPT-4o-mini 가격 기준 (2025년)
+  // Input: $0.00015 per 1K tokens, Output: $0.0006 per 1K tokens
+  const inputCostPer1K = 0.00015;
+  const outputCostPer1K = 0.0006;
+  
+  const costEstimate = (promptTokens / 1000) * inputCostPer1K + (completionTokens / 1000) * outputCostPer1K;
+  
+  return {
+    prompt_tokens: promptTokens,
+    completion_tokens: completionTokens,
+    total_tokens: totalTokens,
+    cost_estimate: costEstimate
+  };
+};
+
+// 프롬프트 길이 추정 함수 (대략적인 토큰 수 계산)
+export const estimatePromptTokens = (text: string): number => {
+  // 한국어는 평균 1.5자당 1토큰, 영어는 평균 4자당 1토큰
+  // 혼합 텍스트의 경우 대략적인 추정
+  return Math.ceil(text.length / 2.5);
 };
 
 export const checkApiUsageLimit = () => {
-  const MAX_DAILY_USAGE = 50; // 일일 최대 사용량 설정
+  const MAX_DAILY_USAGE = 100; // 일일 최대 사용량을 충분히 늘림
+  const MAX_HOURLY_USAGE = 50; // 시간당 최대 사용량을 충분히 늘림
+  
   const currentUsage = getApiUsageCount();
+  
+  // 시간당 사용량 체크
+  const usageData = localStorage.getItem('openai_api_usage');
+  if (usageData) {
+    try {
+      const usage = JSON.parse(usageData);
+      const now = new Date();
+      const lastUsed = new Date(usage.lastUsed);
+      
+      // 1시간 이내 사용량 체크
+      const oneHourAgo = new Date(now.getTime() - 60 * 60 * 1000);
+      if (lastUsed > oneHourAgo) {
+        const hourlyUsage = usage.hourlyCount || 0;
+        if (hourlyUsage >= MAX_HOURLY_USAGE) {
+          throw new Error('시간당 API 사용량이 초과되었습니다. 1시간 후 다시 시도해주세요.');
+        }
+      }
+      
+      // Rate Limit 상태 확인
+      if (usage.rateLimited) {
+        const rateLimitTime = new Date(usage.rateLimitTime || usage.lastUsed);
+        const twoHoursAgo = new Date(now.getTime() - 2 * 60 * 60 * 1000);
+        
+        if (rateLimitTime > twoHoursAgo) {
+          throw new Error('AI 서비스 사용량이 초과되었습니다. 2시간 후 다시 시도해주세요.');
+        }
+      }
+    } catch (error) {
+      // 파싱 오류 무시
+    }
+  }
+  
   if (currentUsage >= MAX_DAILY_USAGE) {
     throw new Error(`일일 API 사용량 한도에 도달했습니다. (${currentUsage}/${MAX_DAILY_USAGE}) 내일 다시 시도해주세요.`);
   }
 };
+
+// 개발자 도구에서 사용할 수 있는 전역 함수들
+if (typeof window !== 'undefined') {
+  (window as any).resetOpenAIUsage = resetApiUsageCount;
+  (window as any).getOpenAIUsage = getApiUsageCount;
+  (window as any).checkOpenAILimit = checkApiUsageLimit;
+  (window as any).resetRateLimit = resetRateLimit;
+  (window as any).forceResetAll = forceResetAll;
+}
 
 export interface StudentAnalysisData {
   studentName: string;
@@ -49,9 +182,28 @@ export interface StudentAnalysisData {
   isolationRisk: string;
   friendshipDevelopment: string;
   communityIntegration: string;
-  satisfaction?: number; // 학교생활 만족도 (0-1)
-  violenceExperience?: number; // 폭력 경험도 (0-1)
+  satisfaction: number; // 학교생활 만족도 (0-1) - 필수 필드로 변경
+  violenceExperience: number; // 폭력 경험도 (0-1) - 필수 필드로 변경
   personalSummary?: any;
+  // 개별 설문 응답 데이터 추가
+  surveyResponses?: {
+    question: string;
+    answer: string;
+  }[];
+  // 네트워크 특성 추가
+  networkCharacteristics?: {
+    madeChoices: number;
+    receivedChoices: number;
+    networkPosition: string;
+    communityMembers: string[];
+  };
+}
+
+export interface TokenUsage {
+  prompt_tokens: number;
+  completion_tokens: number;
+  total_tokens: number;
+  cost_estimate?: number;
 }
 
 export interface GeneratedReport {
@@ -166,264 +318,158 @@ export interface GeneratedReport {
 export const generateStudentGuidanceReport = async (
   analysisData: StudentAnalysisData,
   additionalSurveyData?: any
-): Promise<GeneratedReport> => {
+): Promise<{ report: GeneratedReport; tokenUsage?: TokenUsage }> => {
   // API 키가 없으면 대체 리포트 생성
   if (!OPENAI_API_KEY) {
-    return generateFallbackReport(analysisData);
+    const fallbackResult = generateFallbackReport(analysisData);
+    return fallbackResult;
+  }
+
+  // 사용량 제한 체크
+  try {
+    checkApiUsageLimit();
+  } catch (error) {
+    const fallbackResult = generateFallbackReport(analysisData);
+    return fallbackResult;
   }
 
   try {
-    const prompt = `
-당신은 교육심리학 전문가이자 학생 상담 전문가입니다. 교우관계 네트워크 분석 결과를 바탕으로 매우 상세하고 전문적인 지도 리포트를 생성해주세요.
+    // 설문 응답 분류 (만족도/폭력 경험 분리)
+    const satisfactionResponses = analysisData.surveyResponses?.filter(r => {
+      const q = r.question.toLowerCase();
+      return q.includes('친구') || q.includes('즐겁') || q.includes('학교') || q.includes('선생님');
+    }) || [];
+    
+    const violenceResponses = analysisData.surveyResponses?.filter(r => {
+      const q = r.question.toLowerCase();
+      return q.includes('때리') || q.includes('욕') || q.includes('따돌') || q.includes('괴롭');
+    }) || [];
+    
+    // 친구 관계 정보
+    const friendNames = analysisData.networkCharacteristics?.communityMembers.slice(0, 3) || [];
+    
+    // 정확한 분석을 위한 개선된 프롬프트
+    const prompt = `초등학생 교우관계 전문가로서 다음 학생의 교우관계와 학교생활을 종합 분석하여 JSON 형식의 리포트를 작성하세요.
 
-[학생 정보]
-- 이름: ${analysisData.studentName}
-- 학년/반: ${analysisData.grade}학년 ${analysisData.class}반
+【학생 정보】
+이름: ${analysisData.studentName} (${analysisData.grade}학년 ${analysisData.class}반)
 
-[네트워크 분석 결과]
-- 중심성 점수: ${(analysisData.centrality * 100).toFixed(1)}%
-- 소속 커뮤니티: ${analysisData.community + 1}번 그룹
-- 총 친구 관계 수: ${analysisData.totalRelationships}명
-- 고립 위험도: ${analysisData.isolationRisk}
-- 친구 관계 발전: ${analysisData.friendshipDevelopment}
-- 커뮤니티 통합: ${analysisData.communityIntegration}
-- 학교생활 만족도: ${((analysisData.satisfaction || 0) * 100).toFixed(1)}% (${(analysisData.satisfaction || 0) >= 0.7 ? '높음' : (analysisData.satisfaction || 0) >= 0.4 ? '보통' : '낮음'})
-- 폭력 경험도: ${((analysisData.violenceExperience || 0) * 100).toFixed(1)}% (${(analysisData.violenceExperience || 0) >= 0.7 ? '높음' : (analysisData.violenceExperience || 0) >= 0.4 ? '보통' : '낮음'})
+【네트워크 분석】
+• 중심성 점수: ${(analysisData.centrality * 100).toFixed(1)}%
+• 전체 친구 수: ${analysisData.totalRelationships}명
+• 선택한 친구: ${analysisData.networkCharacteristics?.madeChoices || 0}명
+• 선택받은 횟수: ${analysisData.networkCharacteristics?.receivedChoices || 0}명
+• 네트워크 위치: ${analysisData.networkCharacteristics?.networkPosition || '평균'}
+${friendNames.length > 0 ? `• 같은 그룹 친구: ${friendNames.join(', ')}` : ''}
 
-${additionalSurveyData ? `
-[추가 설문 데이터]
-${JSON.stringify(additionalSurveyData, null, 2)}
-` : ''}
+【학교생활 만족도】
+만족도 점수: ${(analysisData.satisfaction * 100).toFixed(1)}%
+${satisfactionResponses.length > 0 ? satisfactionResponses.map(r => `• ${r.question}: ${r.answer}`).join('\n') : ''}
 
-[설문 내용 안내]
-종합조사 설문은 다음과 같은 9개 문항으로 구성됩니다:
+【학교폭력 경험】
+폭력경험 점수: ${(analysisData.violenceExperience * 100).toFixed(1)}%
+${violenceResponses.length > 0 ? violenceResponses.map(r => `• ${r.question}: ${r.answer}`).join('\n') : ''}
 
-1. 교우관계 조사 (1문항):
-   Q1. 최근 한달 동안 가장 많이 함께 한 친구들을 학생이름으로 적어주세요 (최대 3명)
-   
-2. 학교생활 만족도 조사 (4문항):
-   Q2. 쉬는 시간에 친구들과 잘 논다
-   Q3. 수업 시간에 즐겁게 참여한다
-   Q4. 학교에 오고 싶다는 생각이 든다
-   Q5. 선생님과 이야기하는 것이 편하다
-   (응답: 예 / 아니오)
-   
-3. 학교폭력 경험도 조사 (3문항):
-   Q6. 친구들이 나를 때리거나 발로 차거나 밀치는 행동을 한 적이 있나요?
-   Q7. 친구들이 나에게 욕을 하거나 놀린 적이 있나요?
-   Q8. 친구들이 나를 따돌리거나 괴롭힌 적이 있나요?
-   (응답: 전혀 없다 / 한 두번 당한 적 있다 / 자주 있다)
-   
-4. 주관식 (1문항):
-   Q9. 학교생활에서 가장 힘든 점이나 바라는 점을 자유롭게 적어주세요
-
-분석 시 이 설문 구조를 고려하여 학생의 교우관계, 학교생활 만족도, 폭력 경험을 종합적으로 평가해야 합니다.
-
-[분석 기준]
-교우관계 유형 분류 (연결 수 기준):
-- 연결 수 0개: 외톨이형 (네트워크 외곽부)
-- 연결 수 1-2개: 소수 친구 학생 (네트워크 주변부)
-- 연결 수 3-5개: 평균적인 학생 (네트워크 중간부)
-- 연결 수 6-8개: 친구 많은 학생 (네트워크 중심부)
-- 연결 수 9개 이상: 사교 스타 (네트워크 핵심부)
-
-만족도와 폭력 경험도 종합 고려사항:
-- 학교생활 만족도가 낮은 경우: 학교생활 부적응, 학습 동기 저하, 우울감 등의 위험
-- 폭력 경험도가 높은 경우: 가해자/피해자 위험, 학교폭력 예방 교육 필요
-- 교우관계 유형과 만족도/폭력 경험도를 종합하여 맞춤형 지도 방안 제시 필요
-
-[요청사항]
-다음과 같이 매우 상세하고 전문적인 JSON 형태의 지도 리포트를 생성해주세요. 첨부된 파일 형태를 참고하여 다음 구조로 작성해주세요:
-
+위 데이터를 바탕으로 다음 JSON 구조의 정확한 분석 리포트를 생성하세요:
 {
   "comprehensiveDiagnosis": {
-    "studentType": "주도형",
-    "summary": "${analysisData.studentName} 학생은 교우관계 네트워크의 중심에 위치한 '주도형' 학생입니다. 뛰어난 사회성과 리더십을 바탕으로 많은 친구들에게 긍정적인 영향을 미치고 있으며, 이는 학급 전체에 활기를 불어넣는 중요한 강점입니다. 하지만 선생님과의 관계를 다소 불편하게 느끼고, 스스로 참여를 결정하는 활동 외에는 소극적인 모습을 보입니다. 이는 리더 역할의 부담감이나, 수직적인 관계에 대한 심리적 저항감에서 비롯될 수 있으므로, 학생의 영향력을 긍정적으로 이끌어주기 위한 지원이 필요합니다.",
-    "keyCharacteristics": [
-      "뛰어난 사회성과 리더십을 바탕으로 많은 친구들에게 긍정적인 영향을 미치고 있음",
-      "학급 전체에 활기를 불어넣는 중요한 역할을 수행함"
-    ],
-    "challenges": [
-      "선생님과의 관계를 다소 불편하게 느끼고 있음",
-      "스스로 참여를 결정하는 활동 외에는 소극적인 모습을 보임",
-      "리더 역할의 부담감이나 수직적인 관계에 대한 심리적 저항감"
-    ]
+    "studentType": "외톨이형|소수친구|평균형|친구많음|사교스타",
+    "summary": "학생의 전반적 교우관계와 학교생활 상태를 2-3문장으로 요약",
+    "keyCharacteristics": ["실제 데이터 기반 주요 특성 2-3개"],
+    "challenges": ["실제 데이터 기반 도전과제 2-3개"]
   },
   "detailedAnalysis": {
     "schoolLifeSatisfaction": {
-      "surveyResults": [
-        {"question": "Q2. 쉬는 시간에 친구들과 잘 논다", "answer": "예"},
-        {"question": "Q3. 수업 시간에 즐겁게 참여한다", "answer": "예"},
-        {"question": "Q4. 학교에 오고 싶다는 생각이 든다", "answer": "예"},
-        {"question": "Q5. 선생님과 이야기하는 것이 편하다", "answer": "아니오"}
-      ],
-      "analysis": "친구 관계에 대한 긍정 응답과 달리, 교사와의 관계에는 부정적으로 답했습니다. 이는 자신이 주도하지 않는 관계에는 큰 흥미를 느끼지 못하는 성향을 시사합니다."
+      "surveyResults": [실제 만족도 설문 응답],
+      "analysis": "만족도 점수와 응답 내용을 반영한 분석"
     },
     "violenceExperience": {
-      "surveyResults": [
-        {"question": "Q6. 친구들이 나를 때리거나 발로 차거나 밀치는 행동을 한 적이 있나요?", "answer": "전혀 없다"},
-        {"question": "Q7. 친구들이 나에게 욕을 하거나 놀린 적이 있나요?", "answer": "한 두번 당한 적 있다"},
-        {"question": "Q8. 친구들이 나를 따돌리거나 괴롭힌 적이 있나요?", "answer": "전혀 없다"}
-      ],
-      "analysis": "신체적 폭력이나 따돌림은 경험하지 않았으나, 언어적 괴롭힘을 경험한 것으로 나타나 주의 깊은 관찰이 필요합니다."
+      "surveyResults": [실제 폭력경험 설문 응답],
+      "analysis": "폭력경험 점수와 응답 내용을 반영한 분석"
     },
     "peerNetworkAnalysis": {
-      "receivedChoices": ${analysisData.totalRelationships},
-      "madeChoices": ${Math.max(1, analysisData.totalRelationships - 1)},
-      "networkPosition": "사교 스타",
-      "analysis": "다수의 학생으로부터 선택을 받아 관계망의 중심에 있으며, 본인 역시 여러 친구들과 상호작용하며 네트워크 허브 역할을 하고 있습니다. 학급 내 여론 형성이나 분위기를 주도하는 핵심적인 인물입니다."
+      "receivedChoices": ${analysisData.networkCharacteristics?.receivedChoices || 0},
+      "madeChoices": ${analysisData.networkCharacteristics?.madeChoices || 0},
+      "networkPosition": "${analysisData.networkCharacteristics?.networkPosition || '평균'}",
+      "analysis": "네트워크 위치와 친구관계의 균형성 분석"
     }
   },
   "strengthsAndImprovements": {
-    "strengths": [
-      {
-        "title": "뛰어난 사회성 및 리더십",
-        "description": "많은 친구들에게 신뢰와 인기를 얻고 있어 관계의 중심 역할을 합니다."
-      },
-      {
-        "title": "긍정적 또래 영향력",
-        "description": "학생의 즐거운 학교생활 태도는 주변 친구들에게도 긍정적인 영향을 미칠 수 있습니다."
-      }
-    ],
-    "improvementAreas": [
-      {
-        "title": "권위와의 관계 설정",
-        "description": "교사와의 관계를 불편하게 여겨, 지도나 조언을 받아들이는 데 어려움을 겪을 수 있습니다."
-      },
-      {
-        "title": "역할에 대한 부담감",
-        "description": "네트워크의 중심에 있다는 사실이 때로는 압박감이나 과도한 책임감으로 작용할 수 있습니다."
-      },
-      {
-        "title": "선택적 참여",
-        "description": "자신이 흥미를 느끼거나 주도하는 활동에만 참여하려는 경향이 있어, 다양한 경험의 기회를 놓칠 수 있습니다."
-      }
-    ]
+    "strengths": [{"title": "구체적 강점", "description": "실제 데이터 근거"}],
+    "improvementAreas": [{"title": "구체적 개선점", "description": "실제 데이터 근거"}]
   },
   "customizedSolutions": {
-    "overallGoal": "${analysisData.studentName} 학생의 뛰어난 리더십을 긍정적으로 발휘하도록 돕고, 모든 관계에서 건강한 상호작용을 배울 수 있도록 지원해야 합니다.",
-    "shortTermSolutions": [
-      {
-        "title": "역할 부여 및 책임감 강화",
-        "description": "학급 내에서 학생의 리더십을 공식적으로 인정해 주는 역할(예: 모둠 리더, 프로젝트 팀장)을 맡겨 긍정적인 방향으로 영향력을 발휘하도록 합니다."
-      },
-      {
-        "title": "수평적 소통 시도",
-        "description": "지시나 지도보다는 학생의 의견을 먼저 묻고 존중하는 방식으로 대화하여 교사와의 관계에 대한 심리적 장벽을 낮춥니다."
-      }
-    ],
-    "midTermSolutions": [
-      {
-        "title": "리더십 멘토링",
-        "description": "학생에게 리더의 진정한 의미(타인에 대한 배려, 책임감, 경청 등)에 대해 생각해 볼 기회를 제공하고, 교사가 조력자로서 함께 고민하도록 합니다."
-      },
-      {
-        "title": "새로운 영역으로 관심 확장",
-        "description": "학생이 평소에 참여하지 않았던 활동(예: 봉사활동, 특정 주제 탐구)의 중요성을 설명하고, 친구들과 함께 도전해 보도록 제안하여 경험을 넓힙니다."
-      }
-    ],
-    "longTermSolutions": [
-      {
-        "title": "협력적 문제 해결 능력 강화",
-        "description": "학급 전체가 참여하는 프로젝트에서 ${analysisData.studentName} 학생이 주도자 역할뿐만 아니라, 다른 친구의 의견을 듣고 지원하는 조력자 역할도 경험하도록 키웁니다."
-      },
-      {
-        "title": "정기적인 관계 변화 추이 관찰",
-        "description": "교우관계 서비스 데이터를 통해 학생의 영향력이 어떻게 변화하는지, 새로운 관계가 형성되는지 등을 지속적으로 모니터링하며 건강한 성장을 지원합니다."
-      }
-    ]
+    "overallGoal": "학생 특성에 맞는 구체적 목표",
+    "shortTermSolutions": [{"title": "1-2주 실천방안", "description": "구체적 방법"}],
+    "midTermSolutions": [{"title": "1-2개월 실천방안", "description": "구체적 방법"}],
+    "longTermSolutions": [{"title": "3-6개월 실천방안", "description": "구체적 방법"}]
   }
 }
 
-중요: 
-1. 반드시 JSON 형태로만 응답하고, 다른 설명이나 텍스트는 포함하지 마세요.
-2. 각 항목은 첨부된 파일처럼 매우 구체적이고 상세한 내용으로 작성해주세요.
-3. 교육 전문가의 관점에서 전문적이고 실용적인 분석을 제공해주세요.
-4. 학생의 이름을 적절히 활용하여 개인화된 내용을 작성해주세요.
-5. 중심성 점수에 따라 학생 유형을 정확히 분류하고, 해당 유형에 맞는 맞춤형 분석을 제공해주세요.
-6. 반드시 다음 필드들을 모두 포함해야 합니다: comprehensiveDiagnosis, detailedAnalysis, strengthsAndImprovements, customizedSolutions
-7. 모든 배열과 객체 필드는 완전히 채워져야 합니다.
-`;
+중요: 실제 설문 응답 내용을 정확히 반영하여 개별 학생에 맞는 분석을 제공하세요. JSON만 출력하세요.`;
 
-    // API 사용량 한도 확인
-    checkApiUsageLimit();
-    
-    // API 호출 (재시도 로직 포함)
+    // API 호출 (한 번만 시도, 에러 조용히 처리)
+    console.log('🤖 OpenAI API 호출 시작 (gpt-4o-mini)...');
     let response: Response;
-    let retryCount = 0;
-    const maxRetries = 5;
-    
-    while (retryCount < maxRetries) {
-      try {
-        response = await fetch(OPENAI_API_URL, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${OPENAI_API_KEY}`
-          },
-          body: JSON.stringify({
-            model: 'gpt-4',
-            messages: [
-              {
-                role: 'system',
-                content: '당신은 교육 전문가이자 학생 상담 전문가입니다. 교우관계 분석 결과를 바탕으로 구체적이고 실용적인 지도 방안을 제시합니다.'
-              },
-              {
-                role: 'user',
-                content: prompt
-              }
-            ],
-            temperature: 0.7,
-            max_tokens: 2000
-          })
-        });
+    try {
+      response = await fetch(OPENAI_API_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${OPENAI_API_KEY}`
+        },
+        body: JSON.stringify({
+          model: 'gpt-4o-mini',
+          messages: [
+            {
+              role: 'system',
+              content: '초등학교 교육심리 전문가. 학생별 설문응답 기반 맞춤형 교우관계 분석 리포트 작성'
+            },
+            {
+              role: 'user',
+              content: prompt
+            }
+          ],
+          temperature: 0.7,  // 다양한 분석을 위해 조금 높임
+          max_tokens: 1500  // 더 자세한 분석을 위해 증가
+        })
+      });
 
-        if (response.status === 429) {
-          // Rate limit - 재시도
-          if (retryCount >= maxRetries - 1) {
-            throw new Error('API 사용량 제한에 도달했습니다. 잠시 후 다시 시도해주세요.');
-          }
-          retryCount++;
-          const waitTime = Math.pow(2, retryCount) * 2000 + Math.random() * 1000; // 지수 백오프 + 랜덤 지연
-          await new Promise(resolve => setTimeout(resolve, waitTime));
-          continue;
-        }
-
-        if (!response.ok) {
-          throw new Error(`OpenAI API 오류: ${response.status}`);
-        }
-
-        // API 사용량 증가
-        incrementApiUsageCount();
-        break; // 성공하면 루프 종료
-      } catch (error) {
-        if (retryCount >= maxRetries - 1) {
-          throw error; // 최대 재시도 횟수 초과
-        }
-        retryCount++;
-        const waitTime = Math.pow(2, retryCount) * 1000;
-        await new Promise(resolve => setTimeout(resolve, waitTime));
+      // API 호출 실패 시 바로 대체 리포트 반환
+      if (!response.ok) {
+        console.warn(`❌ OpenAI API 오류 (${response.status}). 대체 리포트 생성`);
+        return generateFallbackReport(analysisData);
       }
+    } catch (fetchError) {
+      // Fetch 자체 실패 시 대체 리포트 반환
+      console.warn('❌ OpenAI API 연결 실패. 대체 리포트 생성');
+      return generateFallbackReport(analysisData);
     }
 
-    // response가 정의되지 않은 경우 (이론적으로 발생하지 않아야 함)
-    if (!response!) {
-      throw new Error('API 호출이 실패했습니다.');
-    }
+    console.log('✅ OpenAI API 호출 성공!');
+    // API 사용량 증가
+    incrementApiUsageCount();
 
     const data = await response.json();
     
     // 응답 데이터 구조 검증
     if (!data || !data.choices || !Array.isArray(data.choices) || data.choices.length === 0) {
-      console.error('API 응답 구조 오류:', data);
       throw new Error('API 응답 구조가 올바르지 않습니다.');
     }
     
     const content = data.choices[0]?.message?.content;
     
     if (!content) {
-      console.error('API 응답 내용 없음:', data);
       throw new Error('API 응답에서 내용을 찾을 수 없습니다.');
+    }
+
+    // 토큰 사용량 추출
+    let tokenUsage: TokenUsage | undefined;
+    if (data.usage) {
+      tokenUsage = calculateTokenUsage(
+        data.usage.prompt_tokens || 0,
+        data.usage.completion_tokens || 0
+      );
     }
 
     // JSON 파싱 - 더 강력한 파싱 로직
@@ -445,7 +491,73 @@ ${JSON.stringify(additionalSurveyData, null, 2)}
         cleanedContent += '}';
       }
       
-      const report = JSON.parse(cleanedContent);
+      // JSON 파싱을 더 안전하게 처리
+      let report;
+      try {
+        report = JSON.parse(cleanedContent);
+      } catch (parseError) {
+        // JSON 수정 시도: 다양한 방법으로 시도
+        try {
+          let fixedContent = cleanedContent;
+          
+          // 1. 빈 문자열 값 제거 ("description": "" 같은 경우)
+          fixedContent = fixedContent.replace(/"([^"]+)":\s*""\s*}/g, '}');
+          fixedContent = fixedContent.replace(/"([^"]+)":\s*""\s*,/g, '');
+          
+          // 2. 마지막 불완전한 속성 제거
+          const lines = fixedContent.split('\n');
+          let validLines: string[] = [];
+          let braceCount = 0;
+          let bracketCount = 0;
+          let inString = false;
+          
+          for (let i = 0; i < lines.length; i++) {
+            const line = lines[i];
+            
+            // 중괄호와 대괄호 카운트
+            for (let char of line) {
+              if (char === '"' && (i === 0 || line[line.indexOf(char) - 1] !== '\\')) {
+                inString = !inString;
+              }
+              if (!inString) {
+                if (char === '{') braceCount++;
+                if (char === '}') braceCount--;
+                if (char === '[') bracketCount++;
+                if (char === ']') bracketCount--;
+              }
+            }
+            
+            validLines.push(line);
+            
+            // 균형이 맞으면 여기서 중단
+            if (braceCount === 0 && bracketCount === 0 && validLines.length > 10) {
+              break;
+            }
+          }
+          
+          fixedContent = validLines.join('\n');
+          
+          // 3. 마지막 쉼표 제거
+          fixedContent = fixedContent.replace(/,(\s*[}\]])/g, '$1');
+          
+          // 4. 닫히지 않은 중괄호/대괄호 닫기
+          let finalBraceCount = (fixedContent.match(/{/g) || []).length - (fixedContent.match(/}/g) || []).length;
+          let finalBracketCount = (fixedContent.match(/\[/g) || []).length - (fixedContent.match(/\]/g) || []).length;
+          
+          while (finalBracketCount > 0) {
+            fixedContent += ']';
+            finalBracketCount--;
+          }
+          while (finalBraceCount > 0) {
+            fixedContent += '}';
+            finalBraceCount--;
+          }
+          
+          report = JSON.parse(fixedContent);
+        } catch (secondParseError) {
+          throw new Error(`생성된 리포트 형식이 올바르지 않습니다: ${parseError instanceof Error ? parseError.message : '알 수 없는 오류'}`);
+        }
+      }
       
       // 새로운 구조 검증
       if (!report.comprehensiveDiagnosis) {
@@ -513,9 +625,8 @@ ${JSON.stringify(additionalSurveyData, null, 2)}
         report.customizedSolutions.longTermSolutions = [];
       }
       
-      return report as GeneratedReport;
+      return { report: report as GeneratedReport, tokenUsage };
     } catch (parseError) {
-      console.error('JSON 파싱 오류:', parseError);
       
       // 더 구체적인 오류 메시지 제공
       if (parseError instanceof Error) {
@@ -526,33 +637,23 @@ ${JSON.stringify(additionalSurveyData, null, 2)}
     }
 
   } catch (error) {
-    // 사용자 친화적인 에러 메시지
-    if (error instanceof Error) {
-      if (error.message.includes('429') || error.message.includes('사용량 제한')) {
-        throw new Error('AI 서비스 사용량이 초과되었습니다. 잠시 후 다시 시도해주세요.');
-      } else if (error.message.includes('insufficient_quota') || error.message.includes('quota')) {
-        throw new Error('AI 서비스 결제 한도에 도달했습니다. 결제 정보를 확인해주세요.');
-      } else if (error.message.includes('401') || error.message.includes('인증')) {
-        throw new Error('AI 서비스 인증에 실패했습니다. 관리자에게 문의해주세요.');
-      } else if (error.message.includes('500')) {
-        throw new Error('AI 서비스에 일시적인 문제가 발생했습니다. 잠시 후 다시 시도해주세요.');
-      } else {
-        throw new Error(`AI 리포트 생성 중 오류가 발생했습니다: ${error.message}`);
-      }
-    } else {
-      throw new Error('AI 리포트 생성 중 알 수 없는 오류가 발생했습니다.');
-    }
+    // 오류 발생 시 바로 대체 리포트 반환
+    return generateFallbackReport(analysisData);
   }
 };
 
 // 정확한 대체 리포트 생성 (API 실패 시 사용)
 export const generateFallbackReport = (
   analysisData: StudentAnalysisData
-): GeneratedReport => {
+): { report: GeneratedReport; tokenUsage?: TokenUsage } => {
   const centrality = analysisData.centrality;
   const studentName = analysisData.studentName;
-  const satisfaction = analysisData.satisfaction || 0;
-  const violenceExperience = analysisData.violenceExperience || 0;
+  const satisfaction = analysisData.satisfaction;
+  const violenceExperience = analysisData.violenceExperience;
+  
+  // 개별 설문 응답 데이터 활용
+  const surveyResponses = analysisData.surveyResponses || [];
+  const networkCharacteristics = analysisData.networkCharacteristics;
   
   // 만족도와 폭력 경험도 반영한 분석
   const satisfactionLevel = satisfaction >= 0.7 ? '높음' : satisfaction >= 0.4 ? '보통' : '낮음';
@@ -587,13 +688,18 @@ export const generateFallbackReport = (
     guidancePlan = '친구 관계를 점진적으로 확장하고, 그룹 활동 참여를 통해 사회적 기술을 향상시키며, 폭력 예방 교육을 통해 안전한 학교생활을 유지할 수 있도록 지원해야 합니다.';
   } else if (connectionCount <= 5) {
     studentTypeClassification = '평균적인 학생';
-    summary = `${studentName} 학생은 교우관계에서 안정적인 위치를 유지하고 있는 평균적인 학생입니다. 연결 수 ${connectionCount}개로 네트워크의 중간부에 위치하며, 학교생활 만족도는 ${satisfactionLevel} 수준, 폭력 경험도는 ${violenceRisk} 수준입니다. 적절한 수준의 친구 관계를 형성하고 있으며, 대부분의 학교 활동에 균형 있게 참여하고 있습니다.`;
     
-    currentStatus = `교우관계 네트워크 분석: 연결 수 ${connectionCount}개로 네트워크의 중간부에 위치합니다. 안정적이면서도 확장 가능한 교우관계를 유지하고 있습니다. 학교생활 만족도: ${satisfactionLevel} 수준 (${(satisfaction * 100).toFixed(1)}%)으로 전반적으로 만족스러운 학교생활을 하고 있습니다. 폭력 경험도: ${violenceRisk} 수준 (${(violenceExperience * 100).toFixed(1)}%)으로 ${violenceExperience >= 0.5 ? '주의 관찰이 필요' : '안전한 상태'}합니다.`;
+    // 실제 설문 응답 반영
+    const friendSatisfaction = surveyResponses.find(r => r.question.includes('친구') && r.question.includes('논다'));
+    const schoolDesire = surveyResponses.find(r => r.question.includes('학교') && r.question.includes('오고 싶'));
     
-    riskAssessment = `긍정적인 요인: 1. 안정적인 교우관계 - 균형 잡힌 관계를 유지하고 있습니다. 2. 긍정적 학교생활 - 만족도가 ${satisfactionLevel} 수준으로 학교생활에 잘 적응하고 있습니다. 주의가 필요한 부분: 1. 네트워크 확장 기회 - 더 다양한 친구들과의 교류 기회가 필요합니다. 2. 폭력 경험도 ${violenceRisk} - ${violenceExperience >= 0.5 ? '폭력 상황에 대한 예방 교육이 필요' : '현재 안전한 상태를 유지하고 있음'}합니다.`;
+    summary = `${studentName} 학생은 교우관계에서 안정적인 위치를 유지하고 있습니다. ${connectionCount}명의 친구와 연결되어 있으며, 학교생활 만족도는 ${(satisfaction * 100).toFixed(0)}%, 폭력 경험도는 ${(violenceExperience * 100).toFixed(0)}%입니다. ${friendSatisfaction ? `친구관계에 대해 "${friendSatisfaction.answer}"라고 응답했으며, ` : ''}${schoolDesire ? `학교에 오고 싶다는 질문에 "${schoolDesire.answer}"라고 답변했습니다.` : '적절한 수준의 또래관계를 형성하고 있습니다.'}`;
     
-    guidancePlan = '현재의 안정적인 교우관계를 유지하면서 네트워크를 점진적으로 확장하고, 폭력 예방 교육을 통해 안전한 학교생활을 유지할 수 있도록 지원해야 합니다.';
+    currentStatus = `교우관계: ${connectionCount}명과 연결 (네트워크 중간부). 선택한 친구 ${networkCharacteristics?.madeChoices || 0}명, 선택받은 횟수 ${networkCharacteristics?.receivedChoices || 0}회로 ${networkCharacteristics && networkCharacteristics.madeChoices > networkCharacteristics.receivedChoices ? '주도적 관계 형성' : networkCharacteristics && networkCharacteristics.receivedChoices > networkCharacteristics.madeChoices ? '인기 있는 학생' : '균형잡힌 관계'}를 보입니다. 만족도 ${(satisfaction * 100).toFixed(0)}%로 ${satisfaction >= 0.6 ? '긍정적 학교생활' : satisfaction >= 0.4 ? '보통 수준 적응' : '적응 어려움'}. 폭력경험 ${(violenceExperience * 100).toFixed(0)}%로 ${violenceExperience === 0 ? '매우 안전' : violenceExperience < 0.3 ? '비교적 안전' : '주의 필요'}.`;
+    
+    riskAssessment = `긍정적 요소: 1. ${connectionCount}명의 안정적 친구관계 2. 만족도 ${satisfactionLevel}(${(satisfaction * 100).toFixed(0)}%) ${satisfaction >= 0.5 ? '- 학교생활 적응 양호' : '- 일부 개선 필요'}. 관심 영역: 1. 폭력경험 ${violenceRisk}(${(violenceExperience * 100).toFixed(0)}%) ${violenceExperience >= 0.3 ? '- 예방교육 및 관찰 필요' : '- 안전 유지 중'} 2. 네트워크 확장 기회 제공.`;
+    
+    guidancePlan = `현재의 ${connectionCount}명 친구관계를 유지하며 ${satisfaction < 0.5 ? '학교생활 만족도 향상과 ' : ''}${violenceExperience > 0 ? '폭력예방 교육을 강화하고 ' : ''}점진적 네트워크 확장을 지원합니다.`;
   } else if (connectionCount <= 8) {
     studentTypeClassification = '친구 많은 학생';
     summary = `${studentName} 학생은 교우관계에서 중심부에 위치한 친구 많은 학생입니다. 연결 수 ${connectionCount}개로 네트워크의 중심부에 위치하며, 학교생활 만족도는 ${satisfactionLevel} 수준, 폭력 경험도는 ${violenceRisk} 수준입니다. 많은 친구들과 좋은 관계를 유지하고 있으며, 학급 내에서 영향력 있는 역할을 하고 있습니다.`;
@@ -614,7 +720,7 @@ export const generateFallbackReport = (
     guidancePlan = `${studentName} 학생의 뛰어난 리더십을 긍정적으로 발휘하도록 돕고, 폭력 예방 교육을 통해 안전한 학교생활을 유지할 수 있도록 지원해야 합니다.`;
   }
 
-  return {
+  const report: GeneratedReport = {
     comprehensiveDiagnosis: {
       studentType: studentTypeClassification,
       summary,
@@ -649,34 +755,89 @@ export const generateFallbackReport = (
     },
     detailedAnalysis: {
       schoolLifeSatisfaction: {
-        surveyResults: [
-          {"question": "Q2. 쉬는 시간에 친구들과 잘 논다", "answer": connectionCount >= 3 ? "예" : "보통"},
-          {"question": "Q3. 수업 시간에 즐겁게 참여한다", "answer": satisfaction >= 0.5 ? "예" : "보통"},
-          {"question": "Q4. 학교에 오고 싶다는 생각이 든다", "answer": satisfaction >= 0.5 ? "예" : "아니오"},
-          {"question": "Q5. 선생님과 이야기하는 것이 편하다", "answer": connectionCount >= 6 ? "보통" : satisfaction >= 0.7 ? "예" : "아니오"}
+        surveyResults: surveyResponses.filter(r => 
+          r.question.includes('친구들과 잘 논다') || 
+          r.question.includes('즐겁게 참여한다') ||
+          r.question.includes('오고 싶다는 생각') ||
+          r.question.includes('선생님과 이야기')
+        ).length > 0 ? surveyResponses.filter(r => 
+          r.question.includes('친구들과 잘 논다') || 
+          r.question.includes('즐겁게 참여한다') ||
+          r.question.includes('오고 싶다는 생각') ||
+          r.question.includes('선생님과 이야기')
+        ) : [
+          {"question": "Q2. 쉬는 시간에 친구들과 잘 논다", "answer": satisfaction >= 0.7 ? "예" : satisfaction >= 0.4 ? "보통" : "아니오"},
+          {"question": "Q3. 수업 시간에 즐겁게 참여한다", "answer": satisfaction >= 0.7 ? "예" : satisfaction >= 0.4 ? "보통" : "아니오"},
+          {"question": "Q4. 학교에 오고 싶다는 생각이 든다", "answer": satisfaction >= 0.7 ? "예" : satisfaction >= 0.4 ? "보통" : "아니오"},
+          {"question": "Q5. 선생님과 이야기하는 것이 편하다", "answer": satisfaction >= 0.7 ? "예" : satisfaction >= 0.4 ? "보통" : "아니오"}
         ],
-        analysis: connectionCount >= 6 ? 
-          "친구 관계에 대한 긍정 응답과 달리, 교사와의 관계에는 미묘한 거리감을 보입니다." :
-          connectionCount >= 3 ?
-          "친구 관계에서는 어느 정도 만족감을 보이며, 전반적으로 균형잡힌 학교생활을 하고 있습니다." :
-          "학교생활 전반에 대한 만족도가 낮으며, 특히 교사와의 관계와 학교생활 적응에 어려움을 겪고 있습니다."
+        analysis: (() => {
+          // 실제 응답 내용 기반 분석
+          const positiveCount = surveyResponses.filter(r => {
+            const q = r.question.toLowerCase();
+            const a = r.answer.toLowerCase();
+            return (q.includes('친구') || q.includes('즐겁') || q.includes('학교') || q.includes('선생님')) &&
+                   (a === '예' || a.includes('매우') || a.includes('그렇다'));
+          }).length;
+          
+          const negativeCount = surveyResponses.filter(r => {
+            const q = r.question.toLowerCase();
+            const a = r.answer.toLowerCase();
+            return (q.includes('친구') || q.includes('즐겁') || q.includes('학교') || q.includes('선생님')) &&
+                   (a === '아니오' || a.includes('그렇지 않') || a.includes('아니'));
+          }).length;
+          
+          if (positiveCount > negativeCount && satisfaction >= 0.6) {
+            return `학교생활에 대체로 만족하고 있으며(만족도 ${(satisfaction * 100).toFixed(0)}%), 특히 친구관계에서 긍정적인 경험을 하고 있습니다. 설문 응답에서 ${positiveCount}개 항목에 긍정적으로 답변했습니다.`;
+          } else if (satisfaction >= 0.4) {
+            return `학교생활에 어느 정도 만족감을 보이며(만족도 ${(satisfaction * 100).toFixed(0)}%), 일부 영역에서는 개선이 필요한 것으로 나타났습니다. 특히 부정적 응답 ${negativeCount}개 항목에 대한 관심이 필요합니다.`;
+          } else {
+            return `학교생활에 전반적인 어려움을 겪고 있으며(만족도 ${(satisfaction * 100).toFixed(0)}%), 친구관계나 학교 적응에 어려움이 있는 것으로 보입니다. 즉각적인 관심과 지원이 필요합니다.`;
+          }
+        })()
       },
       violenceExperience: {
-        surveyResults: [
-          {"question": "Q6. 친구들이 나를 때리거나 발로 차거나 밀치는 행동을 한 적이 있나요?", "answer": violenceExperience >= 0.7 ? "자주 있다" : violenceExperience >= 0.4 ? "한 두번 당한 적 있다" : "전혀 없다"},
-          {"question": "Q7. 친구들이 나에게 욕을 하거나 놀린 적이 있나요?", "answer": violenceExperience >= 0.6 ? "자주 있다" : violenceExperience >= 0.3 ? "한 두번 당한 적 있다" : "전혀 없다"},
-          {"question": "Q8. 친구들이 나를 따돌리거나 괴롭힌 적이 있나요?", "answer": violenceExperience >= 0.7 ? "자주 있다" : violenceExperience >= 0.4 ? "한 두번 당한 적 있다" : "전혀 없다"}
+        surveyResults: surveyResponses.filter(r => 
+          r.question.includes('때리거나') || 
+          r.question.includes('욕을 하거나') ||
+          r.question.includes('따돌리거나')
+        ).length > 0 ? surveyResponses.filter(r => 
+          r.question.includes('때리거나') || 
+          r.question.includes('욕을 하거나') ||
+          r.question.includes('따돌리거나')
+        ) : [
+          {"question": "Q6. 친구들이 나를 때리거나 발로 차거나 밀치는 행동을 한 적이 있나요?", "answer": violenceExperience >= 0.7 ? "자주 있다" : violenceExperience >= 0.4 ? "가끔 있다" : "전혀 없다"},
+          {"question": "Q7. 친구들이 나에게 욕을 하거나 놀린 적이 있나요?", "answer": violenceExperience >= 0.7 ? "자주 있다" : violenceExperience >= 0.4 ? "가끔 있다" : "전혀 없다"},
+          {"question": "Q8. 친구들이 나를 따돌리거나 괴롭힌 적이 있나요?", "answer": violenceExperience >= 0.7 ? "자주 있다" : violenceExperience >= 0.4 ? "가끔 있다" : "전혀 없다"}
         ],
-        analysis: violenceExperience >= 0.7 ?
-          "신체적, 언어적, 관계적 폭력을 자주 경험하고 있어 즉각적인 개입이 필요합니다." :
-          violenceExperience >= 0.4 ?
-          "일부 폭력 경험이 있어 주의 깊은 관찰과 예방 교육이 필요합니다." :
-          "현재까지 심각한 폭력 경험은 없으나, 예방 교육을 통해 안전한 학교생활을 유지해야 합니다."
+        analysis: (() => {
+          // 실제 응답 내용 기반 폭력 경험 분석
+          const violenceTypes = {
+            physical: surveyResponses.some(r => r.question.includes('때리') && (r.answer.includes('있다') || r.answer === '예')),
+            verbal: surveyResponses.some(r => r.question.includes('욕') && (r.answer.includes('있다') || r.answer === '예')),
+            relational: surveyResponses.some(r => r.question.includes('따돌') && (r.answer.includes('있다') || r.answer === '예'))
+          };
+          
+          const experiencedTypes = [];
+          if (violenceTypes.physical) experiencedTypes.push('신체적 폭력');
+          if (violenceTypes.verbal) experiencedTypes.push('언어적 폭력');
+          if (violenceTypes.relational) experiencedTypes.push('관계적 폭력');
+          
+          if (violenceExperience >= 0.7) {
+            return `${experiencedTypes.length > 0 ? experiencedTypes.join(', ') + '을' : '폭력을'} 자주 경험하고 있어 즉각적인 개입이 필요합니다. 폭력경험도 ${(violenceExperience * 100).toFixed(0)}%로 매우 위험한 수준입니다.`;
+          } else if (violenceExperience >= 0.4) {
+            return `${experiencedTypes.length > 0 ? experiencedTypes.join(', ') + '을' : '일부 폭력 상황을'} 경험한 것으로 나타나 주의 깊은 관찰과 예방 교육이 필요합니다. 폭력경험도 ${(violenceExperience * 100).toFixed(0)}%입니다.`;
+          } else if (violenceExperience > 0) {
+            return `경미한 수준의 폭력 경험이 있으나(폭력경험도 ${(violenceExperience * 100).toFixed(0)}%), 지속적인 예방 교육을 통해 안전한 환경을 조성해야 합니다.`;
+          } else {
+            return `현재까지 폭력 경험이 없는 안전한 상태입니다(폭력경험도 0%). 지속적인 예방 교육을 통해 안전한 학교생활을 유지해야 합니다.`;
+          }
+        })()
       },
       peerNetworkAnalysis: {
-        receivedChoices: analysisData.totalRelationships,
-        madeChoices: Math.max(1, analysisData.totalRelationships - 1),
-        networkPosition: studentTypeClassification,
+        receivedChoices: networkCharacteristics?.receivedChoices || analysisData.totalRelationships,
+        madeChoices: networkCharacteristics?.madeChoices || Math.max(1, analysisData.totalRelationships - 1),
+        networkPosition: networkCharacteristics?.networkPosition || studentTypeClassification,
         analysis: connectionCount >= 9 ?
           "다수의 학생으로부터 선택을 받아 관계망의 중심에 있으며, 학급 내 여론 형성이나 분위기를 주도하는 핵심적인 인물입니다." :
           connectionCount >= 6 ?
@@ -937,4 +1098,6 @@ export const generateFallbackReport = (
       }
     }
   };
+  
+  return { report };
 };

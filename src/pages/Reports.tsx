@@ -16,7 +16,8 @@ import {
   generateStudentGuidanceReport, 
   generateFallbackReport,
   type StudentAnalysisData,
-  type GeneratedReport 
+  type GeneratedReport,
+  type TokenUsage
 } from '../services/chatgptService';
 
 // 담임교사 정보 타입
@@ -83,6 +84,7 @@ const Reports: React.FC = () => {
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
   const [selectedReport, setSelectedReport] = useState<NetworkAnalysisResult | null>(null);
   const [aiReport, setAiReport] = useState<GeneratedReport | null>(null);
+  const [tokenUsage, setTokenUsage] = useState<TokenUsage | undefined>(undefined);
   const [generatingAiReport, setGeneratingAiReport] = useState(false);
   
   // 정렬 관련 상태
@@ -747,12 +749,23 @@ const Reports: React.FC = () => {
         isolationRisk: report.risk_indicators.isolation_risk,
         friendshipDevelopment: report.recommendations.friendship_development,
         communityIntegration: report.recommendations.community_integration,
-        personalSummary: report.recommendations.personal_summary
+        personalSummary: report.recommendations.personal_summary,
+        satisfaction: 0.5, // 기본값 (Reports 페이지에서는 설문 응답 데이터 접근 불가)
+        violenceExperience: 0, // 기본값
+        surveyResponses: [], // Reports 페이지에서는 상세 설문 응답 제공 안 함
+        networkCharacteristics: {
+          madeChoices: report.risk_indicators.total_relationships,
+          receivedChoices: report.risk_indicators.total_relationships,
+          networkPosition: report.centrality_scores.centrality >= 0.7 ? '사교 스타' : 
+                          report.centrality_scores.centrality >= 0.4 ? '친구 많은 학생' : '평균적인 학생',
+          communityMembers: []
+        }
       };
 
       // ChatGPT API 호출
-      const aiGeneratedReport = await generateStudentGuidanceReport(analysisData);
-      setAiReport(aiGeneratedReport);
+      const aiGeneratedResult = await generateStudentGuidanceReport(analysisData);
+      setAiReport(aiGeneratedResult.report);
+      setTokenUsage(aiGeneratedResult.tokenUsage);
       
       // AI 리포트를 DB에 저장
       try {
@@ -762,13 +775,8 @@ const Reports: React.FC = () => {
             student_id: student.id,
             survey_id: report.survey_id,
             teacher_id: teacherInfo?.id,
-            summary: aiGeneratedReport.summary,
-            current_status: aiGeneratedReport.currentStatus,
-            risk_assessment: aiGeneratedReport.riskAssessment,
-            guidance_plan: aiGeneratedReport.guidancePlan,
-            specific_actions: aiGeneratedReport.specificActions,
-            monitoring_points: aiGeneratedReport.monitoringPoints,
-            expected_outcomes: aiGeneratedReport.expectedOutcomes,
+            report_data: aiGeneratedResult.report,
+            token_usage: aiGeneratedResult.tokenUsage,
             created_at: new Date().toISOString(),
             updated_at: new Date().toISOString()
           }]);
@@ -795,11 +803,22 @@ const Reports: React.FC = () => {
         isolationRisk: report.risk_indicators.isolation_risk,
         friendshipDevelopment: report.recommendations.friendship_development,
         communityIntegration: report.recommendations.community_integration,
-        personalSummary: report.recommendations.personal_summary
+        personalSummary: report.recommendations.personal_summary,
+        satisfaction: 0.5, // 기본값
+        violenceExperience: 0, // 기본값
+        surveyResponses: [],
+        networkCharacteristics: {
+          madeChoices: report.risk_indicators.total_relationships,
+          receivedChoices: report.risk_indicators.total_relationships,
+          networkPosition: report.centrality_scores.centrality >= 0.7 ? '사교 스타' : 
+                          report.centrality_scores.centrality >= 0.4 ? '친구 많은 학생' : '평균적인 학생',
+          communityMembers: []
+        }
       };
       
-      const fallbackReport = generateFallbackReport(fallbackData);
-      setAiReport(fallbackReport);
+      const fallbackResult = generateFallbackReport(fallbackData);
+      setAiReport(fallbackResult.report);
+      setTokenUsage(fallbackResult.tokenUsage);
       
       // Fallback 리포트도 DB에 저장
       try {
@@ -809,13 +828,8 @@ const Reports: React.FC = () => {
             student_id: student.id,
             survey_id: report.survey_id,
             teacher_id: teacherInfo?.id,
-            summary: fallbackReport.summary,
-            current_status: fallbackReport.currentStatus,
-            risk_assessment: fallbackReport.riskAssessment,
-            guidance_plan: fallbackReport.guidancePlan,
-            specific_actions: fallbackReport.specificActions,
-            monitoring_points: fallbackReport.monitoringPoints,
-            expected_outcomes: fallbackReport.expectedOutcomes,
+            report_data: fallbackResult.report,
+            token_usage: fallbackResult.tokenUsage,
             created_at: new Date().toISOString(),
             updated_at: new Date().toISOString()
           }]);

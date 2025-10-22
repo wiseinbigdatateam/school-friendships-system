@@ -3,11 +3,49 @@ import { GeneratedReport } from '../services/chatgptService';
 
 interface AIReportDisplayProps {
   aiReport: GeneratedReport;
+  tokenUsage?: {
+    prompt_tokens: number;
+    completion_tokens: number;
+    total_tokens: number;
+    cost_estimate?: number;
+  };
 }
 
-const AIReportDisplay: React.FC<AIReportDisplayProps> = ({ aiReport }) => {
+const AIReportDisplay: React.FC<AIReportDisplayProps> = ({ aiReport, tokenUsage }) => {
   return (
     <div className="space-y-6">
+      {/* 토큰 사용량 정보 */}
+      {/* {tokenUsage && (
+        <div className="rounded-lg border border-gray-200 bg-gray-50 p-4">
+          <h4 className="mb-3 text-sm font-semibold text-gray-700">
+            📊 AI 토큰 사용량 정보
+          </h4>
+          <div className="grid grid-cols-2 gap-4 text-sm">
+            <div className="space-y-2">
+              <div className="flex justify-between">
+                <span className="text-gray-600">프롬프트 토큰:</span>
+                <span className="font-medium text-blue-600">{tokenUsage.prompt_tokens.toLocaleString()}개</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-600">응답 토큰:</span>
+                <span className="font-medium text-green-600">{tokenUsage.completion_tokens.toLocaleString()}개</span>
+              </div>
+            </div>
+            <div className="space-y-2">
+              <div className="flex justify-between">
+                <span className="text-gray-600">총 토큰:</span>
+                <span className="font-medium text-purple-600">{tokenUsage.total_tokens.toLocaleString()}개</span>
+              </div>
+              {tokenUsage.cost_estimate && (
+                <div className="flex justify-between">
+                  <span className="text-gray-600">추정 비용:</span>
+                  <span className="font-medium text-orange-600">${tokenUsage.cost_estimate.toFixed(4)}</span>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )} */}
       {/* 종합진단 */}
       <div className="rounded-lg border border-blue-200 bg-blue-50 p-6">
         <h4 className="mb-4 text-lg font-semibold text-blue-800">

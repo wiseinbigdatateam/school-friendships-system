@@ -31,12 +31,20 @@ export class SurveyService {
         throw error;
       }
 
-      // 응답 수 계산
-      const surveysWithStats = data?.map(survey => ({
-        ...survey,
-        response_count: (survey as any).survey_responses?.[0]?.count || 0,
-        responseRate: 0 // TODO: 대상 학생 수 대비 응답률 계산
-      }));
+      // 응답 수 및 응답률 계산
+      const surveysWithStats = await Promise.all(
+        data?.map(async (survey) => {
+          const responseCount = (survey as any).survey_responses?.[0]?.count || 0;
+          const targetStudentCount = await this.getTargetStudentCount(survey as SurveyWithStats);
+          const responseRate = targetStudentCount > 0 ? (responseCount / targetStudentCount) * 100 : 0;
+          
+          return {
+            ...survey,
+            response_count: responseCount,
+            responseRate: responseRate
+          };
+        }) || []
+      );
 
 
       return surveysWithStats as SurveyWithStats[];
@@ -75,11 +83,20 @@ export class SurveyService {
         throw error;
       }
 
-      const surveysWithStats = data?.map(survey => ({
-        ...survey,
-        response_count: (survey as any).survey_responses?.[0]?.count || 0,
-        responseRate: 0
-      }));
+      // 응답 수 및 응답률 계산
+      const surveysWithStats = await Promise.all(
+        data?.map(async (survey) => {
+          const responseCount = (survey as any).survey_responses?.[0]?.count || 0;
+          const targetStudentCount = await this.getTargetStudentCount(survey as SurveyWithStats);
+          const responseRate = targetStudentCount > 0 ? (responseCount / targetStudentCount) * 100 : 0;
+          
+          return {
+            ...survey,
+            response_count: responseCount,
+            responseRate: responseRate
+          };
+        }) || []
+      );
 
       return surveysWithStats as SurveyWithStats[];
     } catch (error) {
@@ -127,11 +144,20 @@ export class SurveyService {
         throw error;
       }
 
-      const surveysWithStats = data?.map(survey => ({
-        ...survey,
-        response_count: (survey as any).survey_responses?.[0]?.count || 0,
-        responseRate: 0
-      }));
+      // 응답 수 및 응답률 계산
+      const surveysWithStats = await Promise.all(
+        data?.map(async (survey) => {
+          const responseCount = (survey as any).survey_responses?.[0]?.count || 0;
+          const targetStudentCount = await this.getTargetStudentCount(survey as SurveyWithStats);
+          const responseRate = targetStudentCount > 0 ? (responseCount / targetStudentCount) * 100 : 0;
+          
+          return {
+            ...survey,
+            response_count: responseCount,
+            responseRate: responseRate
+          };
+        }) || []
+      );
 
       return surveysWithStats as SurveyWithStats[];
     } catch (error) {
@@ -383,30 +409,6 @@ export class SurveyService {
     }
   }
 
-  // 설문 상태 자동 업데이트 (응답 완료 체크)
-  static async updateSurveyStatusByCompletion(surveyId: string): Promise<void> {
-    try {
-      // 설문 정보 조회
-      const survey = await this.getSurveyById(surveyId);
-      if (!survey) return;
-
-      // 대상 학생 수 계산 (target_grades, target_classes 기반)
-      const targetStudentCount = await this.getTargetStudentCount(survey);
-      
-      // 응답 수 조회
-      const responseCount = survey.response_count || 0;
-
-      // 응답률이 90% 이상이면 완료 상태로 변경
-      const responseRate = targetStudentCount > 0 ? (responseCount / targetStudentCount) * 100 : 0;
-      
-      if (responseRate >= 90 && survey.status !== 'completed') {
-        await this.updateSurveyStatus(surveyId, 'completed');
-      }
-    } catch (error) {
-      console.error('SurveyService.updateSurveyStatusByCompletion error:', error);
-      throw error;
-    }
-  }
 
   // 대상 학생 수 계산
   private static async getTargetStudentCount(survey: SurveyWithStats): Promise<number> {
@@ -445,6 +447,68 @@ export class SurveyService {
     }
   }
 
+  // 설문 응답 완료율에 따른 상태 업데이트
+  static async updateSurveyStatusByCompletion(surveyId: string): Promise<void> {
+    try {
+      // 설문 정보 조회
+      const { data: survey, error: surveyError } = await supabase
+        .from('surveys')
+        .select('id, target_grades, target_classes, school_id, status')
+        .eq('id', surveyId)
+        .single();
+
+      if (surveyError || !survey) {
+        console.error('설문 조회 오류:', surveyError);
+        return;
+      }
+
+      // 설문이 이미 완료 상태이면 스킵
+      if (survey.status === 'completed') {
+        return;
+      }
+
+      // 대상 학생 수 계산
+      const targetStudentCount = await this.getTargetStudentCount(survey as SurveyWithStats);
+      
+      if (targetStudentCount === 0) {
+        console.log(`설문 ${surveyId}: 대상 학생이 없음`);
+        return;
+      }
+
+      // 현재 응답 수 조회
+      const { data: responses, error: responseError } = await supabase
+        .from('survey_responses')
+        .select('id')
+        .eq('survey_id', surveyId);
+
+      if (responseError) {
+        console.error('응답 조회 오류:', responseError);
+        return;
+      }
+
+      const responseCount = responses?.length || 0;
+      const completionRate = (responseCount / targetStudentCount) * 100;
+
+      console.log(`설문 ${surveyId}: 응답률 ${completionRate.toFixed(1)}% (${responseCount}/${targetStudentCount})`);
+
+      // 응답률이 100% 이상이면 완료로 변경
+      if (completionRate >= 100) {
+        const { error: updateError } = await supabase
+          .from('surveys')
+          .update({ status: 'completed' })
+          .eq('id', surveyId);
+
+        if (updateError) {
+          console.error(`설문 ${surveyId} 완료 상태 업데이트 오류:`, updateError);
+        } else {
+          console.log(`설문 ${surveyId}: 모든 응답 완료로 상태를 'completed'로 변경`);
+        }
+      }
+    } catch (error) {
+      console.error('설문 응답 완료율 체크 오류:', error);
+    }
+  }
+
   // 모든 설문 상태 자동 업데이트
   static async updateAllSurveyStatuses(): Promise<SurveyWithStats[]> {
     try {
@@ -463,7 +527,24 @@ export class SurveyService {
       const now = new Date();
       const updates: { id: string; status: string }[] = [];
 
-      surveys?.forEach(survey => {
+      // 먼저 응답 완료율 체크를 수행하여 완료된 설문들을 처리
+      for (const survey of surveys || []) {
+        await this.updateSurveyStatusByCompletion(survey.id);
+      }
+
+      // 응답 완료율 체크 후 다시 설문 상태 조회 (완료된 설문 제외)
+      const { data: updatedSurveys, error: updatedError } = await supabase
+        .from('surveys')
+        .select('id, start_date, end_date, status')
+        .in('status', ['waiting', 'active']);
+
+      if (updatedError) {
+        console.error('업데이트된 설문 조회 오류:', updatedError);
+        return [];
+      }
+
+      // 날짜 기반 상태 변경 (응답 완료율 체크 후)
+      updatedSurveys?.forEach(survey => {
         const startDate = new Date(survey.start_date);
         const endDate = new Date(survey.end_date);
         
@@ -503,13 +584,6 @@ export class SurveyService {
         }
       } else {
       }
-      
-      // 활성화된 설문들의 응답 완료 체크
-      const activeSurveys = await this.getSurveysByStatus('', 'active');
-      for (const survey of activeSurveys) {
-        await this.updateSurveyStatusByCompletion(survey.id);
-      }
-      
       
       // 업데이트된 모든 설문 데이터 반환
       return await this.getAllSurveys('');
