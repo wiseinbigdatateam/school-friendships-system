@@ -68,11 +68,7 @@ const Dashboard: React.FC = () => {
   const [students, setStudents] = useState<any[]>([]);
   const [responses, setResponses] = useState<any[]>([]);
   const [statusFilter, setStatusFilter] = useState<string>("all");
-  const [showGuideModal, setShowGuideModal] = useState(() => {
-    // localStorage에서 가이드 숨김 여부 확인
-    const guideHidden = localStorage.getItem("dashboard-guide-hidden");
-    return guideHidden !== "true";
-  });
+  const [showGuideModal, setShowGuideModal] = useState(false);
   const [dontShowAgain, setDontShowAgain] = useState(false);
 
   // 상태를 한글로 변환하는 함수
@@ -285,6 +281,16 @@ const Dashboard: React.FC = () => {
           return;
         }
 
+        // 1-1. 사용자의 가이드 보기 여부 확인
+        const { data: userData, error: userError } = await supabase
+          .from("users")
+          .select("viewed_dashboard_guide")
+          .eq("id", currentUser.id)
+          .single();
+
+        if (!userError && userData) {
+          setShowGuideModal(!userData.viewed_dashboard_guide);
+        }
 
         // 2. 사용자 정보에서 학교, 학년, 반 정보 추출
         const schoolId = currentUser.school_id || currentUser.schoolId || "";
@@ -727,9 +733,13 @@ const Dashboard: React.FC = () => {
                 </p>
               </div>
               <button
-                onClick={() => {
-                  if (dontShowAgain) {
-                    localStorage.setItem("dashboard-guide-hidden", "true");
+                onClick={async () => {
+                  if (dontShowAgain && currentUser) {
+                    // 서버에 가이드 보기 여부 저장
+                    await supabase
+                      .from("users")
+                      .update({ viewed_dashboard_guide: true })
+                      .eq("id", currentUser.id);
                   }
                   setShowGuideModal(false);
                 }}
@@ -837,9 +847,13 @@ const Dashboard: React.FC = () => {
                 {/* 시작하기 버튼 */}
                 <div className="flex text-center">
                   <button
-                    onClick={() => {
-                      if (dontShowAgain) {
-                        localStorage.setItem("dashboard-guide-hidden", "true");
+                    onClick={async () => {
+                      if (dontShowAgain && currentUser) {
+                        // 서버에 가이드 보기 여부 저장
+                        await supabase
+                          .from("users")
+                          .update({ viewed_dashboard_guide: true })
+                          .eq("id", currentUser.id);
                       }
                       setShowGuideModal(false);
                     }}

@@ -991,6 +991,7 @@ export type Database = {
           role: string
           school_id: string | null
           updated_at: string | null
+          viewed_dashboard_guide: boolean | null
         }
         Insert: {
           class_number?: string | null
@@ -1010,6 +1011,7 @@ export type Database = {
           role: string
           school_id?: string | null
           updated_at?: string | null
+          viewed_dashboard_guide?: boolean | null
         }
         Update: {
           class_number?: string | null
@@ -1029,6 +1031,7 @@ export type Database = {
           role?: string
           school_id?: string | null
           updated_at?: string | null
+          viewed_dashboard_guide?: boolean | null
         }
         Relationships: [
           {
