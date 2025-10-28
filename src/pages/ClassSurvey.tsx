@@ -95,6 +95,7 @@ const ClassSurvey: React.FC = () => {
     responsive: true,
     plugins: {
       legend: {
+        display: false,
         position: "top" as const,
       },
       title: {
