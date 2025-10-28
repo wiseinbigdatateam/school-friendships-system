@@ -198,7 +198,7 @@ const NetworkAnalysisPage: React.FC = () => {
           }
 
           // 학년/반 매칭 필터링
-          const filteredSurveys = allSurveys?.filter((survey: any) => {
+          let filteredSurveys = allSurveys?.filter((survey: any) => {
             const targetGrades = survey.target_grades || [];
             const targetClasses = survey.target_classes || [];
             
@@ -208,9 +208,14 @@ const NetworkAnalysisPage: React.FC = () => {
             return gradeMatch && classMatch;
           }) || [];
 
+          // 날짜순으로 정렬 (최신이 먼저)
+          filteredSurveys = filteredSurveys.sort((a: any, b: any) => {
+            return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+          });
+
           
           if (filteredSurveys.length > 0) {
-            // SurveyProject 형태로 변환
+            // SurveyProject 형태로 변환 (이미 정렬된 filteredSurveys 사용)
             const projectData: SurveyProject[] = filteredSurveys.map((survey: any) => ({
               pid: survey.id,
               name: survey.title,
@@ -248,6 +253,11 @@ const NetworkAnalysisPage: React.FC = () => {
               response_count: 0,
               template_category: survey.survey_templates?.metadata?.category || "분석가능"
             }));
+
+            // 날짜순으로 정렬 (최신이 먼저)
+            projectData.sort((a, b) => {
+              return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+            });
 
             setProjectsData(projectData);
             setDraggableItems([...projectData]);
@@ -294,7 +304,9 @@ const NetworkAnalysisPage: React.FC = () => {
   const handleProjectDeselect = (project: SurveyProject) => {
     setSelectedItems((prev) => prev.filter((item) => item.pid !== project.pid));
     setDraggableItems((prev) =>
-      [...prev, project].sort((a, b) => a.pid.localeCompare(b.pid)),
+      [...prev, project].sort((a, b) => 
+        new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+      ),
     );
   };
 

@@ -923,6 +923,27 @@ const SurveyResponse: React.FC = () => {
               </div>
             )}
 
+            {/*  만 14세 이상인 경우 안내 (학부모 동의 불필요) */}
+            {!isUnder14 && (
+              <div className="mb-6 rounded-lg border border-blue-200 bg-blue-50 p-4">
+                <div className="flex items-start">
+                  <div className="flex-shrink-0">
+                    <svg className="h-6 w-6 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                  </div>
+                  <div className="ml-3">
+                    <h3 className="text-sm font-semibold text-blue-800">
+                      만 14세 이상 학생
+                    </h3>
+                    <p className="mt-1 text-sm text-blue-700">
+                      만 14세 이상 학생은 본인 동의만으로 설문에 참여할 수 있습니다.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* 학생 본인 동의 - 14세 미만이고 학부모 동의가 없는 경우는 제외 */}
             {(!isUnder14 || selectedStudent.parent_consent) && (
               <>

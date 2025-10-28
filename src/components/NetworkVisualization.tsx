@@ -104,12 +104,12 @@ const NetworkVisualization: React.FC<NetworkVisualizationProps> = ({
       circleRadius = 0;
       console.log('📏 그룹 1개 - 중앙 배치');
     } else {
-      // 그룹 간 최소 거리 계산 (겹치지 않도록)
+      // 그룹 간 최소 거리 계산 (겹치지 않도록 - 여유 추가)
       const avgGroupRadius = 140;
-      const minDistance = avgGroupRadius * 1.6;
+      const minDistance = avgGroupRadius * 2.5; // 1.6 → 2.5로 증가 (더 넓은 간격)
       circleRadius = Math.max(
         minDistance / (2 * Math.sin(Math.PI / totalGroups)),
-        Math.min(width, height) * 0.25,
+        Math.min(width, height) * 0.3, // 0.25 → 0.3으로 증가
       );
       console.log('📏 circleRadius 계산:', { minDistance, totalGroups, circleRadius });
     }
@@ -117,7 +117,7 @@ const NetworkVisualization: React.FC<NetworkVisualizationProps> = ({
     clusterInfo.forEach((cluster, index) => {
       const angle = (index * 2 * Math.PI) / totalGroups;
 
-      // 그룹 크기에 따라 반경 조정
+      // 그룹 크기에 따라 반경 조정 (약간 감소)
       const groupRadius =
         minGroupRadius +
         (cluster.size / maxGroupSize) * (maxGroupRadius - minGroupRadius);
@@ -146,11 +146,11 @@ const NetworkVisualization: React.FC<NetworkVisualizationProps> = ({
         return;
       }
 
-      const groupRadius = groupCenter.radius * 0.6; // 그룹 반경의 60%만 사용
+      const groupRadius = groupCenter.radius * 0.4; // 그룹 반경의 40%만 허용 (더 중심 집중)
 
       cluster.nodes.forEach((node, index) => {
         const angle = (index * 2 * Math.PI) / cluster.nodes.length;
-        const distance = Math.random() * groupRadius * 0.7; // 중심 근처에 배치
+        const distance = Math.random() * groupRadius * 0.5; // 중심 근처에 배치 (중심 집중)
         const x = groupCenter.x + distance * Math.cos(angle);
         const y = groupCenter.y + distance * Math.sin(angle);
         
@@ -251,7 +251,7 @@ const NetworkVisualization: React.FC<NetworkVisualizationProps> = ({
         "charge",
         d3
           .forceManyBody()
-          .strength(-300) // 반발 강도 (절댓값 높이면 더 멀어짐)
+          .strength(-250) // 반발 강도 감소 (떨림 방지)
           .distanceMax(200),
       ) // 반발 최대 거리
       // ⚙️ 노드 충돌 방지 (겹침 방지)
@@ -259,12 +259,12 @@ const NetworkVisualization: React.FC<NetworkVisualizationProps> = ({
         "collide",
         d3
           .forceCollide()
-          .radius(22) // 충돌 반경 (노드 크기 + 여유)
-          .strength(1),
-      ) // 충돌 강도 (1 = 최대)
+          .radius(35) // 충돌 반경 더 증가 (30 → 35, 노드들 사이 간격 더 넓게)
+          .strength(1), // 충돌 강도 최대
+      ) 
       // ⚙️ 중앙 집중력
       .force("center", d3.forceCenter(width / 2, height / 2).strength(0.05)) // 중앙 집중 강도 (낮을수록 자유롭게 배치)
-      // ⚙️ 그룹 유지 강도
+      // ⚙️ 그룹 유지 강도 (조건 강화)
       .force("group", () => {
         // 각 노드를 자신의 그룹 중심으로 끌어당김
         simulationNodes.forEach((node) => {
@@ -276,18 +276,20 @@ const NetworkVisualization: React.FC<NetworkVisualizationProps> = ({
           const dx = groupCenter.x - (node.x || 0);
           const dy = groupCenter.y - (node.y || 0);
           const distance = Math.sqrt(dx * dx + dy * dy);
-          const groupRadius = groupCenter.radius * 0.6; // 그룹 내 배치 비율
+          const groupRadius = groupCenter.radius * 0.4; // 그룹 반경의 40%만 허용 (더 중심 집중)
 
+          // 그룹 반경을 벗어나면 중심으로 끌어당김 (조건 완화)
           if (distance > groupRadius) {
-            const force = 0.1; // 그룹 복원 강도 (높이면 더 강하게 당김)
+            const force = 0.05; // 그룹 복원 강도 증가 (중심 유지 강화)
             node.x = (node.x || 0) + dx * force;
             node.y = (node.y || 0) + dy * force;
           }
         });
       })
-      // ⚙️ 시뮬레이션 속도 조절
-      .alphaDecay(0.02) // 감속 속도 (낮을수록 오래 움직임)
-      .velocityDecay(0.3); // 속도 감쇠 (높을수록 빨리 멈춤)
+      // ⚙️ 시뮬레이션 속도 조절 (떨림 방지 - 더 빠른 안정화)
+      .alpha(0.3) // 시작 alpha 낮춤
+      .alphaDecay(0.08) // 감속 속도 대폭 증가 (더 빠르게 안정화)
+      .velocityDecay(0.7); // 속도 감쇠 대폭 증가 (더 빠르게 멈춤)
 
     // 그룹 영역 그리기 (타원형)
     const groupAreas = svg.append("g").attr("class", "group-areas");
@@ -438,9 +440,69 @@ const NetworkVisualization: React.FC<NetworkVisualizationProps> = ({
         .attr("stroke-width", 4);
     });
 
-    // Simulation tick 이벤트
+    // Simulation tick 이벤트 (떨림 방지 - 강화된 버전)
     let tickCount = 0;
+    let hasStopped = false;
+    let stableCount = 0;
+    
     simulation.on("tick", () => {
+      // 현재 모든 노드의 속도 추적
+      let currentMaxVelocity = 0;
+      simulationNodes.forEach((node: any) => {
+        const vx = node.vx || 0;
+        const vy = node.vy || 0;
+        const velocity = Math.sqrt(vx * vx + vy * vy);
+        currentMaxVelocity = Math.max(currentMaxVelocity, velocity);
+      });
+
+      // alpha 값과 속도를 모두 확인 - 완전히 안정화되면 시뮬레이션 종료
+      const isStable = simulation.alpha() < 0.001 && currentMaxVelocity < 0.05;
+      
+      if (isStable) {
+        stableCount++;
+      } else {
+        stableCount = 0;
+      }
+
+      // 연속 5번 안정적이면 종료 (조건 완화하여 더 빠른 종료)
+      if (!hasStopped && stableCount >= 5) {
+        hasStopped = true;
+        console.log('🛑 시뮬레이션 안정화 완료 - 모든 노드 고정');
+        
+        // 모든 노드를 고정하여 떨림 완전히 방지
+        simulationNodes.forEach((node: any) => {
+          if (node.x !== null && node.y !== null) {
+            // 완전히 고정 (모든 속도와 힘 제거)
+            node.fx = node.x;
+            node.fy = node.y;
+            node.vx = 0;
+            node.vy = 0;
+            node.x = node.fx; // 위치 강제 고정
+            node.y = node.fy;
+          }
+        });
+        
+        // 모든 Force 즉시 제거 (떨림 완전 방지)
+        simulation.force("link", null);
+        simulation.force("charge", null);
+        simulation.force("collide", null);
+        simulation.force("center", null);
+        simulation.force("group", null);
+        
+        // 시뮬레이션 즉시 종료
+        simulation.stop();
+        
+        // 최종 렌더링
+        linkElements
+          .attr("x1", (d) => (d.source as any).x)
+          .attr("y1", (d) => (d.source as any).y)
+          .attr("x2", (d) => (d.target as any).x)
+          .attr("y2", (d) => (d.target as any).y);
+
+        nodeElements.attr("transform", (d) => `translate(${d.x},${d.y})`);
+        return;
+      }
+
       // 링크 업데이트
       linkElements
         .attr("x1", (d) => (d.source as any).x)
@@ -453,12 +515,8 @@ const NetworkVisualization: React.FC<NetworkVisualizationProps> = ({
       
       // 첫 몇 틱만 로그 출력
       tickCount++;
-      if (tickCount === 1 || tickCount === 10 || tickCount === 50) {
-        console.log(`⚡ Simulation tick ${tickCount} - 첫 번째 노드 위치:`, {
-          x: simulationNodes[0]?.x,
-          y: simulationNodes[0]?.y,
-          name: simulationNodes[0]?.name
-        });
+      if (tickCount === 1 || tickCount === 10 || tickCount % 50 === 0) {
+        console.log(`⚡ Simulation tick ${tickCount} - alpha: ${simulation.alpha().toFixed(4)}, maxVelocity: ${currentMaxVelocity.toFixed(4)}`);
       }
     });
 

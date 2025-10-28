@@ -1419,8 +1419,8 @@ const StudentManagement: React.FC = () => {
 
   // 학생 추가 함수
   const handleAddStudent = async () => {
-    if (!newStudent.name || !newStudent.grade || !newStudent.class) {
-      toast.error("이름, 학년, 반은 필수 입력 항목입니다.");
+    if (!newStudent.name || !newStudent.grade || !newStudent.class || !newStudent.phone) {
+      toast.error("이름, 학년, 반, 휴대폰 번호는 필수 입력 항목입니다.");
       return;
     }
 
@@ -1451,7 +1451,7 @@ const StudentManagement: React.FC = () => {
         birth_date: newStudent.birth_date || new Date().toISOString().split("T")[0],
         enrolled_at: new Date().toISOString().split("T")[0],
         is_active: true,
-        phone: newStudent.phone || null,
+        phone: newStudent.phone.trim(),
         current_school_id: teacherInfo.school_id,
         parent_consent: false,
         parent_contact: (newStudent.mother_name || newStudent.mother_phone || 
@@ -1604,22 +1604,26 @@ const StudentManagement: React.FC = () => {
         </div>
 
         {/* 파일, 양식 다운로드 */}
-        <div className="flex justify-between rounded-lg border border-gray-200 bg-white px-5 py-7">
-          <button
-            onClick={() => {
-              // 개인정보동의서_가정통신문 파일 다운로드
-              const link = document.createElement("a");
-              link.href = "/개인정보동의서_가정통신문.hwp";
-              link.download = "개인정보동의서_가정통신문.hwp";
-              document.body.appendChild(link);
-              link.click();
-              document.body.removeChild(link);
-            }}
-            className="flex items-center gap-2 rounded-md bg-gray-400 px-5 py-2 font-semibold text-[#fafafa] hover:bg-gray-500"
-          >
-            <ArrowDownTrayIcon className="w-[18px]" />
-            개인정보동의서_가정통신문
-          </button>
+        <div className={`flex ${teacherInfo?.role === "homeroom_teacher" && teacherInfo?.grade_level && parseInt(teacherInfo.grade_level) >= 3 ? "justify-end" : "justify-between"} rounded-lg border border-gray-200 bg-white px-5 py-7`}>
+          {/* 중학교 3학년 미만일 때만 개인정보동의서 다운로드 버튼 표시 */}
+          {!(teacherInfo?.role === "homeroom_teacher" && teacherInfo?.grade_level && parseInt(teacherInfo.grade_level) >= 3) && (
+            <button
+              onClick={() => {
+                // 개인정보동의서_가정통신문 파일 다운로드
+                const link = document.createElement("a");
+                link.href = "/개인정보동의서_가정통신문.hwp";
+                link.download = "개인정보동의서_가정통신문.hwp";
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+              }}
+              className="flex items-center gap-2 rounded-md bg-gray-400 px-5 py-2 font-semibold text-[#fafafa] transition-colors hover:bg-gray-500"
+              title="개인정보동의서_가정통신문 다운로드"
+            >
+              <ArrowDownTrayIcon className="w-[18px]" />
+              개인정보동의서_가정통신문
+            </button>
+          )}
 
           <div className="flex gap-2">
             <button
@@ -1909,16 +1913,18 @@ const StudentManagement: React.FC = () => {
 
                 {/* 학부모 동의 상태 및 삭제 버튼 */}
                 <div className="flex items-center gap-2">
-                  <div className="flex items-center gap-1">
-                    <div
-                      className={`h-2 w-2 rounded-full ${
-                        student.parent_consent ? "bg-green-500" : "bg-red-500"
-                      }`}
-                    ></div>
-                    <span className="text-xs text-gray-500">
-                      {student.parent_consent ? "동의" : "미동의"}
-                    </span>
-                  </div>
+                  {parseInt(student.grade) <= 2 && (
+                    <div className="flex items-center gap-1">
+                      <div
+                        className={`h-2 w-2 rounded-full ${
+                          student.parent_consent ? "bg-green-500" : "bg-red-500"
+                        }`}
+                      ></div>
+                      <span className="text-xs text-gray-500">
+                        {student.parent_consent ? "동의" : "미동의"}
+                      </span>
+                    </div>
+                  )}
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
@@ -2063,30 +2069,32 @@ const StudentManagement: React.FC = () => {
               ) : (
                 // 정보
                 <div className="flex flex-col gap-5">
-                  {/* 개인정보 학부모 동의 */}
-                  <div>
-                    <h3 className="mb-4 text-base font-semibold text-gray-900">
-                      • 개인정보 학부모 동의
-                    </h3>
-                    <div className="ml-4">
-                      <label className="flex items-center gap-2">
-                        <input
-                          type="checkbox"
-                          checked={selectedStudent.parent_consent || false}
-                          onChange={(e) => {
-                            handleParentConsentChange(
-                              selectedStudent.id,
-                              e.target.checked,
-                            );
-                          }}
-                          className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                        />
-                        <span className="text-sm text-gray-700">
-                          개인정보 수집·이용에 대한 학부모 동의
-                        </span>
-                      </label>
+                  {/* 개인정보 학부모 동의 - 중학교 3학년 미만일 때만 표시 */}
+                  {parseInt(selectedStudent.grade) <= 2 && (
+                    <div>
+                      <h3 className="mb-4 text-base font-semibold text-gray-900">
+                        • 개인정보 학부모 동의
+                      </h3>
+                      <div className="ml-4">
+                        <label className="flex items-center gap-2">
+                          <input
+                            type="checkbox"
+                            checked={selectedStudent.parent_consent || false}
+                            onChange={(e) => {
+                              handleParentConsentChange(
+                                selectedStudent.id,
+                                e.target.checked,
+                              );
+                            }}
+                            className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                          />
+                          <span className="text-sm text-gray-700">
+                            개인정보 수집·이용에 대한 학부모 동의
+                          </span>
+                        </label>
+                      </div>
                     </div>
-                  </div>
+                  )}
 
                   <div>
                     <h3 className="mb-4 text-base font-semibold text-gray-900">
@@ -2470,7 +2478,7 @@ const StudentManagement: React.FC = () => {
 
                   <div>
                     <label className="mb-1 block text-sm font-medium text-gray-700">
-                      휴대폰 번호
+                      휴대폰 번호 <span className="text-red-500">*</span>
                     </label>
                     <input
                       type="tel"
@@ -2478,6 +2486,7 @@ const StudentManagement: React.FC = () => {
                       onChange={(e) => setNewStudent(prev => ({ ...prev, phone: e.target.value }))}
                       className="w-full rounded-md border border-gray-300 px-3 py-2 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-blue-500"
                       placeholder="010-1234-5678"
+                      required
                     />
                   </div>
                 </div>
