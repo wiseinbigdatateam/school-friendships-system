@@ -834,6 +834,21 @@ const Dashboard: React.FC = () => {
                   </div>
                 </div>
 
+                {/* 시작하기 버튼 */}
+                <div className="flex text-center">
+                  <button
+                    onClick={() => {
+                      if (dontShowAgain) {
+                        localStorage.setItem("dashboard-guide-hidden", "true");
+                      }
+                      setShowGuideModal(false);
+                    }}
+                    className="w-[230px] rounded-[4px] bg-blue-600 px-5 py-2 text-sm text-white transition-colors hover:bg-blue-700"
+                  >
+                    시작하기
+                  </button>
+                </div>
+
                 {/* 더 이상 보지 않기 체크박스 */}
                 <div className="flex items-center gap-2">
                   <input
@@ -849,21 +864,6 @@ const Dashboard: React.FC = () => {
                   >
                     더 이상 보지 않기
                   </label>
-                </div>
-
-                {/* 시작하기 버튼 */}
-                <div className="flex text-center">
-                  <button
-                    onClick={() => {
-                      if (dontShowAgain) {
-                        localStorage.setItem("dashboard-guide-hidden", "true");
-                      }
-                      setShowGuideModal(false);
-                    }}
-                    className="w-[230px] rounded-[4px] bg-blue-600 px-5 py-2 text-sm text-white transition-colors hover:bg-blue-700"
-                  >
-                    시작하기
-                  </button>
                 </div>
               </div>
 
