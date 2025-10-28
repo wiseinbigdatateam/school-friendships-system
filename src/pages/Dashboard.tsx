@@ -68,7 +68,12 @@ const Dashboard: React.FC = () => {
   const [students, setStudents] = useState<any[]>([]);
   const [responses, setResponses] = useState<any[]>([]);
   const [statusFilter, setStatusFilter] = useState<string>("all");
-  const [showGuideModal, setShowGuideModal] = useState(true);
+  const [showGuideModal, setShowGuideModal] = useState(() => {
+    // localStorage에서 가이드 숨김 여부 확인
+    const guideHidden = localStorage.getItem("dashboard-guide-hidden");
+    return guideHidden !== "true";
+  });
+  const [dontShowAgain, setDontShowAgain] = useState(false);
 
   // 상태를 한글로 변환하는 함수
   const getStatusLabel = (status: string): string => {
@@ -722,7 +727,12 @@ const Dashboard: React.FC = () => {
                 </p>
               </div>
               <button
-                onClick={() => setShowGuideModal(false)}
+                onClick={() => {
+                  if (dontShowAgain) {
+                    localStorage.setItem("dashboard-guide-hidden", "true");
+                  }
+                  setShowGuideModal(false);
+                }}
                 className="rounded-full p-2 text-gray-400 hover:bg-gray-100 hover:text-gray-600"
               >
                 <svg
@@ -824,10 +834,32 @@ const Dashboard: React.FC = () => {
                   </div>
                 </div>
 
+                {/* 더 이상 보지 않기 체크박스 */}
+                <div className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    id="dontShowAgain"
+                    checked={dontShowAgain}
+                    onChange={(e) => setDontShowAgain(e.target.checked)}
+                    className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                  />
+                  <label
+                    htmlFor="dontShowAgain"
+                    className="text-xs text-gray-600"
+                  >
+                    더 이상 보지 않기
+                  </label>
+                </div>
+
                 {/* 시작하기 버튼 */}
                 <div className="flex text-center">
                   <button
-                    onClick={() => setShowGuideModal(false)}
+                    onClick={() => {
+                      if (dontShowAgain) {
+                        localStorage.setItem("dashboard-guide-hidden", "true");
+                      }
+                      setShowGuideModal(false);
+                    }}
                     className="w-[230px] rounded-[4px] bg-blue-600 px-5 py-2 text-sm text-white transition-colors hover:bg-blue-700"
                   >
                     시작하기
