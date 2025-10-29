@@ -163,9 +163,13 @@ const IndividualAnalysis: React.FC = () => {
   const [networkLoading, setNetworkLoading] = useState(false);
   const [activeTab, setActiveTab] = useState<"core" | "ai" | "python">("core");
   const [aiReport, setAiReport] = useState<GeneratedReport | null>(null);
-  const [tokenUsage, setTokenUsage] = useState<TokenUsage | undefined>(undefined);
+  const [tokenUsage, setTokenUsage] = useState<TokenUsage | undefined>(
+    undefined,
+  );
   const [aiReportLoading, setAiReportLoading] = useState(false);
-  const [aiReportCreatedAt, setAiReportCreatedAt] = useState<string | null>(null);
+  const [aiReportCreatedAt, setAiReportCreatedAt] = useState<string | null>(
+    null,
+  );
   const [isReportFromDB, setIsReportFromDB] = useState(false); // DB에서 불러온 리포트인지 여부
   const [pythonAnalysisResult, setPythonAnalysisResult] =
     useState<PythonAnalysisResult | null>(null);
@@ -184,111 +188,125 @@ const IndividualAnalysis: React.FC = () => {
     useState<NetworkAnalysisData | null>(null);
   const [networkAnalysisLoading, setNetworkAnalysisLoading] = useState(false);
   const [showPrintPreview, setShowPrintPreview] = useState(false);
-  
+
   // 핵심결과 탭용 설문 응답 데이터
   const [coreTabSurveyData, setCoreTabSurveyData] = useState<any[]>([]);
   const [coreTabSatisfaction, setCoreTabSatisfaction] = useState<number>(0.5);
   const [coreTabViolence, setCoreTabViolence] = useState<number>(0);
 
   // 개별 학생의 설문 응답 데이터 수집 함수
-  const getStudentSurveyResponses = async (studentId: string, surveyId: string) => {
+  const getStudentSurveyResponses = async (
+    studentId: string,
+    surveyId: string,
+  ) => {
     try {
       // 설문 템플릿과 함께 응답 조회
       const { data: surveyData, error: surveyError } = await supabase
-        .from('surveys')
-        .select(`
+        .from("surveys")
+        .select(
+          `
           *,
           survey_templates!surveys_template_id_fkey(
             id,
             name,
             metadata
           )
-        `)
-        .eq('id', surveyId)
+        `,
+        )
+        .eq("id", surveyId)
         .single();
 
       if (surveyError) {
-        console.warn('설문 정보 조회 오류:', surveyError);
+        console.warn("설문 정보 조회 오류:", surveyError);
         return [];
       }
 
       const { data, error } = await supabase
-        .from('survey_responses')
-        .select('responses')
-        .eq('student_id', studentId)
-        .eq('survey_id', surveyId)
+        .from("survey_responses")
+        .select("responses")
+        .eq("student_id", studentId)
+        .eq("survey_id", surveyId)
         .single();
 
       if (error || !data) {
-        console.warn('설문 응답 데이터 없음:', error?.message);
+        console.warn("설문 응답 데이터 없음:", error?.message);
         return [];
       }
 
       // 설문 응답을 질문-답변 형태로 변환
       const responses = data.responses;
-      
-      console.log('🔍 원본 응답 데이터:', responses);
-      
+
+      console.log("🔍 원본 응답 데이터:", responses);
+
       // 템플릿 메타데이터에서 질문 카테고리 가져오기
       const metadata = surveyData?.survey_templates?.metadata as any;
       const questionCategories = metadata?.questionCategories || [];
-      
-      console.log('✅ 질문 카테고리 배열:', questionCategories);
-      
+
+      console.log("✅ 질문 카테고리 배열:", questionCategories);
+
       // 응답 데이터를 배열로 변환
-      const responseArray: Array<{question: string; answer: string; category: string}> = [];
-      
+      const responseArray: Array<{
+        question: string;
+        answer: string;
+        category: string;
+      }> = [];
+
       Object.entries(responses || {}).forEach(([key, value]) => {
         // key는 'q1', 'q2', ... 형태
-        const questionIndex = parseInt(key.replace('q', '')) - 1;
-        
+        const questionIndex = parseInt(key.replace("q", "")) - 1;
+
         // metadata에서 카테고리 가져오기
-        let category = 'general';
+        let category = "general";
         if (questionCategories[questionIndex]) {
           const rawCategory = questionCategories[questionIndex];
           // 카테고리 매핑: '만족도' → 'satisfaction', '학교폭력' → 'violence'
-          if (rawCategory === '만족도') {
-            category = 'satisfaction';
-          } else if (rawCategory === '학교폭력') {
-            category = 'violence';
-          } else if (rawCategory === '교우관계') {
-            category = 'friendship';
+          if (rawCategory === "만족도") {
+            category = "satisfaction";
+          } else if (rawCategory === "학교폭력") {
+            category = "violence";
+          } else if (rawCategory === "교우관계") {
+            category = "friendship";
           } else {
             category = rawCategory;
           }
         }
-        
+
         const question = `Q${questionIndex + 1}. 질문`;
-        
+
         // 배열인 경우 (친구 선택) -> 학생 이름으로 변환
-        let answerText = '';
+        let answerText = "";
         if (Array.isArray(value)) {
           // 친구 ID를 이름으로 변환
-          const friendNames = value.map(friendId => {
-            const friend = students.find(s => s.id === friendId);
-            return friend ? friend.name : friendId;
-          }).filter(Boolean);
-          answerText = friendNames.length > 0 ? friendNames.join(', ') : '선택 없음';
+          const friendNames = value
+            .map((friendId) => {
+              const friend = students.find((s) => s.id === friendId);
+              return friend ? friend.name : friendId;
+            })
+            .filter(Boolean);
+          answerText =
+            friendNames.length > 0 ? friendNames.join(", ") : "선택 없음";
         } else {
           // 단일 응답인 경우 학생 이름으로 변환 시도
-          const friend = students.find(s => s.id === String(value));
+          const friend = students.find((s) => s.id === String(value));
           answerText = friend ? friend.name : String(value);
         }
-        
-        console.log(`  Q${questionIndex + 1}: "${question}" → "${answerText}" [${category}]`);
-        
+
+        console.log(
+          `  Q${questionIndex + 1}: "${question}" → "${answerText}" [${category}]`,
+        );
+
         responseArray.push({
           question,
           answer: answerText,
-          category
+          category,
         });
       });
 
-      console.log('✅ 변환된 응답 배열:', responseArray);
-      
+      console.log("✅ 변환된 응답 배열:", responseArray);
+
       return responseArray;
     } catch (error) {
-      console.error('설문 응답 수집 오류:', error);
+      console.error("설문 응답 수집 오류:", error);
       return [];
     }
   };
@@ -296,123 +314,170 @@ const IndividualAnalysis: React.FC = () => {
   // 만족도 점수 계산 함수 (개선된 버전)
   const calculateSatisfactionScore = (responses: any[]) => {
     if (!responses.length) {
-      console.warn('⚠️ 설문 응답이 없습니다. 기본값 0.5 반환');
+      console.warn("⚠️ 설문 응답이 없습니다. 기본값 0.5 반환");
       return 0.5;
     }
-    
+
     // Q2-Q5: 만족도 관련 질문 (친구 선택 제외)
     // 친구 선택 질문(배열 답변)은 제외하고, 단일 답변(예/아니오/보통)만 필터링
     const satisfactionQuestions = responses.filter((r, idx) => {
       // 답변이 "예", "아니오", "보통" 중 하나인 것만 (친구 이름 제외)
       const answer = String(r.answer).trim();
-      const isValidAnswer = answer === '예' || 
-                           answer === '아니오' || 
-                           answer === '보통' ||
-                           answer.includes('그렇다') ||
-                           answer.includes('매우') ||
-                           (answer.length < 15 && !answer.includes(',') && !answer.includes('-'));
-      
+      const isValidAnswer =
+        answer === "예" ||
+        answer === "아니오" ||
+        answer === "보통" ||
+        answer.includes("그렇다") ||
+        answer.includes("매우") ||
+        (answer.length < 15 && !answer.includes(",") && !answer.includes("-"));
+
       // 만족도 관련 키워드 체크 (OR 조건) - 친구 "선택" 질문은 제외
       const q = r.question.toLowerCase();
-      const isSatisfactionQuestion = (
-        (q.includes('친구') && q.includes('논다')) ||
-        (q.includes('즐겁') && q.includes('참여')) ||
-        (q.includes('학교') && q.includes('오고 싶')) ||
-        (q.includes('선생님') && q.includes('이야기')) ||
-        r.category === 'satisfaction'
-      ) && !q.includes('누구') && !q.includes('선택');
-      
+      const isSatisfactionQuestion =
+        ((q.includes("친구") && q.includes("논다")) ||
+          (q.includes("즐겁") && q.includes("참여")) ||
+          (q.includes("학교") && q.includes("오고 싶")) ||
+          (q.includes("선생님") && q.includes("이야기")) ||
+          r.category === "satisfaction") &&
+        !q.includes("누구") &&
+        !q.includes("선택");
+
       return isValidAnswer && isSatisfactionQuestion;
     });
-    
-    console.log('📝 만족도 질문 필터링 결과:', {
+
+    console.log("📝 만족도 질문 필터링 결과:", {
       전체응답수: responses.length,
       만족도질문수: satisfactionQuestions.length,
-      필터링된질문들: satisfactionQuestions.map(q => ({ 
-        질문: q.question.substring(0, 30), 
-        답변: q.answer 
-      }))
+      필터링된질문들: satisfactionQuestions.map((q) => ({
+        질문: q.question.substring(0, 30),
+        답변: q.answer,
+      })),
     });
-    
+
     if (!satisfactionQuestions.length) {
-      console.warn('⚠️ 만족도 질문이 없습니다. 기본값 0.5 반환');
-      console.log('전체 응답 내용:', responses);
+      console.warn("⚠️ 만족도 질문이 없습니다. 기본값 0.5 반환");
+      console.log("전체 응답 내용:", responses);
       return 0.5;
     }
-    
+
     let totalScore = 0;
     let validQuestions = 0;
-    
-    satisfactionQuestions.forEach(q => {
+
+    satisfactionQuestions.forEach((q) => {
       const answer = String(q.answer).toLowerCase().trim();
       let questionScore = 0.5; // 기본값
-      
+
       // 긍정 응답
-      if (answer === '예' || answer === 'yes' || answer.includes('매우') || answer === '그렇다') {
+      if (
+        answer === "예" ||
+        answer === "yes" ||
+        answer.includes("매우") ||
+        answer === "그렇다"
+      ) {
         questionScore = 1.0;
-      } 
+      }
       // 중립 응답
-      else if (answer === '보통' || answer.includes('보통') || answer === 'so-so') {
+      else if (
+        answer === "보통" ||
+        answer.includes("보통") ||
+        answer === "so-so"
+      ) {
         questionScore = 0.5;
-      } 
+      }
       // 부정 응답
-      else if (answer === '아니오' || answer === 'no' || answer.includes('그렇지 않') || answer.includes('아니')) {
+      else if (
+        answer === "아니오" ||
+        answer === "no" ||
+        answer.includes("그렇지 않") ||
+        answer.includes("아니")
+      ) {
         questionScore = 0;
       }
-      
-      console.log(`  - ${q.question.substring(0, 30)}...: "${q.answer}" → ${questionScore}점`);
-      
+
+      console.log(
+        `  - ${q.question.substring(0, 30)}...: "${q.answer}" → ${questionScore}점`,
+      );
+
       totalScore += questionScore;
       validQuestions++;
     });
-    
+
     const finalScore = validQuestions > 0 ? totalScore / validQuestions : 0.5;
-    console.log(`✅ 최종 만족도 점수: ${(finalScore * 100).toFixed(1)}% (${validQuestions}개 질문)`);
-    
+    console.log(
+      `✅ 최종 만족도 점수: ${(finalScore * 100).toFixed(1)}% (${validQuestions}개 질문)`,
+    );
+
     return Math.min(finalScore, 1);
   };
 
   // 폭력 경험 점수 계산 함수 (개선된 버전)
   const calculateViolenceScore = (responses: any[]) => {
     if (!responses.length) {
-      console.warn('⚠️ 설문 응답이 없습니다. 폭력경험 기본값 0 반환');
+      console.warn("⚠️ 설문 응답이 없습니다. 폭력경험 기본값 0 반환");
       return 0;
     }
-    
+
     // 폭력 경험 관련 질문들 필터링 (Q6-Q8)
-    const violenceQuestions = responses.filter(r => {
+    const violenceQuestions = responses.filter((r) => {
       const q = r.question.toLowerCase();
-      return q.includes('때리') || q.includes('발로') || q.includes('밀치') ||
-             q.includes('욕') || q.includes('놀린') ||
-             q.includes('따돌') || q.includes('괴롭') ||
-             r.category === 'violence' || 
-             r.category === 'bullying';
+      return (
+        q.includes("때리") ||
+        q.includes("발로") ||
+        q.includes("밀치") ||
+        q.includes("욕") ||
+        q.includes("놀린") ||
+        q.includes("따돌") ||
+        q.includes("괴롭") ||
+        r.category === "violence" ||
+        r.category === "bullying"
+      );
     });
-    
-    console.log('📝 폭력경험 질문 수:', violenceQuestions.length, '/', responses.length);
-    
+
+    console.log(
+      "📝 폭력경험 질문 수:",
+      violenceQuestions.length,
+      "/",
+      responses.length,
+    );
+
     if (!violenceQuestions.length) {
-      console.warn('⚠️ 폭력경험 질문이 없습니다. 기본값 0 반환');
+      console.warn("⚠️ 폭력경험 질문이 없습니다. 기본값 0 반환");
       return 0;
     }
-    
+
     let totalScore = 0;
     let validQuestions = 0;
-    
-    violenceQuestions.forEach(q => {
+
+    violenceQuestions.forEach((q) => {
       const answer = String(q.answer).toLowerCase().trim();
       let questionScore = 0;
-      
+
       // 폭력 없음
-      if (answer === '전혀 없다' || answer.includes('없다') || answer === '아니오' || answer === 'no') {
+      if (
+        answer === "전혀 없다" ||
+        answer.includes("없다") ||
+        answer === "아니오" ||
+        answer === "no"
+      ) {
         questionScore = 0;
-      } 
+      }
       // 가끔 경험
-      else if (answer === '가끔 있다' || answer.includes('가끔') || answer.includes('한두번') || answer.includes('1-2번')) {
+      else if (
+        answer === "가끔 있다" ||
+        answer.includes("가끔") ||
+        answer.includes("한두번") ||
+        answer.includes("1-2번")
+      ) {
         questionScore = 0.5;
-      } 
+      }
       // 자주 경험
-      else if (answer === '자주 있다' || answer.includes('자주') || answer.includes('여러번') || answer === '예' || answer === 'yes') {
+      else if (
+        answer === "자주 있다" ||
+        answer.includes("자주") ||
+        answer.includes("여러번") ||
+        answer === "예" ||
+        answer === "yes"
+      ) {
         questionScore = 1.0;
       }
       // 알 수 없는 응답은 안전하게 0으로 처리
@@ -420,16 +485,20 @@ const IndividualAnalysis: React.FC = () => {
         console.warn(`⚠️ 알 수 없는 폭력경험 응답: "${q.answer}"`);
         questionScore = 0;
       }
-      
-      console.log(`  - ${q.question.substring(0, 30)}...: "${q.answer}" → ${questionScore}점`);
-      
+
+      console.log(
+        `  - ${q.question.substring(0, 30)}...: "${q.answer}" → ${questionScore}점`,
+      );
+
       totalScore += questionScore;
       validQuestions++;
     });
-    
+
     const finalScore = validQuestions > 0 ? totalScore / validQuestions : 0;
-    console.log(`✅ 최종 폭력경험 점수: ${(finalScore * 100).toFixed(1)}% (${validQuestions}개 질문)`);
-    
+    console.log(
+      `✅ 최종 폭력경험 점수: ${(finalScore * 100).toFixed(1)}% (${validQuestions}개 질문)`,
+    );
+
     return Math.min(finalScore, 1);
   };
 
@@ -520,7 +589,6 @@ const IndividualAnalysis: React.FC = () => {
 
   // 설문별 응답자 수 계산 함수 - 더 간단하고 확실한 방법
   const calculateResponseCounts = async (surveys: Survey[]) => {
-
     const counts: { [key: string]: number } = {};
 
     // 모든 설문의 응답 수를 한 번에 조회
@@ -536,7 +604,6 @@ const IndividualAnalysis: React.FC = () => {
         return;
       }
 
-
       // 설문별로 응답 수 계산
       surveyIds.forEach((surveyId) => {
         const responseCount =
@@ -544,7 +611,6 @@ const IndividualAnalysis: React.FC = () => {
           0;
         counts[surveyId] = responseCount;
       });
-
 
       // 상태 업데이트 - 강제로 즉시 반영
       setSurveyResponseCounts(counts);
@@ -570,13 +636,11 @@ const IndividualAnalysis: React.FC = () => {
   }, [teacherInfo]);
 
   // 강제 리렌더링을 위한 useEffect
-  useEffect(() => {
-  }, [forceUpdate, surveyResponseCounts]);
+  useEffect(() => {}, [forceUpdate, surveyResponseCounts]);
 
   // 선택된 학생이 변경될 때 개별 네트워크 데이터 생성
   useEffect(() => {
     if (selectedStudent && selectedSurvey) {
-      
       generateIndividualNetworkData(selectedStudent, selectedSurvey.id);
     }
   }, [selectedStudent, selectedSurvey]);
@@ -584,16 +648,13 @@ const IndividualAnalysis: React.FC = () => {
   // 네트워크 분석 데이터가 로드되면 학생 상태 업데이트를 위한 강제 리렌더링
   useEffect(() => {
     if (networkAnalysisData) {
-      
       setForceUpdate((prev) => prev + 1);
     }
   }, [networkAnalysisData]);
 
   // 학생 선택 시 통합 분석 수행
   useEffect(() => {
-    
     if (selectedStudent && selectedSurvey) {
-    
       performUnifiedIndividualAnalysis(selectedSurvey.id, selectedStudent);
     }
   }, [selectedStudent, selectedSurvey, performUnifiedIndividualAnalysis]);
@@ -609,23 +670,26 @@ const IndividualAnalysis: React.FC = () => {
   useEffect(() => {
     const loadCoreTabSurveyData = async () => {
       if (selectedStudent && selectedSurvey) {
-        console.log('🔄 핵심결과 탭 - 설문 응답 로드 시작:', { 
-          학생ID: selectedStudent, 
-          설문ID: selectedSurvey.id 
+        console.log("🔄 핵심결과 탭 - 설문 응답 로드 시작:", {
+          학생ID: selectedStudent,
+          설문ID: selectedSurvey.id,
         });
-        
-        const data = await getStudentSurveyResponses(selectedStudent, selectedSurvey.id);
-        
-        console.log('📋 핵심결과 탭 - 로드된 설문 응답:', data);
-        
+
+        const data = await getStudentSurveyResponses(
+          selectedStudent,
+          selectedSurvey.id,
+        );
+
+        console.log("📋 핵심결과 탭 - 로드된 설문 응답:", data);
+
         const satisfaction = calculateSatisfactionScore(data);
         const violence = calculateViolenceScore(data);
-        
-        console.log('📊 핵심결과 탭 - 계산된 점수:', {
+
+        console.log("📊 핵심결과 탭 - 계산된 점수:", {
           만족도: `${(satisfaction * 100).toFixed(1)}%`,
-          폭력경험: `${(violence * 100).toFixed(1)}%`
+          폭력경험: `${(violence * 100).toFixed(1)}%`,
         });
-        
+
         setCoreTabSurveyData(data);
         setCoreTabSatisfaction(satisfaction);
         setCoreTabViolence(violence);
@@ -636,7 +700,7 @@ const IndividualAnalysis: React.FC = () => {
         setCoreTabViolence(0);
       }
     };
-    
+
     loadCoreTabSurveyData();
   }, [selectedStudent, selectedSurvey, activeTab]);
 
@@ -663,8 +727,6 @@ const IndividualAnalysis: React.FC = () => {
 
       if (teacherError) throw teacherError;
       setTeacherInfo(teacherData);
-
-      
     } catch (error) {
       console.error("사용자 정보 조회 오류:", error);
       // 에러 발생 시 로그인 페이지로 이동
@@ -678,7 +740,6 @@ const IndividualAnalysis: React.FC = () => {
         setSurveys([]);
         return;
       }
-
 
       // 먼저 설문 템플릿에서 카테고리가 "교우관계" 또는 "종합조사"인 것 찾기
       const { data: templates, error: templateError } = await supabase
@@ -736,8 +797,6 @@ const IndividualAnalysis: React.FC = () => {
         teacherInfo.grade_level &&
         teacherInfo.class_number
       ) {
-        
-
         // 설문의 target_grades와 target_classes 확인
         const { data: allSurveys, error } = await query.order("created_at", {
           ascending: false,
@@ -761,12 +820,8 @@ const IndividualAnalysis: React.FC = () => {
               targetClasses.length === 0 ||
               targetClasses.includes(teacherInfo.class_number);
 
-            
-
             return gradeMatch && classMatch;
           }) || [];
-
-        
 
         if (filteredSurveys.length > 0) {
           setSurveys(filteredSurveys);
@@ -794,9 +849,7 @@ const IndividualAnalysis: React.FC = () => {
           await calculateResponseCounts(data);
 
           // 즉시 테스트를 위한 추가 로그
-          setTimeout(() => {
-            
-          }, 1000);
+          setTimeout(() => {}, 1000);
         } else {
           setSurveys([]);
         }
@@ -1178,7 +1231,9 @@ const IndividualAnalysis: React.FC = () => {
           return "평균적인 학생"; // 기본값
         };
 
-        console.log(`🔍 개별 네트워크 생성: 학생=${selectedStudentData.name}, 친구수=${selectedFriends.size}`);
+        console.log(
+          `🔍 개별 네트워크 생성: 학생=${selectedStudentData.name}, 친구수=${selectedFriends.size}`,
+        );
 
         // 선택된 학생 추가
         individualNetworkData.push({
@@ -1226,7 +1281,7 @@ const IndividualAnalysis: React.FC = () => {
       // 개별 네트워크 데이터 생성
       generateIndividualNetworkData(selectedStudent, selectedSurvey.id)
         .then((data) => {
-          console.log('✅ individualNetworkData state 설정:', data);
+          console.log("✅ individualNetworkData state 설정:", data);
           setIndividualNetworkData(data);
         })
         .catch((error) => {
@@ -1504,7 +1559,7 @@ const IndividualAnalysis: React.FC = () => {
     <div class="meta">
       <p><strong>${selectedStudentData.name}</strong> 학생 (${selectedStudentData.grade}학년 ${selectedStudentData.class}반)</p>
       <p>설문: ${selectedSurvey.title}</p>
-      <p>생성일: ${new Date().toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' })}</p>
+      <p>생성일: ${new Date().toLocaleDateString("ko-KR", { year: "numeric", month: "long", day: "numeric" })}</p>
     </div>
   </div>
 
@@ -1523,13 +1578,13 @@ const IndividualAnalysis: React.FC = () => {
     <div class="subsection">
       <div class="subsection-title">주요 특징</div>
       <div class="list">
-        ${aiReport.comprehensiveDiagnosis.keyCharacteristics.map(char => `<div class="list-item">✓ ${char}</div>`).join('')}
+        ${aiReport.comprehensiveDiagnosis.keyCharacteristics.map((char) => `<div class="list-item">✓ ${char}</div>`).join("")}
       </div>
     </div>
     <div class="subsection">
       <div class="subsection-title">개선 영역</div>
       <div class="list">
-        ${aiReport.comprehensiveDiagnosis.challenges.map(challenge => `<div class="list-item">• ${challenge}</div>`).join('')}
+        ${aiReport.comprehensiveDiagnosis.challenges.map((challenge) => `<div class="list-item">• ${challenge}</div>`).join("")}
       </div>
     </div>
   </div>
@@ -1540,12 +1595,16 @@ const IndividualAnalysis: React.FC = () => {
     <div class="subsection">
       <div class="subsection-title">학교생활 만족도</div>
       <table class="table">
-        ${aiReport.detailedAnalysis.schoolLifeSatisfaction.surveyResults.map(result => `
+        ${aiReport.detailedAnalysis.schoolLifeSatisfaction.surveyResults
+          .map(
+            (result) => `
           <tr>
             <td>${result.question}</td>
             <td><strong>${result.answer}</strong></td>
           </tr>
-        `).join('')}
+        `,
+          )
+          .join("")}
       </table>
       <div class="content">${aiReport.detailedAnalysis.schoolLifeSatisfaction.analysis}</div>
     </div>
@@ -1553,12 +1612,16 @@ const IndividualAnalysis: React.FC = () => {
     <div class="subsection">
       <div class="subsection-title">폭력 경험도</div>
       <table class="table">
-        ${aiReport.detailedAnalysis.violenceExperience.surveyResults.map(result => `
+        ${aiReport.detailedAnalysis.violenceExperience.surveyResults
+          .map(
+            (result) => `
           <tr>
             <td>${result.question}</td>
             <td><strong>${result.answer}</strong></td>
           </tr>
-        `).join('')}
+        `,
+          )
+          .join("")}
       </table>
       <div class="content">${aiReport.detailedAnalysis.violenceExperience.analysis}</div>
     </div>
@@ -1589,24 +1652,32 @@ const IndividualAnalysis: React.FC = () => {
     <div class="subsection">
       <div class="subsection-title">강점</div>
       <div class="list">
-        ${aiReport.strengthsAndImprovements.strengths.map(strength => `
+        ${aiReport.strengthsAndImprovements.strengths
+          .map(
+            (strength) => `
           <div class="list-item">
             <strong>${strength.title}</strong><br>
             ${strength.description}
           </div>
-        `).join('')}
+        `,
+          )
+          .join("")}
       </div>
     </div>
 
     <div class="subsection">
       <div class="subsection-title">개선 영역</div>
       <div class="list">
-        ${aiReport.strengthsAndImprovements.improvementAreas.map(area => `
+        ${aiReport.strengthsAndImprovements.improvementAreas
+          .map(
+            (area) => `
           <div class="list-item">
             <strong>${area.title}</strong><br>
             ${area.description}
           </div>
-        `).join('')}
+        `,
+          )
+          .join("")}
       </div>
     </div>
   </div>
@@ -1622,43 +1693,55 @@ const IndividualAnalysis: React.FC = () => {
     <div class="subsection">
       <div class="subsection-title">단기 솔루션 (1-2주)</div>
       <div class="list">
-        ${aiReport.customizedSolutions.shortTermSolutions.map(solution => `
+        ${aiReport.customizedSolutions.shortTermSolutions
+          .map(
+            (solution) => `
           <div class="list-item">
             <strong>${solution.title}</strong><br>
             ${solution.description}
           </div>
-        `).join('')}
+        `,
+          )
+          .join("")}
       </div>
     </div>
 
     <div class="subsection">
       <div class="subsection-title">중기 솔루션 (1-2개월)</div>
       <div class="list">
-        ${aiReport.customizedSolutions.midTermSolutions.map(solution => `
+        ${aiReport.customizedSolutions.midTermSolutions
+          .map(
+            (solution) => `
           <div class="list-item">
             <strong>${solution.title}</strong><br>
             ${solution.description}
           </div>
-        `).join('')}
+        `,
+          )
+          .join("")}
       </div>
     </div>
 
     <div class="subsection">
       <div class="subsection-title">장기 솔루션 (3-6개월)</div>
       <div class="list">
-        ${aiReport.customizedSolutions.longTermSolutions.map(solution => `
+        ${aiReport.customizedSolutions.longTermSolutions
+          .map(
+            (solution) => `
           <div class="list-item">
             <strong>${solution.title}</strong><br>
             ${solution.description}
           </div>
-        `).join('')}
+        `,
+          )
+          .join("")}
       </div>
     </div>
   </div>
 
   <div class="footer">
     <p>본 리포트는 와이즈온스쿨 AI 분석 시스템에서 자동으로 생성되었습니다.</p>
-    <p>생성 일시: ${new Date().toLocaleString('ko-KR', { timeZone: 'Asia/Seoul' })}</p>
+    <p>생성 일시: ${new Date().toLocaleString("ko-KR", { timeZone: "Asia/Seoul" })}</p>
     <p>© 2025 WiseOn School. All rights reserved.</p>
   </div>
 
@@ -1695,7 +1778,7 @@ const IndividualAnalysis: React.FC = () => {
     `;
 
     // 새 창에서 미리보기 열기
-    const printWindow = window.open('', '_blank');
+    const printWindow = window.open("", "_blank");
     if (printWindow) {
       printWindow.document.write(printContent);
       printWindow.document.close();
@@ -1705,11 +1788,12 @@ const IndividualAnalysis: React.FC = () => {
   // 24시간 경과 여부 확인 함수
   const canRegenerateReport = useCallback(() => {
     if (!aiReportCreatedAt) return true; // 생성된 리포트가 없으면 생성 가능
-    
+
     const createdTime = new Date(aiReportCreatedAt);
     const now = new Date();
-    const hoursPassed = (now.getTime() - createdTime.getTime()) / (1000 * 60 * 60);
-    
+    const hoursPassed =
+      (now.getTime() - createdTime.getTime()) / (1000 * 60 * 60);
+
     return hoursPassed >= 24;
   }, [aiReportCreatedAt]);
 
@@ -1733,7 +1817,7 @@ const IndividualAnalysis: React.FC = () => {
 
       if (existingReport) {
         // 기존 리포트가 있으면 DB에서 로드
-        console.log('✅ 저장된 AI 리포트 발견. DB에서 불러옵니다.');
+        console.log("✅ 저장된 AI 리포트 발견. DB에서 불러옵니다.");
         setAiReport(existingReport.report_data || null);
         setAiReportCreatedAt(existingReport.created_at || null);
         setIsReportFromDB(true); // DB에서 불러온 것으로 표시
@@ -1741,7 +1825,7 @@ const IndividualAnalysis: React.FC = () => {
         return;
       }
 
-      console.log('📝 새 AI 리포트 생성 시작...');
+      console.log("📝 새 AI 리포트 생성 시작...");
 
       // 네트워크 분석 결과에서 데이터 추출 - 더 구체적인 메트릭 사용
       const centerStudent = individualNetworkData.find((s) => s.isCenter);
@@ -1819,30 +1903,41 @@ const IndividualAnalysis: React.FC = () => {
       }
 
       // 개별 학생의 실제 설문 응답 데이터 수집
-      const surveyResponses = await getStudentSurveyResponses(selectedStudentData.id, selectedSurvey.id);
-      console.log('📋 수집된 설문 응답:', surveyResponses);
-      console.log('📋 설문 응답 상세:', JSON.stringify(surveyResponses, null, 2));
-      
+      const surveyResponses = await getStudentSurveyResponses(
+        selectedStudentData.id,
+        selectedSurvey.id,
+      );
+      console.log("📋 수집된 설문 응답:", surveyResponses);
+      console.log(
+        "📋 설문 응답 상세:",
+        JSON.stringify(surveyResponses, null, 2),
+      );
+
       // 네트워크 특성 데이터 수집
       const networkCharacteristics = {
         madeChoices: centerStudent?.friendCount || 0,
-        receivedChoices: individualNetworkData.filter(s => s.friends && s.friends.includes(selectedStudentData.id)).length,
+        receivedChoices: individualNetworkData.filter(
+          (s) => s.friends && s.friends.includes(selectedStudentData.id),
+        ).length,
         networkPosition: networkMetrics?.network_position || "평균적인 학생",
         communityMembers: individualNetworkData
-          .filter(s => s.community === communityId && s.id !== selectedStudentData.id)
-          .map(s => s.name)
+          .filter(
+            (s) =>
+              s.community === communityId && s.id !== selectedStudentData.id,
+          )
+          .map((s) => s.name),
       };
-      
-      console.log('🔍 네트워크 특성:', networkCharacteristics);
+
+      console.log("🔍 네트워크 특성:", networkCharacteristics);
 
       const satisfactionScore = calculateSatisfactionScore(surveyResponses);
       const violenceScore = calculateViolenceScore(surveyResponses);
-      
-      console.log('📊 계산된 점수:', {
+
+      console.log("📊 계산된 점수:", {
         만족도: `${(satisfactionScore * 100).toFixed(1)}%`,
         폭력경험: `${(violenceScore * 100).toFixed(1)}%`,
         친구수: centerStudent?.friendCount || 0,
-        중심성: `${(refinedCentrality * 100).toFixed(1)}%`
+        중심성: `${(refinedCentrality * 100).toFixed(1)}%`,
       });
 
       const analysisData: StudentAnalysisData = {
@@ -1858,7 +1953,7 @@ const IndividualAnalysis: React.FC = () => {
         satisfaction: satisfactionScore,
         violenceExperience: violenceScore,
         surveyResponses: surveyResponses,
-        networkCharacteristics: networkCharacteristics
+        networkCharacteristics: networkCharacteristics,
       };
 
       // 추가 설문 데이터 수집 (다른 설문들의 내용도 참조)
@@ -1878,8 +1973,8 @@ const IndividualAnalysis: React.FC = () => {
       // DB에 저장 시도 (실패해도 리포트는 표시됨)
       try {
         const savedReport = await AIReportService.saveAIReport(
-        selectedStudentData.id,
-        selectedSurvey.id,
+          selectedStudentData.id,
+          selectedSurvey.id,
           result.report,
           result.tokenUsage,
         );
@@ -1887,14 +1982,13 @@ const IndividualAnalysis: React.FC = () => {
         if (savedReport && savedReport.created_at) {
           setAiReportCreatedAt(savedReport.created_at);
           setIsReportFromDB(true); // DB에 저장 후 DB 상태로 변경
-          console.log('✅ AI 리포트 DB 저장 완료!');
+          console.log("✅ AI 리포트 DB 저장 완료!");
         }
       } catch (saveError) {
         // DB 저장 실패해도 무시 (리포트는 이미 표시됨)
-        console.error('⚠️ AI 리포트 DB 저장 실패:', saveError);
+        console.error("⚠️ AI 리포트 DB 저장 실패:", saveError);
       }
     } catch (error) {
-
       // 대체 리포트 생성 (오류 메시지 없이)
       const centerStudent = individualNetworkData.find((s) => s.isCenter);
       const centrality = centerStudent
@@ -1903,25 +1997,30 @@ const IndividualAnalysis: React.FC = () => {
         : 0;
 
       // 대체 리포트용 데이터도 개별화
-      const surveyResponses = await getStudentSurveyResponses(selectedStudentData.id, selectedSurvey.id);
-      console.log('📋 대체 리포트 - 설문 응답:', surveyResponses);
-      
+      const surveyResponses = await getStudentSurveyResponses(
+        selectedStudentData.id,
+        selectedSurvey.id,
+      );
+      console.log("📋 대체 리포트 - 설문 응답:", surveyResponses);
+
       const networkCharacteristics = {
         madeChoices: centerStudent?.friendCount || 0,
-        receivedChoices: individualNetworkData.filter(s => s.friends && s.friends.includes(selectedStudentData.id)).length,
+        receivedChoices: individualNetworkData.filter(
+          (s) => s.friends && s.friends.includes(selectedStudentData.id),
+        ).length,
         networkPosition: "평균적인 학생",
         communityMembers: individualNetworkData
-          .filter(s => s.community === 0 && s.id !== selectedStudentData.id)
-          .map(s => s.name)
+          .filter((s) => s.community === 0 && s.id !== selectedStudentData.id)
+          .map((s) => s.name),
       };
 
       const satisfactionScore = calculateSatisfactionScore(surveyResponses);
       const violenceScore = calculateViolenceScore(surveyResponses);
-      
-      console.log('📊 대체 리포트 - 계산된 점수:', {
+
+      console.log("📊 대체 리포트 - 계산된 점수:", {
         만족도: `${(satisfactionScore * 100).toFixed(1)}%`,
         폭력경험: `${(violenceScore * 100).toFixed(1)}%`,
-        친구수: centerStudent?.friendCount || 0
+        친구수: centerStudent?.friendCount || 0,
       });
 
       const analysisData: StudentAnalysisData = {
@@ -1940,7 +2039,7 @@ const IndividualAnalysis: React.FC = () => {
         satisfaction: satisfactionScore,
         violenceExperience: violenceScore,
         surveyResponses: surveyResponses,
-        networkCharacteristics: networkCharacteristics
+        networkCharacteristics: networkCharacteristics,
       };
 
       const fallbackResult = generateFallbackReport(analysisData);
@@ -1963,11 +2062,11 @@ const IndividualAnalysis: React.FC = () => {
           if (savedReport && savedReport.created_at) {
             setAiReportCreatedAt(savedReport.created_at);
             setIsReportFromDB(true); // DB에 저장 후 DB 상태로 변경
-            console.log('✅ 대체 리포트 DB 저장 완료!');
+            console.log("✅ 대체 리포트 DB 저장 완료!");
           }
         } catch (saveError) {
           // DB 저장 실패해도 무시 (리포트는 이미 표시됨)
-          console.error('⚠️ 대체 리포트 DB 저장 실패:', saveError);
+          console.error("⚠️ 대체 리포트 DB 저장 실패:", saveError);
         }
       }
     } finally {
@@ -2175,10 +2274,11 @@ const IndividualAnalysis: React.FC = () => {
                     onClick={() => setSelectedStudent(student.id)}
                   >
                     <div className="flex items-center justify-between">
-                      <div className="flex items-center space-x-2">
-                        <span className="truncate text-sm font-medium">
-                          {index + 1}번) {student.name}
-                        </span>
+                      <span className="truncate text-sm font-medium">
+                        {index + 1}번) {student.name}
+                      </span>
+
+                      <div className="flex items-center gap-2">
                         <span
                           className={`rounded-full px-2 py-1 text-xs font-medium ${getStudentTypeColor(
                             getStudentType(student),
@@ -2191,10 +2291,10 @@ const IndividualAnalysis: React.FC = () => {
                         >
                           {getStudentTypeLabel(getStudentType(student))}
                         </span>
+                        {selectedStudent === student.id && (
+                          <ChevronRightIcon className="h-4 w-4 flex-shrink-0 text-blue-600" />
+                        )}
                       </div>
-                      {selectedStudent === student.id && (
-                        <ChevronRightIcon className="h-4 w-4 flex-shrink-0 text-blue-600" />
-                      )}
                     </div>
                   </div>
                 ))}
@@ -2334,47 +2434,53 @@ const IndividualAnalysis: React.FC = () => {
                               </button>
                               {/* 재생성 버튼 - 24시간 후에만 표시 */}
                               {canRegenerateReport() && (
-                              <button
-                                onClick={async () => {
-                                  // 기존 리포트 삭제 후 재생성
-                                  setAiReport(null);
+                                <button
+                                  onClick={async () => {
+                                    // 기존 리포트 삭제 후 재생성
+                                    setAiReport(null);
                                     setAiReportCreatedAt(null);
                                     setIsReportFromDB(false); // 상태 초기화
-                                  setAiReportLoading(true);
+                                    setAiReportLoading(true);
 
-                                  try {
-                                    // DB에서 기존 리포트 삭제
-                                    if (selectedStudentData && selectedSurvey) {
-                                      await AIReportService.deleteAIReportByStudentSurvey(
-                                        selectedStudentData.id,
-                                        selectedSurvey.id,
+                                    try {
+                                      // DB에서 기존 리포트 삭제
+                                      if (
+                                        selectedStudentData &&
+                                        selectedSurvey
+                                      ) {
+                                        await AIReportService.deleteAIReportByStudentSurvey(
+                                          selectedStudentData.id,
+                                          selectedSurvey.id,
+                                        );
+                                      }
+
+                                      // 새 리포트 생성
+                                      await generateAIReport();
+                                    } catch (error) {
+                                      console.error(
+                                        "리포트 재생성 오류:",
+                                        error,
                                       );
+                                      setAiReportLoading(false);
                                     }
-
-                                    // 새 리포트 생성
-                                    await generateAIReport();
-                                  } catch (error) {
-                                    console.error("리포트 재생성 오류:", error);
-                                    setAiReportLoading(false);
-                                  }
-                                }}
-                                className="flex items-center space-x-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-blue-700"
-                              >
-                                <svg
-                                  className="h-4 w-4"
-                                  fill="none"
-                                  stroke="currentColor"
-                                  viewBox="0 0 24 24"
+                                  }}
+                                  className="flex items-center space-x-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-blue-700"
                                 >
-                                  <path
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    strokeWidth={2}
-                                    d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
-                                  />
-                                </svg>
-                                <span>리포트 재생성</span>
-                              </button>
+                                  <svg
+                                    className="h-4 w-4"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    viewBox="0 0 24 24"
+                                  >
+                                    <path
+                                      strokeLinecap="round"
+                                      strokeLinejoin="round"
+                                      strokeWidth={2}
+                                      d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                                    />
+                                  </svg>
+                                  <span>리포트 재생성</span>
+                                </button>
                               )}
                               {/* 24시간 이내인 경우 안내 메시지 */}
                               {!canRegenerateReport() && aiReportCreatedAt && (
@@ -2393,13 +2499,17 @@ const IndividualAnalysis: React.FC = () => {
                                     />
                                   </svg>
                                   <span>
-                                    리포트 재생성은 24시간 후 가능합니다
-                                    (생성: {new Date(aiReportCreatedAt).toLocaleString('ko-KR', { 
-                                      month: 'short', 
-                                      day: 'numeric', 
-                                      hour: '2-digit', 
-                                      minute: '2-digit' 
-                                    })})
+                                    리포트 재생성은 24시간 후 가능합니다 (생성:{" "}
+                                    {new Date(aiReportCreatedAt).toLocaleString(
+                                      "ko-KR",
+                                      {
+                                        month: "short",
+                                        day: "numeric",
+                                        hour: "2-digit",
+                                        minute: "2-digit",
+                                      },
+                                    )}
+                                    )
                                   </span>
                                 </div>
                               )}
@@ -2407,7 +2517,7 @@ const IndividualAnalysis: React.FC = () => {
 
                             {/* DB 상태 표시 뱃지 */}
                             {isReportFromDB && (
-                              <div className="flex items-center space-x-2 rounded-lg bg-green-50 border border-green-200 px-4 py-3">
+                              <div className="flex items-center space-x-2 rounded-lg border border-green-200 bg-green-50 px-4 py-3">
                                 <svg
                                   className="h-5 w-5 text-green-600"
                                   fill="none"
@@ -2426,18 +2536,23 @@ const IndividualAnalysis: React.FC = () => {
                                 </span>
                                 {aiReportCreatedAt && (
                                   <span className="text-xs text-green-600">
-                                    (생성: {new Date(aiReportCreatedAt).toLocaleString('ko-KR', { 
-                                      month: 'short', 
-                                      day: 'numeric', 
-                                      hour: '2-digit', 
-                                      minute: '2-digit' 
-                                    })})
+                                    (생성:{" "}
+                                    {new Date(aiReportCreatedAt).toLocaleString(
+                                      "ko-KR",
+                                      {
+                                        month: "short",
+                                        day: "numeric",
+                                        hour: "2-digit",
+                                        minute: "2-digit",
+                                      },
+                                    )}
+                                    )
                                   </span>
                                 )}
                               </div>
                             )}
                             {!isReportFromDB && (
-                              <div className="flex items-center space-x-2 rounded-lg bg-blue-50 border border-blue-200 px-4 py-3">
+                              <div className="flex items-center space-x-2 rounded-lg border border-blue-200 bg-blue-50 px-4 py-3">
                                 <svg
                                   className="h-5 w-5 text-blue-600"
                                   fill="none"
@@ -2458,7 +2573,10 @@ const IndividualAnalysis: React.FC = () => {
                             )}
 
                             {/* AI 리포트 표시 */}
-                            <AIReportDisplay aiReport={aiReport} tokenUsage={tokenUsage} />
+                            <AIReportDisplay
+                              aiReport={aiReport}
+                              tokenUsage={tokenUsage}
+                            />
 
                             {/* 실용적인 활용 예시 섹션 */}
                             <div className="mt-8 space-y-6">
@@ -2488,9 +2606,11 @@ const IndividualAnalysis: React.FC = () => {
                                       </span>
                                       <button
                                         onClick={() => {
-                                          const message = `안녕하세요, ${selectedStudentData?.name} 학부모님.\n\n최근 교우관계 분석 결과, ${selectedStudentData?.name} 학생이 친구들과 매우 긍정적인 관계를 맺고 있는 것으로 나타났습니다. ${selectedStudentData?.name} 학생의 밝은 모습이 학급 분위기에도 좋은 영향을 주고 있습니다.\n\n앞으로도 건강하고 즐거운 학교생활이 되도록 지도하겠습니다.\n\n${teacherInfo?.name || ''} 담임 올림`;
-                                          navigator.clipboard.writeText(message);
-                                          alert('문자 내용이 복사되었습니다!');
+                                          const message = `안녕하세요, ${selectedStudentData?.name} 학부모님.\n\n최근 교우관계 분석 결과, ${selectedStudentData?.name} 학생이 친구들과 매우 긍정적인 관계를 맺고 있는 것으로 나타났습니다. ${selectedStudentData?.name} 학생의 밝은 모습이 학급 분위기에도 좋은 영향을 주고 있습니다.\n\n앞으로도 건강하고 즐거운 학교생활이 되도록 지도하겠습니다.\n\n${teacherInfo?.name || ""} 담임 올림`;
+                                          navigator.clipboard.writeText(
+                                            message,
+                                          );
+                                          alert("문자 내용이 복사되었습니다!");
                                         }}
                                         className="text-xs text-blue-600 underline hover:text-blue-800"
                                       >
@@ -2498,16 +2618,29 @@ const IndividualAnalysis: React.FC = () => {
                                       </button>
                                     </div>
                                     <p className="text-sm text-gray-700">
-                                      안녕하세요, <strong>{selectedStudentData?.name}</strong> 학부모님.
+                                      안녕하세요,{" "}
+                                      <strong>
+                                        {selectedStudentData?.name}
+                                      </strong>{" "}
+                                      학부모님.
                                       <br />
                                       <br />
-                                      최근 교우관계 분석 결과, <strong>{selectedStudentData?.name}</strong> 학생이 친구들과 매우 긍정적인 관계를 맺고 있는 것으로 나타났습니다. {selectedStudentData?.name} 학생의 밝은 모습이 학급 분위기에도 좋은 영향을 주고 있습니다.
+                                      최근 교우관계 분석 결과,{" "}
+                                      <strong>
+                                        {selectedStudentData?.name}
+                                      </strong>{" "}
+                                      학생이 친구들과 매우 긍정적인 관계를 맺고
+                                      있는 것으로 나타났습니다.{" "}
+                                      {selectedStudentData?.name} 학생의 밝은
+                                      모습이 학급 분위기에도 좋은 영향을 주고
+                                      있습니다.
                                       <br />
                                       <br />
-                                      앞으로도 건강하고 즐거운 학교생활이 되도록 지도하겠습니다.
+                                      앞으로도 건강하고 즐거운 학교생활이 되도록
+                                      지도하겠습니다.
                                       <br />
                                       <br />
-                                      {teacherInfo?.name || ''} 담임 올림
+                                      {teacherInfo?.name || ""} 담임 올림
                                     </p>
                                   </div>
 
@@ -2518,9 +2651,11 @@ const IndividualAnalysis: React.FC = () => {
                                       </span>
                                       <button
                                         onClick={() => {
-                                          const message = `안녕하세요, ${selectedStudentData?.name} 학부모님.\n\n최근 교우관계 분석을 통해 ${selectedStudentData?.name} 학생의 학교생활을 살펴보았습니다. 좀 더 다양한 친구들과 교류할 수 있도록 학급에서 소그룹 활동 기회를 제공하고 있습니다.\n\n가정에서도 학교생활에 대해 편안하게 이야기 나눌 수 있는 시간을 가져주시면 좋겠습니다. 필요시 상담 일정을 잡아 자세히 말씀드리겠습니다.\n\n${teacherInfo?.name || ''} 담임 올림`;
-                                          navigator.clipboard.writeText(message);
-                                          alert('문자 내용이 복사되었습니다!');
+                                          const message = `안녕하세요, ${selectedStudentData?.name} 학부모님.\n\n최근 교우관계 분석을 통해 ${selectedStudentData?.name} 학생의 학교생활을 살펴보았습니다. 좀 더 다양한 친구들과 교류할 수 있도록 학급에서 소그룹 활동 기회를 제공하고 있습니다.\n\n가정에서도 학교생활에 대해 편안하게 이야기 나눌 수 있는 시간을 가져주시면 좋겠습니다. 필요시 상담 일정을 잡아 자세히 말씀드리겠습니다.\n\n${teacherInfo?.name || ""} 담임 올림`;
+                                          navigator.clipboard.writeText(
+                                            message,
+                                          );
+                                          alert("문자 내용이 복사되었습니다!");
                                         }}
                                         className="text-xs text-orange-600 underline hover:text-orange-800"
                                       >
@@ -2528,16 +2663,29 @@ const IndividualAnalysis: React.FC = () => {
                                       </button>
                                     </div>
                                     <p className="text-sm text-gray-700">
-                                      안녕하세요, <strong>{selectedStudentData?.name}</strong> 학부모님.
+                                      안녕하세요,{" "}
+                                      <strong>
+                                        {selectedStudentData?.name}
+                                      </strong>{" "}
+                                      학부모님.
                                       <br />
                                       <br />
-                                      최근 교우관계 분석을 통해 <strong>{selectedStudentData?.name}</strong> 학생의 학교생활을 살펴보았습니다. 좀 더 다양한 친구들과 교류할 수 있도록 학급에서 소그룹 활동 기회를 제공하고 있습니다.
+                                      최근 교우관계 분석을 통해{" "}
+                                      <strong>
+                                        {selectedStudentData?.name}
+                                      </strong>{" "}
+                                      학생의 학교생활을 살펴보았습니다. 좀 더
+                                      다양한 친구들과 교류할 수 있도록 학급에서
+                                      소그룹 활동 기회를 제공하고 있습니다.
                                       <br />
                                       <br />
-                                      가정에서도 학교생활에 대해 편안하게 이야기 나눌 수 있는 시간을 가져주시면 좋겠습니다. 필요시 상담 일정을 잡아 자세히 말씀드리겠습니다.
+                                      가정에서도 학교생활에 대해 편안하게 이야기
+                                      나눌 수 있는 시간을 가져주시면 좋겠습니다.
+                                      필요시 상담 일정을 잡아 자세히
+                                      말씀드리겠습니다.
                                       <br />
                                       <br />
-                                      {teacherInfo?.name || ''} 담임 올림
+                                      {teacherInfo?.name || ""} 담임 올림
                                     </p>
                                   </div>
                                 </div>
@@ -2569,9 +2717,11 @@ const IndividualAnalysis: React.FC = () => {
                                       </span>
                                       <button
                                         onClick={() => {
-                                          const message = `${selectedStudentData?.name}야 안녕! 선생님이야 😊\n\n오늘 친구들이랑 재밌게 노는 거 봤어. ${selectedStudentData?.name} 웃는 모습 보니까 선생님도 기분 좋더라 ㅎㅎ\n\n내일도 오늘처럼 즐겁게 보내! 힘들거나 이야기하고 싶은 거 있으면 언제든 말해 🤗\n\n${teacherInfo?.name || ''} 쌤이`;
-                                          navigator.clipboard.writeText(message);
-                                          alert('문자 내용이 복사되었습니다!');
+                                          const message = `${selectedStudentData?.name}야 안녕! 선생님이야 😊\n\n오늘 친구들이랑 재밌게 노는 거 봤어. ${selectedStudentData?.name} 웃는 모습 보니까 선생님도 기분 좋더라 ㅎㅎ\n\n내일도 오늘처럼 즐겁게 보내! 힘들거나 이야기하고 싶은 거 있으면 언제든 말해 🤗\n\n${teacherInfo?.name || ""} 쌤이`;
+                                          navigator.clipboard.writeText(
+                                            message,
+                                          );
+                                          alert("문자 내용이 복사되었습니다!");
                                         }}
                                         className="text-xs text-pink-600 underline hover:text-pink-800"
                                       >
@@ -2579,16 +2729,24 @@ const IndividualAnalysis: React.FC = () => {
                                       </button>
                                     </div>
                                     <p className="text-sm text-gray-700">
-                                      <strong>{selectedStudentData?.name}</strong>야 안녕! 선생님이야 😊
+                                      <strong>
+                                        {selectedStudentData?.name}
+                                      </strong>
+                                      야 안녕! 선생님이야 😊
                                       <br />
                                       <br />
-                                      오늘 친구들이랑 재밌게 노는 거 봤어. <strong>{selectedStudentData?.name}</strong> 웃는 모습 보니까 선생님도 기분 좋더라 ㅎㅎ
+                                      오늘 친구들이랑 재밌게 노는 거 봤어.{" "}
+                                      <strong>
+                                        {selectedStudentData?.name}
+                                      </strong>{" "}
+                                      웃는 모습 보니까 선생님도 기분 좋더라 ㅎㅎ
                                       <br />
                                       <br />
-                                      내일도 오늘처럼 즐겁게 보내! 힘들거나 이야기하고 싶은 거 있으면 언제든 말해 🤗
+                                      내일도 오늘처럼 즐겁게 보내! 힘들거나
+                                      이야기하고 싶은 거 있으면 언제든 말해 🤗
                                       <br />
                                       <br />
-                                      {teacherInfo?.name || ''} 쌤이
+                                      {teacherInfo?.name || ""} 쌤이
                                     </p>
                                   </div>
 
@@ -2599,9 +2757,11 @@ const IndividualAnalysis: React.FC = () => {
                                       </span>
                                       <button
                                         onClick={() => {
-                                          const message = `${selectedStudentData?.name}아 안녕~ 쌤이야! ☺️\n\n요즘 어때? 학교생활 재밌어? 선생님이 ${selectedStudentData?.name} 생각나서 연락했어 ㅎㅎ\n\n혹시 힘든 일 있거나 고민 있으면 쌤한테 언제든 말해도 돼. 내일 쉬는 시간에 잠깐 얘기할까? 🍪 과자도 준비할게!\n\n쌤이 항상 응원해! 💪\n\n${teacherInfo?.name || ''} 쌤`;
-                                          navigator.clipboard.writeText(message);
-                                          alert('문자 내용이 복사되었습니다!');
+                                          const message = `${selectedStudentData?.name}아 안녕~ 쌤이야! ☺️\n\n요즘 어때? 학교생활 재밌어? 선생님이 ${selectedStudentData?.name} 생각나서 연락했어 ㅎㅎ\n\n혹시 힘든 일 있거나 고민 있으면 쌤한테 언제든 말해도 돼. 내일 쉬는 시간에 잠깐 얘기할까? 🍪 과자도 준비할게!\n\n쌤이 항상 응원해! 💪\n\n${teacherInfo?.name || ""} 쌤`;
+                                          navigator.clipboard.writeText(
+                                            message,
+                                          );
+                                          alert("문자 내용이 복사되었습니다!");
                                         }}
                                         className="text-xs text-pink-600 underline hover:text-pink-800"
                                       >
@@ -2609,19 +2769,28 @@ const IndividualAnalysis: React.FC = () => {
                                       </button>
                                     </div>
                                     <p className="text-sm text-gray-700">
-                                      <strong>{selectedStudentData?.name}</strong>아 안녕~ 쌤이야! ☺️
+                                      <strong>
+                                        {selectedStudentData?.name}
+                                      </strong>
+                                      아 안녕~ 쌤이야! ☺️
                                       <br />
                                       <br />
-                                      요즘 어때? 학교생활 재밌어? 선생님이 <strong>{selectedStudentData?.name}</strong> 생각나서 연락했어 ㅎㅎ
+                                      요즘 어때? 학교생활 재밌어? 선생님이{" "}
+                                      <strong>
+                                        {selectedStudentData?.name}
+                                      </strong>{" "}
+                                      생각나서 연락했어 ㅎㅎ
                                       <br />
                                       <br />
-                                      혹시 힘든 일 있거나 고민 있으면 쌤한테 언제든 말해도 돼. 내일 쉬는 시간에 잠깐 얘기할까? 🍪 과자도 준비할게!
+                                      혹시 힘든 일 있거나 고민 있으면 쌤한테
+                                      언제든 말해도 돼. 내일 쉬는 시간에 잠깐
+                                      얘기할까? 🍪 과자도 준비할게!
                                       <br />
                                       <br />
                                       쌤이 항상 응원해! 💪
                                       <br />
                                       <br />
-                                      {teacherInfo?.name || ''} 쌤
+                                      {teacherInfo?.name || ""} 쌤
                                     </p>
                                   </div>
 
@@ -2632,9 +2801,11 @@ const IndividualAnalysis: React.FC = () => {
                                       </span>
                                       <button
                                         onClick={() => {
-                                          const message = `${selectedStudentData?.name}야! 🌟\n\n오늘 수업시간에 발표한 거 진짜 대박이었어! 👏 ${selectedStudentData?.name} 점점 더 당당해지는 모습 보니까 쌤이 완전 뿌듯하다 ㅠㅠ\n\n이번 주도 이렇게 멋지게! 화이팅!! 💪✨\n\n${teacherInfo?.name || ''} 쌤이`;
-                                          navigator.clipboard.writeText(message);
-                                          alert('문자 내용이 복사되었습니다!');
+                                          const message = `${selectedStudentData?.name}야! 🌟\n\n오늘 수업시간에 발표한 거 진짜 대박이었어! 👏 ${selectedStudentData?.name} 점점 더 당당해지는 모습 보니까 쌤이 완전 뿌듯하다 ㅠㅠ\n\n이번 주도 이렇게 멋지게! 화이팅!! 💪✨\n\n${teacherInfo?.name || ""} 쌤이`;
+                                          navigator.clipboard.writeText(
+                                            message,
+                                          );
+                                          alert("문자 내용이 복사되었습니다!");
                                         }}
                                         className="text-xs text-pink-600 underline hover:text-pink-800"
                                       >
@@ -2642,16 +2813,25 @@ const IndividualAnalysis: React.FC = () => {
                                       </button>
                                     </div>
                                     <p className="text-sm text-gray-700">
-                                      <strong>{selectedStudentData?.name}</strong>야! 🌟
+                                      <strong>
+                                        {selectedStudentData?.name}
+                                      </strong>
+                                      야! 🌟
                                       <br />
                                       <br />
-                                      오늘 수업시간에 발표한 거 진짜 대박이었어! 👏 <strong>{selectedStudentData?.name}</strong> 점점 더 당당해지는 모습 보니까 쌤이 완전 뿌듯하다 ㅠㅠ
+                                      오늘 수업시간에 발표한 거 진짜 대박이었어!
+                                      👏{" "}
+                                      <strong>
+                                        {selectedStudentData?.name}
+                                      </strong>{" "}
+                                      점점 더 당당해지는 모습 보니까 쌤이 완전
+                                      뿌듯하다 ㅠㅠ
                                       <br />
                                       <br />
                                       이번 주도 이렇게 멋지게! 화이팅!! 💪✨
                                       <br />
                                       <br />
-                                      {teacherInfo?.name || ''} 쌤이
+                                      {teacherInfo?.name || ""} 쌤이
                                     </p>
                                   </div>
 
@@ -2662,9 +2842,11 @@ const IndividualAnalysis: React.FC = () => {
                                       </span>
                                       <button
                                         onClick={() => {
-                                          const message = `🎂 ${selectedStudentData?.name}야 생일 축하해!! 🎉🎈\n\n${selectedStudentData?.name} 덕분에 우리 반이 더 재밌고 행복해! 올해도 멋진 일들만 가득하길! 🌟\n\n내일 학교에서 보자~ 쌤이 작은 서프라이즈 준비했어 ㅎㅎ 기대해도 돼! 😊🎁\n\n${teacherInfo?.name || ''} 쌤이`;
-                                          navigator.clipboard.writeText(message);
-                                          alert('문자 내용이 복사되었습니다!');
+                                          const message = `🎂 ${selectedStudentData?.name}야 생일 축하해!! 🎉🎈\n\n${selectedStudentData?.name} 덕분에 우리 반이 더 재밌고 행복해! 올해도 멋진 일들만 가득하길! 🌟\n\n내일 학교에서 보자~ 쌤이 작은 서프라이즈 준비했어 ㅎㅎ 기대해도 돼! 😊🎁\n\n${teacherInfo?.name || ""} 쌤이`;
+                                          navigator.clipboard.writeText(
+                                            message,
+                                          );
+                                          alert("문자 내용이 복사되었습니다!");
                                         }}
                                         className="text-xs text-pink-600 underline hover:text-pink-800"
                                       >
@@ -2672,16 +2854,25 @@ const IndividualAnalysis: React.FC = () => {
                                       </button>
                                     </div>
                                     <p className="text-sm text-gray-700">
-                                      🎂 <strong>{selectedStudentData?.name}</strong>야 생일 축하해!! 🎉🎈
+                                      🎂{" "}
+                                      <strong>
+                                        {selectedStudentData?.name}
+                                      </strong>
+                                      야 생일 축하해!! 🎉🎈
                                       <br />
                                       <br />
-                                      <strong>{selectedStudentData?.name}</strong> 덕분에 우리 반이 더 재밌고 행복해! 올해도 멋진 일들만 가득하길! 🌟
+                                      <strong>
+                                        {selectedStudentData?.name}
+                                      </strong>{" "}
+                                      덕분에 우리 반이 더 재밌고 행복해! 올해도
+                                      멋진 일들만 가득하길! 🌟
                                       <br />
                                       <br />
-                                      내일 학교에서 보자~ 쌤이 작은 서프라이즈 준비했어 ㅎㅎ 기대해도 돼! 😊🎁
+                                      내일 학교에서 보자~ 쌤이 작은 서프라이즈
+                                      준비했어 ㅎㅎ 기대해도 돼! 😊🎁
                                       <br />
                                       <br />
-                                      {teacherInfo?.name || ''} 쌤이
+                                      {teacherInfo?.name || ""} 쌤이
                                     </p>
                                   </div>
                                 </div>
@@ -2711,12 +2902,17 @@ const IndividualAnalysis: React.FC = () => {
                                       1. 라포 형성 (신뢰 구축)
                                     </h4>
                                     <div className="space-y-2 text-sm text-gray-700">
-                                      <p className="font-medium text-green-600">✓ 대화 시작</p>
+                                      <p className="font-medium text-green-600">
+                                        ✓ 대화 시작
+                                      </p>
                                       <p className="ml-4">
-                                        "안녕, {selectedStudentData?.name}! 오늘 기분은 어때? 선생님이랑 잠깐 이야기 나눌 수 있을까?"
+                                        "안녕, {selectedStudentData?.name}! 오늘
+                                        기분은 어때? 선생님이랑 잠깐 이야기 나눌
+                                        수 있을까?"
                                       </p>
                                       <p className="ml-4 text-xs text-gray-500">
-                                        → 편안한 분위기에서 학생이 마음을 열 수 있도록 합니다
+                                        → 편안한 분위기에서 학생이 마음을 열 수
+                                        있도록 합니다
                                       </p>
                                     </div>
                                   </div>
@@ -2726,12 +2922,17 @@ const IndividualAnalysis: React.FC = () => {
                                       2. 공감적 경청
                                     </h4>
                                     <div className="space-y-2 text-sm text-gray-700">
-                                      <p className="font-medium text-green-600">✓ 감정 인정하기</p>
+                                      <p className="font-medium text-green-600">
+                                        ✓ 감정 인정하기
+                                      </p>
                                       <p className="ml-4">
-                                        "요즘 친구들과 지내는 게 조금 힘들구나. 그런 기분이 드는 게 당연해. 선생님한테 더 이야기해줄 수 있어?"
+                                        "요즘 친구들과 지내는 게 조금 힘들구나.
+                                        그런 기분이 드는 게 당연해. 선생님한테
+                                        더 이야기해줄 수 있어?"
                                       </p>
                                       <p className="ml-4 text-xs text-gray-500">
-                                        → 학생의 감정을 먼저 인정하고 공감해줍니다
+                                        → 학생의 감정을 먼저 인정하고
+                                        공감해줍니다
                                       </p>
                                     </div>
                                   </div>
@@ -2741,18 +2942,23 @@ const IndividualAnalysis: React.FC = () => {
                                       3. 구체적 질문 (열린 질문)
                                     </h4>
                                     <div className="space-y-2 text-sm text-gray-700">
-                                      <p className="font-medium text-green-600">✓ 상황 파악하기</p>
-                                      <p className="ml-4">
-                                        "쉬는 시간에는 주로 누구랑 무엇을 하면서 시간을 보내니?"
+                                      <p className="font-medium text-green-600">
+                                        ✓ 상황 파악하기
                                       </p>
                                       <p className="ml-4">
-                                        "요즘 학교에서 가장 즐거운 순간은 언제야?"
+                                        "쉬는 시간에는 주로 누구랑 무엇을 하면서
+                                        시간을 보내니?"
+                                      </p>
+                                      <p className="ml-4">
+                                        "요즘 학교에서 가장 즐거운 순간은
+                                        언제야?"
                                       </p>
                                       <p className="ml-4">
                                         "친구들이랑 같이 하고 싶은 활동이 있어?"
                                       </p>
                                       <p className="ml-4 text-xs text-gray-500">
-                                        → 예/아니오로 답할 수 없는 열린 질문으로 학생의 생각을 듣습니다
+                                        → 예/아니오로 답할 수 없는 열린 질문으로
+                                        학생의 생각을 듣습니다
                                       </p>
                                     </div>
                                   </div>
@@ -2762,15 +2968,23 @@ const IndividualAnalysis: React.FC = () => {
                                       4. 긍정적 강화
                                     </h4>
                                     <div className="space-y-2 text-sm text-gray-700">
-                                      <p className="font-medium text-green-600">✓ 강점 발견 및 격려</p>
-                                      <p className="ml-4">
-                                        "선생님이 보니까 {selectedStudentData?.name}는 친구들 이야기를 잘 들어주더라. 그게 정말 좋은 점이야."
+                                      <p className="font-medium text-green-600">
+                                        ✓ 강점 발견 및 격려
                                       </p>
                                       <p className="ml-4">
-                                        "지난주에 ○○이랑 같이 과제할 때 정말 잘 도와줬잖아. 그런 모습 계속 보여주면 좋겠어."
+                                        "선생님이 보니까{" "}
+                                        {selectedStudentData?.name}는 친구들
+                                        이야기를 잘 들어주더라. 그게 정말 좋은
+                                        점이야."
+                                      </p>
+                                      <p className="ml-4">
+                                        "지난주에 ○○이랑 같이 과제할 때 정말 잘
+                                        도와줬잖아. 그런 모습 계속 보여주면
+                                        좋겠어."
                                       </p>
                                       <p className="ml-4 text-xs text-gray-500">
-                                        → 구체적인 행동을 언급하며 강점을 강화합니다
+                                        → 구체적인 행동을 언급하며 강점을
+                                        강화합니다
                                       </p>
                                     </div>
                                   </div>
@@ -2780,15 +2994,20 @@ const IndividualAnalysis: React.FC = () => {
                                       5. 실천 가능한 목표 설정
                                     </h4>
                                     <div className="space-y-2 text-sm text-gray-700">
-                                      <p className="font-medium text-green-600">✓ 작은 목표부터</p>
-                                      <p className="ml-4">
-                                        "이번 주에는 점심시간에 평소랑 다른 친구 한 명이랑 같이 밥 먹어보는 건 어때?"
+                                      <p className="font-medium text-green-600">
+                                        ✓ 작은 목표부터
                                       </p>
                                       <p className="ml-4">
-                                        "내일 쉬는 시간에 ○○이한테 먼저 인사해보자. 선생님이 응원할게!"
+                                        "이번 주에는 점심시간에 평소랑 다른 친구
+                                        한 명이랑 같이 밥 먹어보는 건 어때?"
+                                      </p>
+                                      <p className="ml-4">
+                                        "내일 쉬는 시간에 ○○이한테 먼저
+                                        인사해보자. 선생님이 응원할게!"
                                       </p>
                                       <p className="ml-4 text-xs text-gray-500">
-                                        → 학생이 실천 가능한 작은 목표를 함께 정합니다
+                                        → 학생이 실천 가능한 작은 목표를 함께
+                                        정합니다
                                       </p>
                                     </div>
                                   </div>
@@ -2819,9 +3038,20 @@ const IndividualAnalysis: React.FC = () => {
                                       📌 소그룹 협력 활동
                                     </h4>
                                     <ul className="ml-4 space-y-1 text-sm text-gray-700">
-                                      <li>• <strong>짝 바꾸기:</strong> 평소 교류가 적은 친구와 짝을 지어 함께 과제 수행</li>
-                                      <li>• <strong>모둠 프로젝트:</strong> 다양한 성향의 학생들로 모둠을 구성하여 협력 기회 제공</li>
-                                      <li>• <strong>점심 친구 만들기:</strong> 주 1회 랜덤으로 점심 짝 정해서 함께 식사</li>
+                                      <li>
+                                        • <strong>짝 바꾸기:</strong> 평소
+                                        교류가 적은 친구와 짝을 지어 함께 과제
+                                        수행
+                                      </li>
+                                      <li>
+                                        • <strong>모둠 프로젝트:</strong> 다양한
+                                        성향의 학생들로 모둠을 구성하여 협력
+                                        기회 제공
+                                      </li>
+                                      <li>
+                                        • <strong>점심 친구 만들기:</strong> 주
+                                        1회 랜덤으로 점심 짝 정해서 함께 식사
+                                      </li>
                                     </ul>
                                   </div>
 
@@ -2830,9 +3060,18 @@ const IndividualAnalysis: React.FC = () => {
                                       🎮 관계 형성 게임
                                     </h4>
                                     <ul className="ml-4 space-y-1 text-sm text-gray-700">
-                                      <li>• <strong>칭찬 릴레이:</strong> 돌아가며 옆 친구의 좋은 점 한 가지씩 말하기</li>
-                                      <li>• <strong>공통점 찾기:</strong> 짝과 함께 서로의 공통점 5가지 찾기</li>
-                                      <li>• <strong>감사 카드:</strong> 이번 주 도움받은 친구에게 감사 카드 쓰기</li>
+                                      <li>
+                                        • <strong>칭찬 릴레이:</strong> 돌아가며
+                                        옆 친구의 좋은 점 한 가지씩 말하기
+                                      </li>
+                                      <li>
+                                        • <strong>공통점 찾기:</strong> 짝과
+                                        함께 서로의 공통점 5가지 찾기
+                                      </li>
+                                      <li>
+                                        • <strong>감사 카드:</strong> 이번 주
+                                        도움받은 친구에게 감사 카드 쓰기
+                                      </li>
                                     </ul>
                                   </div>
 
@@ -2841,9 +3080,19 @@ const IndividualAnalysis: React.FC = () => {
                                       👥 역할 부여 전략
                                     </h4>
                                     <ul className="ml-4 space-y-1 text-sm text-gray-700">
-                                      <li>• <strong>모둠 리더:</strong> 리더십을 발휘할 수 있는 역할 부여 (조용한 학생에게도 기회)</li>
-                                      <li>• <strong>도우미 친구:</strong> 특정 과목에서 어려움을 겪는 친구 도와주기</li>
-                                      <li>• <strong>환경 도우미:</strong> 함께 교실 환경을 관리하며 협력 경험</li>
+                                      <li>
+                                        • <strong>모둠 리더:</strong> 리더십을
+                                        발휘할 수 있는 역할 부여 (조용한
+                                        학생에게도 기회)
+                                      </li>
+                                      <li>
+                                        • <strong>도우미 친구:</strong> 특정
+                                        과목에서 어려움을 겪는 친구 도와주기
+                                      </li>
+                                      <li>
+                                        • <strong>환경 도우미:</strong> 함께
+                                        교실 환경을 관리하며 협력 경험
+                                      </li>
                                     </ul>
                                   </div>
                                 </div>
@@ -2892,7 +3141,9 @@ const IndividualAnalysis: React.FC = () => {
                                     </h4>
                                     <ul className="ml-4 space-y-1 text-sm text-gray-700">
                                       <li>□ 모둠 활동 참여도는 어떠한가?</li>
-                                      <li>□ 발표나 질문을 적극적으로 하는가?</li>
+                                      <li>
+                                        □ 발표나 질문을 적극적으로 하는가?
+                                      </li>
                                       <li>□ 친구들과의 상호작용은 어떠한가?</li>
                                       <li>□ 수업 태도와 집중도는 어떠한가?</li>
                                     </ul>
@@ -2953,8 +3204,14 @@ const IndividualAnalysis: React.FC = () => {
                                           긍정적 상호작용 만들기
                                         </h4>
                                         <p className="mt-1 text-sm text-gray-700">
-                                          오늘 하루 동안 <strong>{selectedStudentData?.name}</strong> 학생에게 최소 3번 이상 긍정적인 피드백을 주세요. 
-                                          "잘했어", "좋은 생각이야", "도움이 됐어" 같은 간단한 말도 효과적입니다.
+                                          오늘 하루 동안{" "}
+                                          <strong>
+                                            {selectedStudentData?.name}
+                                          </strong>{" "}
+                                          학생에게 최소 3번 이상 긍정적인
+                                          피드백을 주세요. "잘했어", "좋은
+                                          생각이야", "도움이 됐어" 같은 간단한
+                                          말도 효과적입니다.
                                         </p>
                                       </div>
                                     </div>
@@ -2970,7 +3227,13 @@ const IndividualAnalysis: React.FC = () => {
                                           관계 연결 기회 제공
                                         </h4>
                                         <p className="mt-1 text-sm text-gray-700">
-                                          수업 중 짝 활동이나 모둠 활동 시, <strong>{selectedStudentData?.name}</strong> 학생이 평소 잘 어울리지 않던 친구와 함께할 수 있도록 의도적으로 배치해보세요.
+                                          수업 중 짝 활동이나 모둠 활동 시,{" "}
+                                          <strong>
+                                            {selectedStudentData?.name}
+                                          </strong>{" "}
+                                          학생이 평소 잘 어울리지 않던 친구와
+                                          함께할 수 있도록 의도적으로
+                                          배치해보세요.
                                         </p>
                                       </div>
                                     </div>
@@ -2986,8 +3249,13 @@ const IndividualAnalysis: React.FC = () => {
                                           1:1 대화 시간 갖기
                                         </h4>
                                         <p className="mt-1 text-sm text-gray-700">
-                                          오늘 또는 내일 중 5분이라도 <strong>{selectedStudentData?.name}</strong> 학생과 개인적으로 대화할 시간을 만들어보세요. 
-                                          학교생활에 대한 솔직한 생각을 들어보는 것이 중요합니다.
+                                          오늘 또는 내일 중 5분이라도{" "}
+                                          <strong>
+                                            {selectedStudentData?.name}
+                                          </strong>{" "}
+                                          학생과 개인적으로 대화할 시간을
+                                          만들어보세요. 학교생활에 대한 솔직한
+                                          생각을 들어보는 것이 중요합니다.
                                         </p>
                                       </div>
                                     </div>
@@ -3591,14 +3859,17 @@ const IndividualAnalysis: React.FC = () => {
                       ) : individualNetworkData.length > 0 ? (
                         <div className="space-y-6">
                           {(() => {
-                            console.log('📊 UI 렌더링 - individualNetworkData:', individualNetworkData);
-                            
+                            console.log(
+                              "📊 UI 렌더링 - individualNetworkData:",
+                              individualNetworkData,
+                            );
+
                             const centerStudent = individualNetworkData.find(
                               (s) => s.isCenter,
                             );
-                            
-                            console.log('🎯 중심 학생 찾기:', centerStudent);
-                            
+
+                            console.log("🎯 중심 학생 찾기:", centerStudent);
+
                             const totalStudents = individualNetworkData.length;
                             const maxPossibleConnections = totalStudents - 1;
 
@@ -3608,13 +3879,16 @@ const IndividualAnalysis: React.FC = () => {
                                 Math.max(maxPossibleConnections, 1)
                               : 0;
                             let friendCount = centerStudent?.friendCount || 0;
-                            
-                            console.log('📈 초기 계산값:', {친구수: friendCount, 중심성: centrality});
+
+                            console.log("📈 초기 계산값:", {
+                              친구수: friendCount,
+                              중심성: centrality,
+                            });
                             let networkDensity = 0;
                             let isolationRiskLevel = "보통";
                             let socialInfluenceLevel = "보통";
                             let communityId = 0;
-                            
+
                             // 친구 수 기반 학생 유형 분류
                             let friendshipType = "평균적인 학생";
                             if (friendCount === 0) {
@@ -3628,27 +3902,38 @@ const IndividualAnalysis: React.FC = () => {
                             } else {
                               friendshipType = "사교 스타";
                             }
-                            
+
                             let recommendations = null;
 
                             // 통합 분석 결과가 있으면 실제 데이터 사용 (단, individualNetworkData가 더 정확하면 우선 사용)
                             if (unifiedAnalysisResult) {
-                              console.log('⚠️ unifiedAnalysisResult 발견:', {
-                                connection_count: unifiedAnalysisResult.student.connection_count,
-                                degree: unifiedAnalysisResult.centralityMetrics.degree
+                              console.log("⚠️ unifiedAnalysisResult 발견:", {
+                                connection_count:
+                                  unifiedAnalysisResult.student
+                                    .connection_count,
+                                degree:
+                                  unifiedAnalysisResult.centralityMetrics
+                                    .degree,
                               });
-                              
+
                               // individualNetworkData의 값이 더 정확하므로, unifiedAnalysisResult가 0이면 무시
-                              const unifiedFriendCount = unifiedAnalysisResult.student.connection_count;
-                              const unifiedCentrality = unifiedAnalysisResult.centralityMetrics.degree;
-                              
+                              const unifiedFriendCount =
+                                unifiedAnalysisResult.student.connection_count;
+                              const unifiedCentrality =
+                                unifiedAnalysisResult.centralityMetrics.degree;
+
                               // unifiedAnalysisResult가 유효한 값을 가지고 있을 때만 사용
-                              if (unifiedFriendCount > 0 || unifiedCentrality > 0) {
+                              if (
+                                unifiedFriendCount > 0 ||
+                                unifiedCentrality > 0
+                              ) {
                                 centrality = unifiedCentrality;
                                 friendCount = unifiedFriendCount;
-                                console.log('✅ unifiedAnalysisResult 값 사용');
+                                console.log("✅ unifiedAnalysisResult 값 사용");
                               } else {
-                                console.log('⚠️ unifiedAnalysisResult가 0이므로 individualNetworkData 값 유지');
+                                console.log(
+                                  "⚠️ unifiedAnalysisResult가 0이므로 individualNetworkData 값 유지",
+                                );
                               }
 
                               // 격리 위험도 사용
@@ -3678,9 +3963,12 @@ const IndividualAnalysis: React.FC = () => {
                               // 친구관계 유형 사용 (실제 친구 수로 재계산)
                               friendshipType =
                                 unifiedAnalysisResult.student.friendship_type;
-                              
-                              console.log('🔄 unifiedAnalysisResult 적용 후:', {친구수: friendCount, 중심성: centrality});
-                              
+
+                              console.log("🔄 unifiedAnalysisResult 적용 후:", {
+                                친구수: friendCount,
+                                중심성: centrality,
+                              });
+
                               // 친구 수 기반으로 재검증 (통합 분석 결과가 부정확할 수 있음)
                               if (friendCount === 0) {
                                 friendshipType = "외톨이형";
@@ -3741,13 +4029,13 @@ const IndividualAnalysis: React.FC = () => {
                                 : "연결된 학생 없음";
 
                             // 디버깅 로그
-                            console.log('👤 개인별 요약 - 학생 정보:', {
+                            console.log("👤 개인별 요약 - 학생 정보:", {
                               학생명: selectedStudentData?.name,
                               친구수: friendCount,
                               중심성: `${(centrality * 100).toFixed(1)}%`,
                               학생유형: friendshipType,
                               만족도: `${(coreTabSatisfaction * 100).toFixed(1)}%`,
-                              폭력경험: `${(coreTabViolence * 100).toFixed(1)}%`
+                              폭력경험: `${(coreTabViolence * 100).toFixed(1)}%`,
                             });
 
                             return (
@@ -3787,7 +4075,10 @@ const IndividualAnalysis: React.FC = () => {
                                               pyStatus.peer_relationship,
                                             networkParticipation:
                                               pyStatus.network_participation,
-                                            violenceExperience: (pyStatus as any).violence_experience || "파악 필요",
+                                            violenceExperience:
+                                              (pyStatus as any)
+                                                .violence_experience ||
+                                              "파악 필요",
                                           };
                                         } else {
                                           // 유틸리티 함수로 계산 (실제 설문 응답 포함)
@@ -3800,9 +4091,10 @@ const IndividualAnalysis: React.FC = () => {
                                               socialInfluenceLevel,
                                             totalStudents,
                                             communityId,
-                                            satisfactionScore: coreTabSatisfaction,
+                                            satisfactionScore:
+                                              coreTabSatisfaction,
                                             violenceScore: coreTabViolence,
-                                            surveyResponses: coreTabSurveyData
+                                            surveyResponses: coreTabSurveyData,
                                           };
                                           currentStatus =
                                             calculateCurrentStatus(metrics);
@@ -3884,20 +4176,26 @@ const IndividualAnalysis: React.FC = () => {
                                             longTerm:
                                               recommendations.long_term_goals ||
                                               [],
-                                            interventionLevel:
-                                              (() => {
-                                                const level = recommendations.intervention_level || "관찰";
-                                                // 영어 개입 수준을 한글로 변환
-                                                const levelMap: { [key: string]: string } = {
-                                                  "observation": "관찰",
-                                                  "attention": "주의", 
-                                                  "urgent": "긴급",
-                                                  "emergency": "긴급",
-                                                  "monitoring": "관찰",
-                                                  "intervention": "주의"
-                                                };
-                                                return levelMap[level.toLowerCase()] || level;
-                                              })(),
+                                            interventionLevel: (() => {
+                                              const level =
+                                                recommendations.intervention_level ||
+                                                "관찰";
+                                              // 영어 개입 수준을 한글로 변환
+                                              const levelMap: {
+                                                [key: string]: string;
+                                              } = {
+                                                observation: "관찰",
+                                                attention: "주의",
+                                                urgent: "긴급",
+                                                emergency: "긴급",
+                                                monitoring: "관찰",
+                                                intervention: "주의",
+                                              };
+                                              return (
+                                                levelMap[level.toLowerCase()] ||
+                                                level
+                                              );
+                                            })(),
                                           };
                                         } else {
                                           const metrics: StudentMetrics = {
@@ -3909,9 +4207,10 @@ const IndividualAnalysis: React.FC = () => {
                                               socialInfluenceLevel,
                                             totalStudents,
                                             communityId,
-                                            satisfactionScore: coreTabSatisfaction,
+                                            satisfactionScore:
+                                              coreTabSatisfaction,
                                             violenceScore: coreTabViolence,
-                                            surveyResponses: coreTabSurveyData
+                                            surveyResponses: coreTabSurveyData,
                                           };
                                           recommendationPlan =
                                             generateRecommendationPlan(metrics);
@@ -4004,9 +4303,10 @@ const IndividualAnalysis: React.FC = () => {
                                               socialInfluenceLevel,
                                             totalStudents,
                                             communityId,
-                                            satisfactionScore: coreTabSatisfaction,
+                                            satisfactionScore:
+                                              coreTabSatisfaction,
                                             violenceScore: coreTabViolence,
-                                            surveyResponses: coreTabSurveyData
+                                            surveyResponses: coreTabSurveyData,
                                           };
                                           monitoringPoints =
                                             generateMonitoringPoints(
