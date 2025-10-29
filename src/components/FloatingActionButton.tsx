@@ -26,9 +26,12 @@ const FloatingActionButton: React.FC<FloatingActionButtonProps> = ({
 
   const handleDownload = () => {
     // 매뉴얼 파일 다운로드
+    const fileName = '와이즈온스쿨_매뉴얼.pdf';
+    // URL 인코딩하여 특수문자 처리
+    const encodedFileName = encodeURIComponent(fileName);
     const link = document.createElement('a');
-    link.href = '/와이즈온스쿨_매뉴얼_ver 1.0.pdf';
-    link.download = '와이즈온스쿨_매뉴얼_ver 1.0.pdf';
+    link.href = '/' + encodedFileName;
+    link.download = fileName;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
