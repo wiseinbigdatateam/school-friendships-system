@@ -43,13 +43,13 @@ const NetworkVisualization: React.FC<NetworkVisualizationProps> = ({
 
   // 클러스터 정보 계산
   const clusterInfo = useMemo(() => {
-    console.log('🎨 NetworkVisualization - 받은 데이터:', {
+    console.log("🎨 NetworkVisualization - 받은 데이터:", {
       노드수: data.nodes.length,
       엣지수: data.edges.length,
       nodes: data.nodes,
-      edges: data.edges
+      edges: data.edges,
     });
-    
+
     const clusters: { [key: number]: NetworkNode[] } = {};
 
     data.nodes.forEach((node) => {
@@ -68,9 +68,9 @@ const NetworkVisualization: React.FC<NetworkVisualizationProps> = ({
       size: nodes.length,
       color: clusterColors[parseInt(id) % clusterColors.length],
     }));
-    
-    console.log('📍 클러스터 정보:', clusterResult);
-    
+
+    console.log("📍 클러스터 정보:", clusterResult);
+
     return clusterResult;
   }, [data.nodes]);
 
@@ -81,37 +81,48 @@ const NetworkVisualization: React.FC<NetworkVisualizationProps> = ({
     } = {};
 
     const totalGroups = clusterInfo.length;
-    console.log('🎯 calculateGroupLayout - totalGroups:', totalGroups, 'width:', width, 'height:', height);
-    
+    console.log(
+      "🎯 calculateGroupLayout - totalGroups:",
+      totalGroups,
+      "width:",
+      width,
+      "height:",
+      height,
+    );
+
     if (totalGroups === 0) return groupCenters;
 
     const centerX = width / 2;
     const centerY = height / 2;
-    
-    console.log('📐 중심점:', { centerX, centerY });
+
+    console.log("📐 중심점:", { centerX, centerY });
 
     // 그룹 크기에 따른 동적 반경 계산
     const maxGroupSize = Math.max(...clusterInfo.map((c) => c.size), 1);
     // ⚙️ 조절 가능: 그룹 원의 크기 범위
-    const minGroupRadius = 100; // 최소 그룹 반경 (작은 그룹)
-    const maxGroupRadius = 180; // 최대 그룹 반경 (큰 그룹)
+    const minGroupRadius = 50; // 최소 그룹 반경 (작은 그룹)
+    const maxGroupRadius = 210; // 최대 그룹 반경 (큰 그룹)
 
     // 그룹이 1개일 때는 중앙에 배치
     let circleRadius = 0;
-    
+
     if (totalGroups === 1) {
       // 그룹이 1개면 중앙에 배치
       circleRadius = 0;
-      console.log('📏 그룹 1개 - 중앙 배치');
+      console.log("📏 그룹 1개 - 중앙 배치");
     } else {
       // 그룹 간 최소 거리 계산 (겹치지 않도록 - 여유 추가)
       const avgGroupRadius = 140;
-      const minDistance = avgGroupRadius * 2.5; // 1.6 → 2.5로 증가 (더 넓은 간격)
+      const minDistance = avgGroupRadius * 0.5; // 1.6 → 2.5로 증가 (더 넓은 간격)
       circleRadius = Math.max(
         minDistance / (2 * Math.sin(Math.PI / totalGroups)),
         Math.min(width, height) * 0.3, // 0.25 → 0.3으로 증가
       );
-      console.log('📏 circleRadius 계산:', { minDistance, totalGroups, circleRadius });
+      console.log("📏 circleRadius 계산:", {
+        minDistance,
+        totalGroups,
+        circleRadius,
+      });
     }
 
     clusterInfo.forEach((cluster, index) => {
@@ -124,10 +135,16 @@ const NetworkVisualization: React.FC<NetworkVisualizationProps> = ({
 
       const x = centerX + circleRadius * Math.cos(angle);
       const y = centerY + circleRadius * Math.sin(angle);
-      
+
       groupCenters[cluster.id] = { x, y, radius: groupRadius };
-      
-      console.log(`🎯 클러스터 ${cluster.id} 중심점:`, { x, y, radius: groupRadius, angle, circleRadius });
+
+      console.log(`🎯 클러스터 ${cluster.id} 중심점:`, {
+        x,
+        y,
+        radius: groupRadius,
+        angle,
+        circleRadius,
+      });
     });
 
     return groupCenters;
@@ -135,8 +152,13 @@ const NetworkVisualization: React.FC<NetworkVisualizationProps> = ({
 
   // 노드 초기 위치 계산 (그룹 내에서만 자유 배치)
   const initialNodePositions = useMemo(() => {
-    console.log('📍 초기 위치 계산 시작 - clusterInfo:', clusterInfo, 'groupLayout:', calculateGroupLayout);
-    
+    console.log(
+      "📍 초기 위치 계산 시작 - clusterInfo:",
+      clusterInfo,
+      "groupLayout:",
+      calculateGroupLayout,
+    );
+
     const positions: { [key: string]: { x: number; y: number } } = {};
 
     clusterInfo.forEach((cluster) => {
@@ -153,11 +175,16 @@ const NetworkVisualization: React.FC<NetworkVisualizationProps> = ({
         const distance = Math.random() * groupRadius * 0.5; // 중심 근처에 배치 (중심 집중)
         const x = groupCenter.x + distance * Math.cos(angle);
         const y = groupCenter.y + distance * Math.sin(angle);
-        
+
         positions[node.id] = { x, y };
-        
+
         if (index === 0) {
-          console.log(`📍 첫 번째 노드(${node.name}) 초기 위치:`, { x, y, groupCenter, groupRadius });
+          console.log(`📍 첫 번째 노드(${node.name}) 초기 위치:`, {
+            x,
+            y,
+            groupCenter,
+            groupRadius,
+          });
         }
       });
     });
@@ -172,8 +199,12 @@ const NetworkVisualization: React.FC<NetworkVisualizationProps> = ({
       }
     });
 
-    console.log('✅ 초기 위치 계산 완료 - 총', Object.keys(positions).length, '개 노드');
-    
+    console.log(
+      "✅ 초기 위치 계산 완료 - 총",
+      Object.keys(positions).length,
+      "개 노드",
+    );
+
     return positions;
   }, [clusterInfo, calculateGroupLayout, data.nodes, width, height]);
 
@@ -185,22 +216,27 @@ const NetworkVisualization: React.FC<NetworkVisualizationProps> = ({
     // D3 요소가 있다면 스타일 리셋
     if (svgRef.current) {
       const svg = d3.select(svgRef.current);
-      svg.selectAll(".node circle").attr("opacity", 1).attr("stroke-width", 4);
+      svg.selectAll(".node circle").attr("opacity", 1).attr("stroke-width", 2);
 
       svg
         .selectAll(".links line")
         .attr("stroke-opacity", 0.6)
         .attr("stroke-width", 2)
-        .attr("stroke", "#999");
+        .attr("stroke", "oklch(70.7% 0.022 261.325)");
     }
   };
 
   // D3 Force Simulation 설정
   useEffect(() => {
-    console.log('🎬 D3 렌더링 시작 - svgRef:', svgRef.current, 'nodes:', data.nodes.length);
-    
+    console.log(
+      "🎬 D3 렌더링 시작 - svgRef:",
+      svgRef.current,
+      "nodes:",
+      data.nodes.length,
+    );
+
     if (!svgRef.current || !data.nodes.length) {
-      console.log('⚠️ D3 렌더링 중단 - svgRef 또는 nodes 없음');
+      console.log("⚠️ D3 렌더링 중단 - svgRef 또는 nodes 없음");
       return;
     }
 
@@ -209,7 +245,7 @@ const NetworkVisualization: React.FC<NetworkVisualizationProps> = ({
 
     // SVG 설정
     svg.attr("width", width).attr("height", height);
-    console.log('📐 SVG 크기 설정:', { width, height });
+    console.log("📐 SVG 크기 설정:", { width, height });
 
     // 배경 클릭 시 하이라이트 해제
     svg.on("click", (event) => {
@@ -259,9 +295,9 @@ const NetworkVisualization: React.FC<NetworkVisualizationProps> = ({
         "collide",
         d3
           .forceCollide()
-          .radius(35) // 충돌 반경 더 증가 (30 → 35, 노드들 사이 간격 더 넓게)
+          .radius(65) // 충돌 반경 더 증가 (30 → 35, 노드들 사이 간격 더 넓게)
           .strength(1), // 충돌 강도 최대
-      ) 
+      )
       // ⚙️ 중앙 집중력
       .force("center", d3.forceCenter(width / 2, height / 2).strength(0.05)) // 중앙 집중 강도 (낮을수록 자유롭게 배치)
       // ⚙️ 그룹 유지 강도 (조건 강화)
@@ -301,7 +337,7 @@ const NetworkVisualization: React.FC<NetworkVisualizationProps> = ({
       const groupRadius = groupCenter.radius;
       // ⚙️ 조절 가능: 타원 비율
       const ellipseRx = groupRadius * 1.3; // 가로 반경 (더 넓게)
-      const ellipseRy = groupRadius * 0.9; // 세로 반경 (더 좁게)
+      const ellipseRy = groupRadius * 1.1; // 세로 반경 (더 좁게)
 
       groupAreas
         .append("ellipse")
@@ -312,9 +348,9 @@ const NetworkVisualization: React.FC<NetworkVisualizationProps> = ({
         .attr("fill", cluster.color)
         .attr("fill-opacity", 0.15)
         .attr("stroke", cluster.color)
-        .attr("stroke-width", 4)
-        .attr("stroke-opacity", 0.8)
-        .attr("stroke-dasharray", "5,5");
+        .attr("stroke-width", 2)
+        .attr("stroke-opacity", 0.5)
+        .attr("stroke-dasharray", "3");
     });
 
     // 링크 그리기
@@ -325,11 +361,11 @@ const NetworkVisualization: React.FC<NetworkVisualizationProps> = ({
       .data(simulationLinks)
       .enter()
       .append("line")
-      .attr("stroke", "#999")
+      .attr("stroke", "oklch(70.7% 0.022 261.325)")
       .attr("stroke-opacity", 0.6)
       .attr("stroke-width", 2);
 
-    console.log('🔗 링크 엘리먼트 생성됨:', linkElements.size(), '개');
+    console.log("🔗 링크 엘리먼트 생성됨:", linkElements.size(), "개");
 
     // 노드 그룹 생성
     const nodeElements = svg
@@ -342,12 +378,12 @@ const NetworkVisualization: React.FC<NetworkVisualizationProps> = ({
       .attr("class", "node")
       .style("cursor", "pointer");
 
-    console.log('👤 노드 엘리먼트 생성됨:', nodeElements.size(), '개');
+    console.log("👤 노드 엘리먼트 생성됨:", nodeElements.size(), "개");
 
     // 노드 원형
     nodeElements
       .append("circle")
-      .attr("r", 20)
+      .attr("r", 28)
       .attr("fill", (d) => {
         if (d.friendship_type === "외톨이형") return "#FF6B6B";
         if (d.friendship_type === "소수 친구 학생") return "#4ECDC4";
@@ -356,19 +392,20 @@ const NetworkVisualization: React.FC<NetworkVisualizationProps> = ({
         if (d.friendship_type === "사교 스타") return "#FFEAA7";
         return "#94a3b8";
       })
-      .attr("stroke", (d) => {
-        if (d.friendship_type === "외톨이형") return "#999999";
-        const clusterId = d.community || 0;
-        return clusterColors[clusterId % clusterColors.length];
-      })
-      .attr("stroke-width", 4);
+      // .attr("stroke", (d) => {
+      //   if (d.friendship_type === "외톨이형") return "#999999";
+      //   const clusterId = d.community || 0;
+      //   return clusterColors[clusterId % clusterColors.length];
+      // })
+      .attr("stroke", "oklch(70.7% 0.022 261.325)")
+      .attr("stroke-width", 2);
 
     // 노드 텍스트
     nodeElements
       .append("text")
       .attr("text-anchor", "middle")
       .attr("dy", 5)
-      .attr("font-size", "12px")
+      .attr("font-size", "14px")
       .attr("font-weight", "bold")
       .attr("fill", (d) =>
         d.friendship_type === "사교 스타" ? "#000" : "#fff",
@@ -396,7 +433,7 @@ const NetworkVisualization: React.FC<NetworkVisualizationProps> = ({
       nodeElements
         .selectAll("circle")
         .attr("opacity", 0.3)
-        .attr("stroke-width", 4);
+        .attr("stroke-width", 3);
 
       linkElements.attr("stroke-opacity", 0.1).attr("stroke-width", 2);
 
@@ -405,7 +442,7 @@ const NetworkVisualization: React.FC<NetworkVisualizationProps> = ({
         .filter((node: any) => connectedNodeIds.has(node.id))
         .selectAll("circle")
         .attr("opacity", 1)
-        .attr("stroke-width", 6);
+        .attr("stroke-width", 3);
 
       // 연결된 링크 하이라이트
       linkElements
@@ -417,7 +454,7 @@ const NetworkVisualization: React.FC<NetworkVisualizationProps> = ({
           return sourceId === d.id || targetId === d.id;
         })
         .attr("stroke-opacity", 0.8)
-        .attr("stroke-width", 4)
+        .attr("stroke-width", 3)
         .attr("stroke", "#FF6B35");
 
       if (onNodeClick) {
@@ -427,24 +464,18 @@ const NetworkVisualization: React.FC<NetworkVisualizationProps> = ({
 
     // 노드 호버 이벤트
     nodeElements.on("mouseover", (event, d) => {
-      d3.select(event.currentTarget)
-        .select("circle")
-        .attr("r", 25)
-        .attr("stroke-width", 6);
+      d3.select(event.currentTarget).select("circle").attr("r", 30);
     });
 
     nodeElements.on("mouseout", (event, d) => {
-      d3.select(event.currentTarget)
-        .select("circle")
-        .attr("r", 20)
-        .attr("stroke-width", 4);
+      d3.select(event.currentTarget).select("circle").attr("r", 28);
     });
 
     // Simulation tick 이벤트 (떨림 방지 - 강화된 버전)
     let tickCount = 0;
     let hasStopped = false;
     let stableCount = 0;
-    
+
     simulation.on("tick", () => {
       // 현재 모든 노드의 속도 추적
       let currentMaxVelocity = 0;
@@ -457,7 +488,7 @@ const NetworkVisualization: React.FC<NetworkVisualizationProps> = ({
 
       // alpha 값과 속도를 모두 확인 - 완전히 안정화되면 시뮬레이션 종료
       const isStable = simulation.alpha() < 0.001 && currentMaxVelocity < 0.05;
-      
+
       if (isStable) {
         stableCount++;
       } else {
@@ -467,8 +498,8 @@ const NetworkVisualization: React.FC<NetworkVisualizationProps> = ({
       // 연속 5번 안정적이면 종료 (조건 완화하여 더 빠른 종료)
       if (!hasStopped && stableCount >= 5) {
         hasStopped = true;
-        console.log('🛑 시뮬레이션 안정화 완료 - 모든 노드 고정');
-        
+        console.log("🛑 시뮬레이션 안정화 완료 - 모든 노드 고정");
+
         // 모든 노드를 고정하여 떨림 완전히 방지
         simulationNodes.forEach((node: any) => {
           if (node.x !== null && node.y !== null) {
@@ -481,17 +512,17 @@ const NetworkVisualization: React.FC<NetworkVisualizationProps> = ({
             node.y = node.fy;
           }
         });
-        
+
         // 모든 Force 즉시 제거 (떨림 완전 방지)
         simulation.force("link", null);
         simulation.force("charge", null);
         simulation.force("collide", null);
         simulation.force("center", null);
         simulation.force("group", null);
-        
+
         // 시뮬레이션 즉시 종료
         simulation.stop();
-        
+
         // 최종 렌더링
         linkElements
           .attr("x1", (d) => (d.source as any).x)
@@ -512,11 +543,13 @@ const NetworkVisualization: React.FC<NetworkVisualizationProps> = ({
 
       // 노드 위치 업데이트
       nodeElements.attr("transform", (d) => `translate(${d.x},${d.y})`);
-      
+
       // 첫 몇 틱만 로그 출력
       tickCount++;
       if (tickCount === 1 || tickCount === 10 || tickCount % 50 === 0) {
-        console.log(`⚡ Simulation tick ${tickCount} - alpha: ${simulation.alpha().toFixed(4)}, maxVelocity: ${currentMaxVelocity.toFixed(4)}`);
+        console.log(
+          `⚡ Simulation tick ${tickCount} - alpha: ${simulation.alpha().toFixed(4)}, maxVelocity: ${currentMaxVelocity.toFixed(4)}`,
+        );
       }
     });
 
