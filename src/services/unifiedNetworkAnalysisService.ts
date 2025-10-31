@@ -33,6 +33,22 @@ class UnifiedNetworkAnalysisService {
    */
   async performCompleteAnalysis(surveyId: string): Promise<CompleteAnalysisResult> {
     try {
+      // 학부모 개인정보 동의서 설문인지 확인 (분석 제외)
+      const { data: surveyData, error: surveyCheckError } = await supabase
+        .from('surveys')
+        .select(`
+          title,
+          survey_templates!surveys_template_id_fkey(name)
+        `)
+        .eq('id', surveyId)
+        .single();
+
+      if (!surveyCheckError && surveyData) {
+        const combinedTitle = `${surveyData.title || ""} ${(surveyData.survey_templates as any)?.name || ""}`;
+        if (combinedTitle.includes("개인정보") && combinedTitle.includes("동의")) {
+          throw new Error("학부모 개인정보 수집·이용 동의서 설문은 분석 대상이 아닙니다.");
+        }
+      }
       
       // Python API 호출로 전체 분석 수행
       const pythonData = await this.getSurveyDataForPython(surveyId);
@@ -249,7 +265,7 @@ class UnifiedNetworkAnalysisService {
         .from('surveys')
         .select(`
           *,
-          survey_templates!surveys_template_id_fkey(questions, metadata)
+          survey_templates!surveys_template_id_fkey(questions, metadata, name)
         `)
         .eq('id', surveyId)
         .single();
@@ -257,6 +273,12 @@ class UnifiedNetworkAnalysisService {
       if (surveyError) {
         console.error('❌ 설문 데이터 조회 오류:', surveyError);
         throw surveyError;
+      }
+
+      // 학부모 개인정보 동의서 설문인지 확인
+      const combinedTitle = `${surveyData.title || ""} ${surveyData.survey_templates?.name || ""}`;
+      if (combinedTitle.includes("개인정보") && combinedTitle.includes("동의")) {
+        throw new Error("학부모 개인정보 수집·이용 동의서 설문은 분석 대상이 아닙니다.");
       }
 
 

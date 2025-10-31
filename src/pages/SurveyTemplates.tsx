@@ -134,10 +134,19 @@ const SurveyTemplates: React.FC = () => {
           return !excludeCategories.includes(template.category);
         });
 
-        // 종합조사를 먼저 오도록 정렬
+        // 학부모 개인정보 수집 동의서를 제일 위로, 그 다음 종합조사
         const sortedTemplates = filteredTemplates.sort((a, b) => {
-          if (a.category === "종합조사") return -1;
-          if (b.category === "종합조사") return 1;
+          const aIsParentConsent = a.title.includes("개인정보") && a.title.includes("동의");
+          const bIsParentConsent = b.title.includes("개인정보") && b.title.includes("동의");
+          
+          // 학부모 동의서가 우선
+          if (aIsParentConsent && !bIsParentConsent) return -1;
+          if (!aIsParentConsent && bIsParentConsent) return 1;
+          
+          // 그 다음 종합조사
+          if (a.category === "종합조사" && b.category !== "종합조사") return -1;
+          if (b.category === "종합조사" && a.category !== "종합조사") return 1;
+          
           return 0;
         });
 
@@ -392,10 +401,19 @@ const SurveyTemplates: React.FC = () => {
             return !excludeCategories.includes(template.category);
           });
 
-          // 종합조사를 먼저 오도록 정렬
+          // 학부모 개인정보 수집 동의서를 제일 위로, 그 다음 종합조사
           const sortedTemplates = filteredTemplates.sort((a, b) => {
-            if (a.category === "종합조사") return -1;
-            if (b.category === "종합조사") return 1;
+            const aIsParentConsent = a.title.includes("개인정보") && a.title.includes("동의");
+            const bIsParentConsent = b.title.includes("개인정보") && b.title.includes("동의");
+            
+            // 학부모 동의서가 우선
+            if (aIsParentConsent && !bIsParentConsent) return -1;
+            if (!aIsParentConsent && bIsParentConsent) return 1;
+            
+            // 그 다음 종합조사
+            if (a.category === "종합조사" && b.category !== "종합조사") return -1;
+            if (b.category === "종합조사" && a.category !== "종합조사") return 1;
+            
             return 0;
           });
 
@@ -419,150 +437,126 @@ const SurveyTemplates: React.FC = () => {
 
   const TemplateCard: React.FC<{ template: SurveyTemplate }> = ({
     template,
-  }) => (
-    <div className="flex h-full w-full flex-col rounded-lg border border-gray-200 bg-white p-7 transition-shadow hover:shadow-md">
-      <div className="flex-1">
-        <div className="flex items-start justify-between gap-7">
-          {/* 카드 왼쪽 섹션 */}
-          <div className="flex w-1/2 flex-col gap-10">
-            <div className="flex flex-col gap-2">
-              <div className="flex items-center space-x-2">
-                <h3 className="text-lg font-semibold text-gray-900">
-                  {template.title}
-                </h3>
-                <span className="inline-block rounded-[20px] bg-gray-100 px-3 py-1 text-[13px] text-gray-600">
-                  {template.category}
-                </span>
-                {template.isDefault && (
-                  <span className="rounded-[20px] bg-blue-100 px-3 py-1 text-[13px] text-blue-600">
-                    기본
+  }) => {
+    const isParentConsentSurvey = template.title.includes("개인정보") && template.title.includes("동의");
+    
+    return (
+      <div className="flex h-full w-full flex-col rounded-lg border border-gray-200 bg-white p-7 transition-shadow hover:shadow-md">
+        <div className="flex-1">
+          <div className="flex items-start justify-between gap-7">
+            {/* 카드 왼쪽 섹션 */}
+            <div className="flex w-1/2 flex-col gap-10">
+              <div className="flex flex-col gap-2">
+                <div className="flex items-center space-x-2">
+                  <h3 className="text-lg font-semibold text-gray-900">
+                    {template.title}
+                  </h3>
+                  <span className="inline-block rounded-[20px] bg-gray-100 px-3 py-1 text-[13px] text-gray-600">
+                    {template.category}
                   </span>
-                )}
-              </div>
-              <p className="text-sm text-gray-600">{template.description}</p>
+                  {template.isDefault && (
+                    <span className="rounded-[20px] bg-blue-100 px-3 py-1 text-[13px] text-blue-600">
+                      기본
+                    </span>
+                  )}
+                </div>
+                <p className="text-sm text-gray-600">{template.description}</p>
 
-              <div className="flex items-center space-x-4 text-xs text-gray-500">
-                <span>📊 {template.questions.length}개 질문</span>
-                <span className="hidden">⏱️ 약 {template.estimatedTime}분</span>
-                <span className="hidden">
-                  🎯 {template.targetGrades.join(", ")}학년
-                </span>
-                <span>📈 {template.useCount}회 사용</span>
-              </div>
-            </div>
-
-            <div className="flex flex-col gap-2.5 text-gray-600">
-              <p className="text-sm">문항별 관련 내용</p>
-              <div className="flex items-center gap-2.5 text-sm">
-                <span className="rounded-[20px] bg-blue-100 px-3 py-1 text-blue-600">
-                  교우관계
-                </span>
-                1번 문항
-              </div>
-              <div className="flex items-center gap-2.5 text-sm">
-                <span className="rounded-[20px] bg-emerald-50 px-3 py-1 text-emerald-600">
-                  만족도
-                </span>
-                2번 ~ 5번 문항
-              </div>
-              <div className="flex items-center gap-2.5 text-sm">
-                <span className="rounded-[20px] bg-[#FAE1E1] px-3 py-1 text-red-500">
-                  학교폭력
-                </span>
-                6번 ~ 8번 문항
-              </div>
-              <div className="flex items-center gap-2.5 text-sm">
-                <span className="rounded-[20px] bg-indigo-100 px-3 py-1 text-indigo-700">
-                  주관식
-                </span>
-                9번 문항
-              </div>
-            </div>
-          </div>
-
-          {/* 카드 오른쪽 섹션 */}
-          <div className="flex w-1/2 flex-col gap-2">
-            {/* 질문 목록 */}
-            <div className="rounded-lg bg-gray-50 p-5">
-              <div className="space-y-3">
-                {template.questions.map((question, index) => {
-                  const category = (template as any).questionCategories?.[
-                    index
-                  ];
-                  const questionType = (template as any).questionTypes?.[index];
-                  const options = (template as any).questionOptions?.[index];
-
-                  return (
-                    <div key={index} className="flex items-start space-x-3">
-                      <span className="text-gray-9950 text-xs font-medium">
-                        Q{index + 1}.
-                      </span>
-                      <div className="flex-1">
-                        <p className="text-xs text-gray-950">{question}</p>
-                        {/* <div className="mt-1 flex items-center space-x-2">
-                          <span
-                            className={`inline-block rounded px-2 py-1 text-xs ${
-                              category === "교우관계"
-                                ? "bg-blue-100 text-blue-700"
-                                : category === "만족도"
-                                  ? "bg-green-100 text-green-700"
-                                  : category === "학교폭력"
-                                    ? "bg-red-100 text-red-700"
-                                    : category === "주관식"
-                                      ? "bg-purple-100 text-purple-700"
-                                      : "bg-gray-100 text-gray-700"
-                            }`}
-                          >
-                            {category}
-                          </span>
-                          <span className="text-xs text-gray-500">
-                            (
-                            {questionType === "multiple_choice"
-                              ? "다중선택"
-                              : questionType === "yes_no"
-                                ? "예/아니오"
-                                : questionType === "scale"
-                                  ? "척도"
-                                  : questionType === "text"
-                                    ? "주관식"
-                                    : questionType}
-                            )
-                          </span>
-                          {options && options.length > 0 && (
-                            <span className="text-xs text-gray-500">
-                              선택지: {options.join(", ")}
-                            </span>
-                          )}
-                        </div> */}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* 버튼 */}
-            <div className="">
-              <button
-                onClick={() => handleUseTemplate(template)}
-                disabled={isCreating}
-                className="w-full rounded-[4px] bg-[#3F80EA] px-3 py-2 text-sm text-white transition-colors hover:bg-blue-600 disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                {isCreating ? (
-                  <div className="flex items-center justify-center">
-                    <div className="mr-1 h-3 w-3 animate-spin rounded-full border border-white border-t-transparent"></div>
-                    생성 중...
+                {!isParentConsentSurvey && (
+                  <div className="flex items-center space-x-4 text-xs text-gray-500">
+                    <span>📊 {template.questions.length}개 질문</span>
+                    <span className="hidden">⏱️ 약 {template.estimatedTime}분</span>
+                    <span className="hidden">
+                      🎯 {template.targetGrades.join(", ")}학년
+                    </span>
+                    <span>📈 {template.useCount}회 사용</span>
                   </div>
-                ) : (
-                  "사용하기"
                 )}
-              </button>
+              </div>
+
+              {/* 학부모 동의서가 아닌 경우에만 문항별 관련 내용 표시 */}
+              {!isParentConsentSurvey && (
+                <div className="flex flex-col gap-2.5 text-gray-600">
+                  <p className="text-sm">문항별 관련 내용</p>
+                  <div className="flex items-center gap-2.5 text-sm">
+                    <span className="rounded-[20px] bg-blue-100 px-3 py-1 text-blue-600">
+                      교우관계
+                    </span>
+                    1번 문항
+                  </div>
+                  <div className="flex items-center gap-2.5 text-sm">
+                    <span className="rounded-[20px] bg-emerald-50 px-3 py-1 text-emerald-600">
+                      만족도
+                    </span>
+                    2번 ~ 5번 문항
+                  </div>
+                  <div className="flex items-center gap-2.5 text-sm">
+                    <span className="rounded-[20px] bg-[#FAE1E1] px-3 py-1 text-red-500">
+                      학교폭력
+                    </span>
+                    6번 ~ 8번 문항
+                  </div>
+                  <div className="flex items-center gap-2.5 text-sm">
+                    <span className="rounded-[20px] bg-indigo-100 px-3 py-1 text-indigo-700">
+                      주관식
+                    </span>
+                    9번 문항
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* 카드 오른쪽 섹션 */}
+            <div className="flex w-1/2 flex-col gap-2">
+              {/* 질문 목록 - 학부모 동의서가 아닌 경우에만 표시 */}
+              {!isParentConsentSurvey && (
+                <div className="rounded-lg bg-gray-50 p-5">
+                  <div className="space-y-3">
+                    {template.questions.map((question, index) => {
+                      const category = (template as any).questionCategories?.[
+                        index
+                      ];
+                      const questionType = (template as any).questionTypes?.[index];
+                      const options = (template as any).questionOptions?.[index];
+
+                      return (
+                        <div key={index} className="flex items-start space-x-3">
+                          <span className="text-gray-9950 text-xs font-medium">
+                            Q{index + 1}.
+                          </span>
+                          <div className="flex-1">
+                            <p className="text-xs text-gray-950">{question}</p>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* 버튼 */}
+              <div className="">
+                <button
+                  onClick={() => handleUseTemplate(template)}
+                  disabled={isCreating}
+                  className="w-full rounded-[4px] bg-[#3F80EA] px-3 py-2 text-sm text-white transition-colors hover:bg-blue-600 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {isCreating ? (
+                    <div className="flex items-center justify-center">
+                      <div className="mr-1 h-3 w-3 animate-spin rounded-full border border-white border-t-transparent"></div>
+                      생성 중...
+                    </div>
+                  ) : (
+                    "사용하기"
+                  )}
+                </button>
+              </div>
             </div>
           </div>
         </div>
       </div>
-    </div>
-  );
+    );
+  };
 
   return (
     <div className="mx-auto min-h-screen max-w-7xl bg-gray-50 px-4 sm:px-6 lg:px-8">

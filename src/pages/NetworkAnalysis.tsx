@@ -110,13 +110,20 @@ const NetworkAnalysis: React.FC = () => {
           .select(
             `
             *,
-            survey_templates!surveys_template_id_fkey(metadata)
+            survey_templates!surveys_template_id_fkey(metadata, name)
           `,
           )
           .eq("id", selectedSurvey.id)
           .single();
 
         if (surveyError) throw surveyError;
+
+        // 학부모 개인정보 동의서 설문인지 확인 (분석 제외)
+        const combinedTitle = `${surveyData.title || ""} ${(surveyData.survey_templates as any)?.name || ""}`;
+        if (combinedTitle.includes("개인정보") && combinedTitle.includes("동의")) {
+          alert("학부모 개인정보 수집·이용 동의서 설문은 분석 대상이 아닙니다.");
+          return;
+        }
 
         // 2. 설문 응답 데이터 조회
         const { data: responses, error: responseError } = await supabase

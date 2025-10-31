@@ -86,6 +86,23 @@ class NetworkAnalysisService {
     try {
       console.log('🔍 네트워크 분석 시작:', surveyId);
 
+      // 학부모 개인정보 동의서 설문인지 확인 (분석 제외)
+      const { data: surveyData, error: surveyCheckError } = await supabase
+        .from('surveys')
+        .select(`
+          title,
+          survey_templates!surveys_template_id_fkey(name)
+        `)
+        .eq('id', surveyId)
+        .single();
+
+      if (!surveyCheckError && surveyData) {
+        const combinedTitle = `${surveyData.title || ""} ${(surveyData.survey_templates as any)?.name || ""}`;
+        if (combinedTitle.includes("개인정보") && combinedTitle.includes("동의")) {
+          throw new Error("학부모 개인정보 수집·이용 동의서 설문은 분석 대상이 아닙니다.");
+        }
+      }
+
       // 1. 설문 응답 데이터 가져오기
       const surveyResponses = await this.getSurveyResponses(surveyId);
       console.log('📋 설문 응답 개수:', surveyResponses.length);

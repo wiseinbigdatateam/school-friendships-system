@@ -221,6 +221,13 @@ const IndividualAnalysis: React.FC = () => {
         return [];
       }
 
+      // 학부모 개인정보 동의서 설문인지 확인 (분석 제외)
+      const combinedTitle = `${surveyData.title || ""} ${surveyData.survey_templates?.name || ""}`;
+      if (combinedTitle.includes("개인정보") && combinedTitle.includes("동의")) {
+        console.warn("학부모 개인정보 수집·이용 동의서 설문은 분석 대상이 아닙니다.");
+        return [];
+      }
+
       const { data, error } = await supabase
         .from("survey_responses")
         .select("responses")

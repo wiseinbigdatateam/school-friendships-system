@@ -205,6 +205,25 @@ const IntegratedAnalysis: React.FC = () => {
     try {
       setAnalysisLoading(true);
 
+      // 학부모 개인정보 동의서 설문인지 확인 (분석 제외)
+      const { data: surveyData, error: surveyCheckError } = await supabase
+        .from("surveys")
+        .select(`
+          title,
+          survey_templates!surveys_template_id_fkey(name)
+        `)
+        .eq("id", survey.id)
+        .single();
+
+      if (!surveyCheckError && surveyData) {
+        const combinedTitle = `${surveyData.title || ""} ${(surveyData.survey_templates as any)?.name || ""}`;
+        if (combinedTitle.includes("개인정보") && combinedTitle.includes("동의")) {
+          alert("학부모 개인정보 수집·이용 동의서 설문은 분석 대상이 아닙니다.");
+          setAnalysisLoading(false);
+          return;
+        }
+      }
+
       // 설문 응답 데이터 조회
       const { data: responses, error: responseError } = await supabase
         .from("survey_responses")
@@ -299,7 +318,6 @@ const IntegratedAnalysis: React.FC = () => {
         navigationHistory: [...prev.navigationHistory, "individual"]
       }));
 
-      console.log("✅ 개별 학생 분석 완료:", individualAnalysis);
     } catch (error) {
       console.error("❌ 개별 학생 분석 오류:", error);
     } finally {
