@@ -223,8 +223,13 @@ const IndividualAnalysis: React.FC = () => {
 
       // 학부모 개인정보 동의서 설문인지 확인 (분석 제외)
       const combinedTitle = `${surveyData.title || ""} ${surveyData.survey_templates?.name || ""}`;
-      if (combinedTitle.includes("개인정보") && combinedTitle.includes("동의")) {
-        console.warn("학부모 개인정보 수집·이용 동의서 설문은 분석 대상이 아닙니다.");
+      if (
+        combinedTitle.includes("개인정보") &&
+        combinedTitle.includes("동의")
+      ) {
+        console.warn(
+          "학부모 개인정보 수집·이용 동의서 설문은 분석 대상이 아닙니다.",
+        );
         return [];
       }
 
@@ -2219,7 +2224,7 @@ const IndividualAnalysis: React.FC = () => {
               {surveys.map((survey) => (
                 <div
                   key={survey.id}
-                  className={`h-36 min-w-72 cursor-pointer rounded-lg border p-4 transition-colors ${
+                  className={`h-fit min-w-72 cursor-pointer rounded-lg border p-4 transition-colors ${
                     selectedSurvey?.id === survey.id
                       ? "border-blue-500 bg-blue-50"
                       : "border-gray-200 hover:border-gray-300"
@@ -2275,7 +2280,7 @@ const IndividualAnalysis: React.FC = () => {
                     key={student.id}
                     className={`cursor-pointer rounded-lg p-2 transition-colors ${
                       selectedStudent === student.id
-                        ? "bg-blue-50 text-blue-900"
+                        ? "bg-gray-100 text-blue-900"
                         : "hover:bg-gray-50"
                     }`}
                     onClick={() => setSelectedStudent(student.id)}
@@ -2419,26 +2424,7 @@ const IndividualAnalysis: React.FC = () => {
                         ) : aiReport ? (
                           <div className="space-y-4">
                             {/* 재생성 및 출력 버튼 */}
-                            <div className="flex justify-end space-x-3">
-                              <button
-                                onClick={handlePrintReport}
-                                className="flex items-center space-x-2 rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-green-700"
-                              >
-                                <svg
-                                  className="h-4 w-4"
-                                  fill="none"
-                                  stroke="currentColor"
-                                  viewBox="0 0 24 24"
-                                >
-                                  <path
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    strokeWidth={2}
-                                    d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"
-                                  />
-                                </svg>
-                                <span>파일로 출력</span>
-                              </button>
+                            <div className="flex justify-end space-x-2">
                               {/* 재생성 버튼 - 24시간 후에만 표시 */}
                               {canRegenerateReport() && (
                                 <button
@@ -2489,9 +2475,10 @@ const IndividualAnalysis: React.FC = () => {
                                   <span>리포트 재생성</span>
                                 </button>
                               )}
+
                               {/* 24시간 이내인 경우 안내 메시지 */}
                               {!canRegenerateReport() && aiReportCreatedAt && (
-                                <div className="flex items-center space-x-2 rounded-lg bg-gray-100 px-4 py-2 text-sm text-gray-600">
+                                <div className="flex items-center space-x-2 rounded-lg bg-slate-600 px-4 py-2 text-sm text-white">
                                   <svg
                                     className="h-4 w-4"
                                     fill="none"
@@ -2520,13 +2507,33 @@ const IndividualAnalysis: React.FC = () => {
                                   </span>
                                 </div>
                               )}
+
+                              <button
+                                onClick={handlePrintReport}
+                                className="flex items-center space-x-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-blue-700"
+                              >
+                                <svg
+                                  className="h-4 w-4"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  viewBox="0 0 24 24"
+                                >
+                                  <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    strokeWidth={2}
+                                    d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"
+                                  />
+                                </svg>
+                                <span>파일로 출력</span>
+                              </button>
                             </div>
 
                             {/* DB 상태 표시 뱃지 */}
-                            {isReportFromDB && (
-                              <div className="flex items-center space-x-2 rounded-lg border border-green-200 bg-green-50 px-4 py-3">
+                            {/* {isReportFromDB && (
+                              <div className="flex items-center space-x-2">
                                 <svg
-                                  className="h-5 w-5 text-green-600"
+                                  className="h-5 w-5 text-gray-800"
                                   fill="none"
                                   stroke="currentColor"
                                   viewBox="0 0 24 24"
@@ -2538,11 +2545,11 @@ const IndividualAnalysis: React.FC = () => {
                                     d="M5 13l4 4L19 7"
                                   />
                                 </svg>
-                                <span className="text-sm font-medium text-green-800">
-                                  💾 데이터베이스에서 불러온 리포트
+                                <span className="text-sm font-medium text-gray-800">
+                                  데이터베이스에서 불러온 리포트
                                 </span>
                                 {aiReportCreatedAt && (
-                                  <span className="text-xs text-green-600">
+                                  <span className="text-xs text-gray-700">
                                     (생성:{" "}
                                     {new Date(aiReportCreatedAt).toLocaleString(
                                       "ko-KR",
@@ -2559,9 +2566,9 @@ const IndividualAnalysis: React.FC = () => {
                               </div>
                             )}
                             {!isReportFromDB && (
-                              <div className="flex items-center space-x-2 rounded-lg border border-blue-200 bg-blue-50 px-4 py-3">
+                              <div className="flex items-center space-x-2">
                                 <svg
-                                  className="h-5 w-5 text-blue-600"
+                                  className="h-5 w-5 text-gray-800"
                                   fill="none"
                                   stroke="currentColor"
                                   viewBox="0 0 24 24"
@@ -2573,11 +2580,11 @@ const IndividualAnalysis: React.FC = () => {
                                     d="M13 10V3L4 14h7v7l9-11h-7z"
                                   />
                                 </svg>
-                                <span className="text-sm font-medium text-blue-800">
-                                  ✨ 새로 생성된 리포트
+                                <span className="text-sm font-medium text-gray-800">
+                                  새로 생성된 리포트
                                 </span>
                               </div>
-                            )}
+                            )} */}
 
                             {/* AI 리포트 표시 */}
                             <AIReportDisplay
@@ -2588,8 +2595,8 @@ const IndividualAnalysis: React.FC = () => {
                             {/* 실용적인 활용 예시 섹션 */}
                             <div className="mt-8 space-y-6">
                               {/* 문자메시지 예시 */}
-                              <div className="rounded-lg border border-blue-200 bg-blue-50 p-6">
-                                <h3 className="mb-4 flex items-center text-lg font-semibold text-blue-900">
+                              <div className="rounded-lg bg-gray-50 p-6">
+                                <h3 className="mb-4 flex items-center text-lg font-semibold text-gray-800">
                                   <svg
                                     className="mr-2 h-5 w-5"
                                     fill="none"
@@ -2603,13 +2610,13 @@ const IndividualAnalysis: React.FC = () => {
                                       d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"
                                     />
                                   </svg>
-                                  💬 학부모 문자메시지 예시
+                                  학부모 문자메시지 예시
                                 </h3>
                                 <div className="space-y-3">
                                   <div className="rounded-lg bg-white p-4 shadow-sm">
                                     <div className="mb-2 flex items-center justify-between">
                                       <span className="text-sm font-semibold text-blue-700">
-                                        📱 긍정적 피드백형
+                                        긍정적 피드백형
                                       </span>
                                       <button
                                         onClick={() => {
@@ -2654,7 +2661,7 @@ const IndividualAnalysis: React.FC = () => {
                                   <div className="rounded-lg bg-white p-4 shadow-sm">
                                     <div className="mb-2 flex items-center justify-between">
                                       <span className="text-sm font-semibold text-orange-700">
-                                        📱 관심 필요형
+                                        관심 필요형
                                       </span>
                                       <button
                                         onClick={() => {
@@ -2699,8 +2706,8 @@ const IndividualAnalysis: React.FC = () => {
                               </div>
 
                               {/* 학생 대상 문자메시지 예시 */}
-                              <div className="rounded-lg border border-pink-200 bg-pink-50 p-6">
-                                <h3 className="mb-4 flex items-center text-lg font-semibold text-pink-900">
+                              <div className="rounded-lg bg-gray-50 p-6">
+                                <h3 className="mb-4 flex items-center text-lg font-semibold text-gray-800">
                                   <svg
                                     className="mr-2 h-5 w-5"
                                     fill="none"
@@ -2714,23 +2721,23 @@ const IndividualAnalysis: React.FC = () => {
                                       d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"
                                     />
                                   </svg>
-                                  💌 학생 대상 문자메시지 예시
+                                  학생 대상 문자메시지 예시
                                 </h3>
                                 <div className="space-y-3">
                                   <div className="rounded-lg bg-white p-4 shadow-sm">
                                     <div className="mb-2 flex items-center justify-between">
-                                      <span className="text-sm font-semibold text-pink-700">
-                                        📱 격려 및 응원형
+                                      <span className="text-sm font-semibold text-blue-700">
+                                        격려 및 응원형
                                       </span>
                                       <button
                                         onClick={() => {
-                                          const message = `${selectedStudentData?.name}야 안녕! 선생님이야 😊\n\n오늘 친구들이랑 재밌게 노는 거 봤어. ${selectedStudentData?.name} 웃는 모습 보니까 선생님도 기분 좋더라 ㅎㅎ\n\n내일도 오늘처럼 즐겁게 보내! 힘들거나 이야기하고 싶은 거 있으면 언제든 말해 🤗\n\n${teacherInfo?.name || ""} 쌤이`;
+                                          const message = `${selectedStudentData?.name}야 안녕! 선생님이야 \n오늘 친구들이랑 재밌게 노는 거 봤어. ${selectedStudentData?.name} 웃는 모습 보니까 선생님도 기분 좋더라 ㅎㅎ\n내일도 오늘처럼 즐겁게 보내! 힘들거나 이야기하고 싶은 거 있으면 언제든 말해 \n\n${teacherInfo?.name || ""} 쌤이`;
                                           navigator.clipboard.writeText(
                                             message,
                                           );
                                           alert("문자 내용이 복사되었습니다!");
                                         }}
-                                        className="text-xs text-pink-600 underline hover:text-pink-800"
+                                        className="text-xs text-blue-600 underline hover:text-blue-800"
                                       >
                                         복사
                                       </button>
@@ -2739,8 +2746,7 @@ const IndividualAnalysis: React.FC = () => {
                                       <strong>
                                         {selectedStudentData?.name}
                                       </strong>
-                                      야 안녕! 선생님이야 😊
-                                      <br />
+                                      야 안녕! 선생님이야
                                       <br />
                                       오늘 친구들이랑 재밌게 노는 거 봤어.{" "}
                                       <strong>
@@ -2748,9 +2754,8 @@ const IndividualAnalysis: React.FC = () => {
                                       </strong>{" "}
                                       웃는 모습 보니까 선생님도 기분 좋더라 ㅎㅎ
                                       <br />
-                                      <br />
                                       내일도 오늘처럼 즐겁게 보내! 힘들거나
-                                      이야기하고 싶은 거 있으면 언제든 말해 🤗
+                                      이야기하고 싶은 거 있으면 언제든 말해
                                       <br />
                                       <br />
                                       {teacherInfo?.name || ""} 쌤이
@@ -2759,18 +2764,18 @@ const IndividualAnalysis: React.FC = () => {
 
                                   <div className="rounded-lg bg-white p-4 shadow-sm">
                                     <div className="mb-2 flex items-center justify-between">
-                                      <span className="text-sm font-semibold text-pink-700">
-                                        📱 관심 및 지지형
+                                      <span className="text-sm font-semibold text-blue-700">
+                                        관심 및 지지형
                                       </span>
                                       <button
                                         onClick={() => {
-                                          const message = `${selectedStudentData?.name}아 안녕~ 쌤이야! ☺️\n\n요즘 어때? 학교생활 재밌어? 선생님이 ${selectedStudentData?.name} 생각나서 연락했어 ㅎㅎ\n\n혹시 힘든 일 있거나 고민 있으면 쌤한테 언제든 말해도 돼. 내일 쉬는 시간에 잠깐 얘기할까? 🍪 과자도 준비할게!\n\n쌤이 항상 응원해! 💪\n\n${teacherInfo?.name || ""} 쌤`;
+                                          const message = `${selectedStudentData?.name}아 안녕~ 쌤이야!\n요즘 어때? 학교생활 재밌어? 선생님이 ${selectedStudentData?.name} 생각나서 연락했어 ㅎㅎ\n혹시 힘든 일 있거나 고민 있으면 쌤한테 언제든 말해도 돼. 내일 쉬는 시간에 잠깐 얘기할까? 과자도 준비할게!\n쌤이 항상 응원해!\n\n${teacherInfo?.name || ""} 쌤이`;
                                           navigator.clipboard.writeText(
                                             message,
                                           );
                                           alert("문자 내용이 복사되었습니다!");
                                         }}
-                                        className="text-xs text-pink-600 underline hover:text-pink-800"
+                                        className="text-xs text-blue-600 underline hover:text-blue-800"
                                       >
                                         복사
                                       </button>
@@ -2779,8 +2784,7 @@ const IndividualAnalysis: React.FC = () => {
                                       <strong>
                                         {selectedStudentData?.name}
                                       </strong>
-                                      아 안녕~ 쌤이야! ☺️
-                                      <br />
+                                      아 안녕~ 쌤이야!
                                       <br />
                                       요즘 어때? 학교생활 재밌어? 선생님이{" "}
                                       <strong>
@@ -2788,54 +2792,11 @@ const IndividualAnalysis: React.FC = () => {
                                       </strong>{" "}
                                       생각나서 연락했어 ㅎㅎ
                                       <br />
-                                      <br />
                                       혹시 힘든 일 있거나 고민 있으면 쌤한테
                                       언제든 말해도 돼. 내일 쉬는 시간에 잠깐
-                                      얘기할까? 🍪 과자도 준비할게!
+                                      얘기할까? 과자도 준비할게!
                                       <br />
-                                      <br />
-                                      쌤이 항상 응원해! 💪
-                                      <br />
-                                      <br />
-                                      {teacherInfo?.name || ""} 쌤
-                                    </p>
-                                  </div>
-
-                                  <div className="rounded-lg bg-white p-4 shadow-sm">
-                                    <div className="mb-2 flex items-center justify-between">
-                                      <span className="text-sm font-semibold text-pink-700">
-                                        📱 칭찬 및 동기부여형
-                                      </span>
-                                      <button
-                                        onClick={() => {
-                                          const message = `${selectedStudentData?.name}야! 🌟\n\n오늘 수업시간에 발표한 거 진짜 대박이었어! 👏 ${selectedStudentData?.name} 점점 더 당당해지는 모습 보니까 쌤이 완전 뿌듯하다 ㅠㅠ\n\n이번 주도 이렇게 멋지게! 화이팅!! 💪✨\n\n${teacherInfo?.name || ""} 쌤이`;
-                                          navigator.clipboard.writeText(
-                                            message,
-                                          );
-                                          alert("문자 내용이 복사되었습니다!");
-                                        }}
-                                        className="text-xs text-pink-600 underline hover:text-pink-800"
-                                      >
-                                        복사
-                                      </button>
-                                    </div>
-                                    <p className="text-sm text-gray-700">
-                                      <strong>
-                                        {selectedStudentData?.name}
-                                      </strong>
-                                      야! 🌟
-                                      <br />
-                                      <br />
-                                      오늘 수업시간에 발표한 거 진짜 대박이었어!
-                                      👏{" "}
-                                      <strong>
-                                        {selectedStudentData?.name}
-                                      </strong>{" "}
-                                      점점 더 당당해지는 모습 보니까 쌤이 완전
-                                      뿌듯하다 ㅠㅠ
-                                      <br />
-                                      <br />
-                                      이번 주도 이렇게 멋지게! 화이팅!! 💪✨
+                                      쌤이 항상 응원해!
                                       <br />
                                       <br />
                                       {teacherInfo?.name || ""} 쌤이
@@ -2844,39 +2805,74 @@ const IndividualAnalysis: React.FC = () => {
 
                                   <div className="rounded-lg bg-white p-4 shadow-sm">
                                     <div className="mb-2 flex items-center justify-between">
-                                      <span className="text-sm font-semibold text-pink-700">
-                                        📱 생일/특별한 날
+                                      <span className="text-sm font-semibold text-blue-700">
+                                        칭찬 및 동기부여형
                                       </span>
                                       <button
                                         onClick={() => {
-                                          const message = `🎂 ${selectedStudentData?.name}야 생일 축하해!! 🎉🎈\n\n${selectedStudentData?.name} 덕분에 우리 반이 더 재밌고 행복해! 올해도 멋진 일들만 가득하길! 🌟\n\n내일 학교에서 보자~ 쌤이 작은 서프라이즈 준비했어 ㅎㅎ 기대해도 돼! 😊🎁\n\n${teacherInfo?.name || ""} 쌤이`;
+                                          const message = `${selectedStudentData?.name}야! \n오늘 수업시간에 발표한 거 진짜 대박이었어! ${selectedStudentData?.name} 점점 더 당당해지는 모습 보니까 쌤이 완전 뿌듯하다 ㅠㅠ\n이번 주도 이렇게 멋지게! 화이팅!!\n\n${teacherInfo?.name || ""} 쌤이`;
                                           navigator.clipboard.writeText(
                                             message,
                                           );
                                           alert("문자 내용이 복사되었습니다!");
                                         }}
-                                        className="text-xs text-pink-600 underline hover:text-pink-800"
+                                        className="text-xs text-blue-600 underline hover:text-blue-800"
                                       >
                                         복사
                                       </button>
                                     </div>
                                     <p className="text-sm text-gray-700">
-                                      🎂{" "}
                                       <strong>
                                         {selectedStudentData?.name}
                                       </strong>
-                                      야 생일 축하해!! 🎉🎈
+                                      야!
                                       <br />
-                                      <br />
+                                      오늘 수업시간에 발표한 거 진짜 대박이었어!
                                       <strong>
                                         {selectedStudentData?.name}
                                       </strong>{" "}
-                                      덕분에 우리 반이 더 재밌고 행복해! 올해도
-                                      멋진 일들만 가득하길! 🌟
+                                      점점 더 당당해지는 모습 보니까 쌤이 완전
+                                      뿌듯하다 ㅠㅠ
                                       <br />
+                                      이번 주도 이렇게 멋지게! 화이팅!!
+                                      <br />
+                                      <br />
+                                      {teacherInfo?.name || ""} 쌤이
+                                    </p>
+                                  </div>
+
+                                  <div className="rounded-lg bg-white p-4 shadow-sm">
+                                    <div className="mb-2 flex items-center justify-between">
+                                      <span className="text-sm font-semibold text-blue-700">
+                                        생일/특별한 날
+                                      </span>
+                                      <button
+                                        onClick={() => {
+                                          const message = `${selectedStudentData?.name}야 생일 축하해!! \n${selectedStudentData?.name} 덕분에 우리 반이 더 재밌고 행복해! 올해도 멋진 일들만 가득하길! \n내일 학교에서 보자~ 쌤이 작은 서프라이즈 준비했어 ㅎㅎ 기대해도 돼! \n\n${teacherInfo?.name || ""} 쌤이`;
+                                          navigator.clipboard.writeText(
+                                            message,
+                                          );
+                                          alert("문자 내용이 복사되었습니다!");
+                                        }}
+                                        className="text-xs text-blue-600 underline hover:text-blue-800"
+                                      >
+                                        복사
+                                      </button>
+                                    </div>
+                                    <p className="text-sm text-gray-700">
+                                      <strong>
+                                        {selectedStudentData?.name}
+                                      </strong>
+                                      야 생일 축하해!!
+                                      <br />
+                                      <strong>
+                                        {selectedStudentData?.name}
+                                      </strong>
+                                      덕분에 우리 반이 더 재밌고 행복해! 올해도
+                                      멋진 일들만 가득하길!
                                       <br />
                                       내일 학교에서 보자~ 쌤이 작은 서프라이즈
-                                      준비했어 ㅎㅎ 기대해도 돼! 😊🎁
+                                      준비했어 ㅎㅎ 기대해도 돼!
                                       <br />
                                       <br />
                                       {teacherInfo?.name || ""} 쌤이
@@ -2886,8 +2882,8 @@ const IndividualAnalysis: React.FC = () => {
                               </div>
 
                               {/* 상담 스킬 및 대화 예시 */}
-                              <div className="rounded-lg border border-green-200 bg-green-50 p-6">
-                                <h3 className="mb-4 flex items-center text-lg font-semibold text-green-900">
+                              <div className="rounded-lg bg-gray-50 p-6">
+                                <h3 className="mb-4 flex items-center text-lg font-semibold text-gray-800">
                                   <svg
                                     className="mr-2 h-5 w-5"
                                     fill="none"
@@ -2901,15 +2897,15 @@ const IndividualAnalysis: React.FC = () => {
                                       d="M17 8h2a2 2 0 012 2v6a2 2 0 01-2 2h-2v4l-4-4H9a1.994 1.994 0 01-1.414-.586m0 0L11 14h4a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2v4l.586-.586z"
                                     />
                                   </svg>
-                                  🗣️ 학생 상담 대화 스킬
+                                  학생 상담 대화 스킬
                                 </h3>
                                 <div className="space-y-4">
                                   <div className="rounded-lg bg-white p-4 shadow-sm">
-                                    <h4 className="mb-2 font-semibold text-green-700">
+                                    <p className="mb-2 font-semibold text-blue-700">
                                       1. 라포 형성 (신뢰 구축)
-                                    </h4>
+                                    </p>
                                     <div className="space-y-2 text-sm text-gray-700">
-                                      <p className="font-medium text-green-600">
+                                      <p className="font-medium text-blue-600">
                                         ✓ 대화 시작
                                       </p>
                                       <p className="ml-4">
@@ -2925,11 +2921,11 @@ const IndividualAnalysis: React.FC = () => {
                                   </div>
 
                                   <div className="rounded-lg bg-white p-4 shadow-sm">
-                                    <h4 className="mb-2 font-semibold text-green-700">
+                                    <p className="mb-2 font-semibold text-blue-700">
                                       2. 공감적 경청
-                                    </h4>
+                                    </p>
                                     <div className="space-y-2 text-sm text-gray-700">
-                                      <p className="font-medium text-green-600">
+                                      <p className="font-medium text-blue-600">
                                         ✓ 감정 인정하기
                                       </p>
                                       <p className="ml-4">
@@ -2945,11 +2941,11 @@ const IndividualAnalysis: React.FC = () => {
                                   </div>
 
                                   <div className="rounded-lg bg-white p-4 shadow-sm">
-                                    <h4 className="mb-2 font-semibold text-green-700">
+                                    <p className="mb-2 font-semibold text-blue-700">
                                       3. 구체적 질문 (열린 질문)
-                                    </h4>
+                                    </p>
                                     <div className="space-y-2 text-sm text-gray-700">
-                                      <p className="font-medium text-green-600">
+                                      <p className="font-medium text-blue-600">
                                         ✓ 상황 파악하기
                                       </p>
                                       <p className="ml-4">
@@ -2971,11 +2967,11 @@ const IndividualAnalysis: React.FC = () => {
                                   </div>
 
                                   <div className="rounded-lg bg-white p-4 shadow-sm">
-                                    <h4 className="mb-2 font-semibold text-green-700">
+                                    <p className="mb-2 font-semibold text-blue-700">
                                       4. 긍정적 강화
-                                    </h4>
+                                    </p>
                                     <div className="space-y-2 text-sm text-gray-700">
-                                      <p className="font-medium text-green-600">
+                                      <p className="font-medium text-blue-600">
                                         ✓ 강점 발견 및 격려
                                       </p>
                                       <p className="ml-4">
@@ -2997,11 +2993,11 @@ const IndividualAnalysis: React.FC = () => {
                                   </div>
 
                                   <div className="rounded-lg bg-white p-4 shadow-sm">
-                                    <h4 className="mb-2 font-semibold text-green-700">
+                                    <p className="mb-2 font-semibold text-blue-700">
                                       5. 실천 가능한 목표 설정
-                                    </h4>
+                                    </p>
                                     <div className="space-y-2 text-sm text-gray-700">
-                                      <p className="font-medium text-green-600">
+                                      <p className="font-medium text-blue-600">
                                         ✓ 작은 목표부터
                                       </p>
                                       <p className="ml-4">
@@ -3022,8 +3018,8 @@ const IndividualAnalysis: React.FC = () => {
                               </div>
 
                               {/* 교실 활동 예시 */}
-                              <div className="rounded-lg border border-purple-200 bg-purple-50 p-6">
-                                <h3 className="mb-4 flex items-center text-lg font-semibold text-purple-900">
+                              <div className="rounded-lg bg-gray-50 p-6">
+                                <h3 className="mb-4 flex items-center text-lg font-semibold text-gray-800">
                                   <svg
                                     className="mr-2 h-5 w-5"
                                     fill="none"
@@ -3037,13 +3033,13 @@ const IndividualAnalysis: React.FC = () => {
                                       d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"
                                     />
                                   </svg>
-                                  🎯 교실에서 바로 실천할 수 있는 활동
+                                  교실에서 바로 실천할 수 있는 활동
                                 </h3>
                                 <div className="space-y-3">
                                   <div className="rounded-lg bg-white p-4 shadow-sm">
-                                    <h4 className="mb-2 font-semibold text-purple-700">
-                                      📌 소그룹 협력 활동
-                                    </h4>
+                                    <p className="mb-2 font-semibold text-blue-700">
+                                      소그룹 협력 활동
+                                    </p>
                                     <ul className="ml-4 space-y-1 text-sm text-gray-700">
                                       <li>
                                         • <strong>짝 바꾸기:</strong> 평소
@@ -3063,9 +3059,9 @@ const IndividualAnalysis: React.FC = () => {
                                   </div>
 
                                   <div className="rounded-lg bg-white p-4 shadow-sm">
-                                    <h4 className="mb-2 font-semibold text-purple-700">
-                                      🎮 관계 형성 게임
-                                    </h4>
+                                    <p className="mb-2 font-semibold text-blue-700">
+                                      관계 형성 게임
+                                    </p>
                                     <ul className="ml-4 space-y-1 text-sm text-gray-700">
                                       <li>
                                         • <strong>칭찬 릴레이:</strong> 돌아가며
@@ -3083,9 +3079,9 @@ const IndividualAnalysis: React.FC = () => {
                                   </div>
 
                                   <div className="rounded-lg bg-white p-4 shadow-sm">
-                                    <h4 className="mb-2 font-semibold text-purple-700">
-                                      👥 역할 부여 전략
-                                    </h4>
+                                    <p className="mb-2 font-semibold text-blue-700">
+                                      역할 부여 전략
+                                    </p>
                                     <ul className="ml-4 space-y-1 text-sm text-gray-700">
                                       <li>
                                         • <strong>모둠 리더:</strong> 리더십을
@@ -3106,8 +3102,8 @@ const IndividualAnalysis: React.FC = () => {
                               </div>
 
                               {/* 관찰 포인트 */}
-                              <div className="rounded-lg border border-yellow-200 bg-yellow-50 p-6">
-                                <h3 className="mb-4 flex items-center text-lg font-semibold text-yellow-900">
+                              <div className="rounded-lg bg-gray-50 p-6">
+                                <h3 className="mb-4 flex items-center text-lg font-semibold text-gray-800">
                                   <svg
                                     className="mr-2 h-5 w-5"
                                     fill="none"
@@ -3127,64 +3123,62 @@ const IndividualAnalysis: React.FC = () => {
                                       d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
                                     />
                                   </svg>
-                                  👀 일상 관찰 체크리스트
+                                  일상 관찰 체크리스트
                                 </h3>
                                 <div className="grid gap-3 md:grid-cols-2">
                                   <div className="rounded-lg bg-white p-4 shadow-sm">
-                                    <h4 className="mb-2 font-semibold text-yellow-700">
+                                    <p className="mb-2 font-semibold text-blue-700">
                                       쉬는 시간
-                                    </h4>
-                                    <ul className="ml-4 space-y-1 text-sm text-gray-700">
-                                      <li>□ 누구와 함께 시간을 보내는가?</li>
-                                      <li>□ 주로 어떤 활동을 하는가?</li>
-                                      <li>□ 혼자 있는 시간이 얼마나 되는가?</li>
-                                      <li>□ 표정과 분위기는 어떠한가?</li>
+                                    </p>
+                                    <ul className="ml-4 list-disc space-y-1 text-sm text-gray-700">
+                                      <li>누구와 함께 시간을 보내는가?</li>
+                                      <li>주로 어떤 활동을 하는가?</li>
+                                      <li>혼자 있는 시간이 얼마나 되는가?</li>
+                                      <li>표정과 분위기는 어떠한가?</li>
                                     </ul>
                                   </div>
 
                                   <div className="rounded-lg bg-white p-4 shadow-sm">
-                                    <h4 className="mb-2 font-semibold text-yellow-700">
+                                    <p className="mb-2 font-semibold text-blue-700">
                                       수업 시간
-                                    </h4>
-                                    <ul className="ml-4 space-y-1 text-sm text-gray-700">
-                                      <li>□ 모둠 활동 참여도는 어떠한가?</li>
-                                      <li>
-                                        □ 발표나 질문을 적극적으로 하는가?
-                                      </li>
-                                      <li>□ 친구들과의 상호작용은 어떠한가?</li>
-                                      <li>□ 수업 태도와 집중도는 어떠한가?</li>
+                                    </p>
+                                    <ul className="ml-4 list-disc space-y-1 text-sm text-gray-700">
+                                      <li>모둠 활동 참여도는 어떠한가?</li>
+                                      <li>표나 질문을 적극적으로 하는가?</li>
+                                      <li>친구들과의 상호작용은 어떠한가?</li>
+                                      <li>수업 태도와 집중도는 어떠한가?</li>
                                     </ul>
                                   </div>
 
                                   <div className="rounded-lg bg-white p-4 shadow-sm">
-                                    <h4 className="mb-2 font-semibold text-yellow-700">
+                                    <p className="mb-2 font-semibold text-blue-700">
                                       점심 시간
-                                    </h4>
-                                    <ul className="ml-4 space-y-1 text-sm text-gray-700">
-                                      <li>□ 누구와 함께 식사하는가?</li>
-                                      <li>□ 대화에 적극적으로 참여하는가?</li>
-                                      <li>□ 식사 태도는 어떠한가?</li>
-                                      <li>□ 급식 후 활동은 어떠한가?</li>
+                                    </p>
+                                    <ul className="ml-4 list-disc space-y-1 text-sm text-gray-700">
+                                      <li>누구와 함께 식사하는가?</li>
+                                      <li>대화에 적극적으로 참여하는가?</li>
+                                      <li>식사 태도는 어떠한가?</li>
+                                      <li>급식 후 활동은 어떠한가?</li>
                                     </ul>
                                   </div>
 
                                   <div className="rounded-lg bg-white p-4 shadow-sm">
-                                    <h4 className="mb-2 font-semibold text-yellow-700">
+                                    <p className="mb-2 font-semibold text-blue-700">
                                       특별 활동
-                                    </h4>
-                                    <ul className="ml-4 space-y-1 text-sm text-gray-700">
-                                      <li>□ 학교 행사 참여 의욕은 어떠한가?</li>
-                                      <li>□ 체육 활동 시 팀워크는 어떠한가?</li>
-                                      <li>□ 동아리나 특별활동 참여도는?</li>
-                                      <li>□ 리더십 발휘 기회는 충분한가?</li>
+                                    </p>
+                                    <ul className="ml-4 list-disc space-y-1 text-sm text-gray-700">
+                                      <li>학교 행사 참여 의욕은 어떠한가?</li>
+                                      <li>체육 활동 시 팀워크는 어떠한가?</li>
+                                      <li>동아리나 특별활동 참여도는?</li>
+                                      <li>리더십 발휘 기회는 충분한가?</li>
                                     </ul>
                                   </div>
                                 </div>
                               </div>
 
                               {/* 즉시 실천 팁 */}
-                              <div className="rounded-lg border border-indigo-200 bg-indigo-50 p-6">
-                                <h3 className="mb-4 flex items-center text-lg font-semibold text-indigo-900">
+                              <div className="rounded-lg bg-gray-50 p-6">
+                                <h3 className="mb-4 flex items-center text-lg font-semibold text-gray-800">
                                   <svg
                                     className="mr-2 h-5 w-5"
                                     fill="none"
@@ -3198,73 +3192,64 @@ const IndividualAnalysis: React.FC = () => {
                                       d="M13 10V3L4 14h7v7l9-11h-7z"
                                     />
                                   </svg>
-                                  ⚡ 오늘 바로 시작할 수 있는 3가지
+                                  오늘 바로 시작할 수 있는 3가지
                                 </h3>
                                 <div className="space-y-3">
                                   <div className="rounded-lg bg-white p-4 shadow-sm">
-                                    <div className="flex items-start">
-                                      <span className="mr-3 flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-indigo-600 text-sm font-bold text-white">
-                                        1
-                                      </span>
-                                      <div>
-                                        <h4 className="font-semibold text-indigo-700">
+                                    <div className="flex flex-col items-start">
+                                      <ul className="list-disc pl-5">
+                                        <li className="font-semibold text-blue-700">
                                           긍정적 상호작용 만들기
-                                        </h4>
-                                        <p className="mt-1 text-sm text-gray-700">
-                                          오늘 하루 동안{" "}
-                                          <strong>
-                                            {selectedStudentData?.name}
-                                          </strong>{" "}
-                                          학생에게 최소 3번 이상 긍정적인
-                                          피드백을 주세요. "잘했어", "좋은
-                                          생각이야", "도움이 됐어" 같은 간단한
-                                          말도 효과적입니다.
-                                        </p>
-                                      </div>
+                                        </li>
+                                      </ul>
+                                      <p className="mt-1 text-sm text-gray-700">
+                                        오늘 하루 동안{" "}
+                                        <strong>
+                                          {selectedStudentData?.name}
+                                        </strong>{" "}
+                                        학생에게 최소 3번 이상 긍정적인 피드백을
+                                        주세요. "잘했어", "좋은 생각이야",
+                                        "도움이 됐어" 같은 간단한 말도
+                                        효과적입니다.
+                                      </p>
                                     </div>
                                   </div>
 
                                   <div className="rounded-lg bg-white p-4 shadow-sm">
-                                    <div className="flex items-start">
-                                      <span className="mr-3 flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-indigo-600 text-sm font-bold text-white">
-                                        2
-                                      </span>
-                                      <div>
-                                        <h4 className="font-semibold text-indigo-700">
+                                    <div className="flex flex-col items-start">
+                                      <ul className="list-disc pl-5">
+                                        <li className="font-semibold text-blue-700">
                                           관계 연결 기회 제공
-                                        </h4>
-                                        <p className="mt-1 text-sm text-gray-700">
-                                          수업 중 짝 활동이나 모둠 활동 시,{" "}
-                                          <strong>
-                                            {selectedStudentData?.name}
-                                          </strong>{" "}
-                                          학생이 평소 잘 어울리지 않던 친구와
-                                          함께할 수 있도록 의도적으로
-                                          배치해보세요.
-                                        </p>
-                                      </div>
+                                        </li>
+                                      </ul>
+                                      <p className="mt-1 text-sm text-gray-700">
+                                        수업 중 짝 활동이나 모둠 활동 시,{" "}
+                                        <strong>
+                                          {selectedStudentData?.name}
+                                        </strong>{" "}
+                                        학생이 평소 잘 어울리지 않던 친구와
+                                        함께할 수 있도록 의도적으로
+                                        배치해보세요.
+                                      </p>
                                     </div>
                                   </div>
 
                                   <div className="rounded-lg bg-white p-4 shadow-sm">
-                                    <div className="flex items-start">
-                                      <span className="mr-3 flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-indigo-600 text-sm font-bold text-white">
-                                        3
-                                      </span>
-                                      <div>
-                                        <h4 className="font-semibold text-indigo-700">
+                                    <div className="flex flex-col items-start">
+                                      <ul className="list-disc pl-5">
+                                        <li className="font-semibold text-blue-700">
                                           1:1 대화 시간 갖기
-                                        </h4>
-                                        <p className="mt-1 text-sm text-gray-700">
-                                          오늘 또는 내일 중 5분이라도{" "}
-                                          <strong>
-                                            {selectedStudentData?.name}
-                                          </strong>{" "}
-                                          학생과 개인적으로 대화할 시간을
-                                          만들어보세요. 학교생활에 대한 솔직한
-                                          생각을 들어보는 것이 중요합니다.
-                                        </p>
-                                      </div>
+                                        </li>
+                                      </ul>
+                                      <p className="mt-1 text-sm text-gray-700">
+                                        오늘 또는 내일 중 5분이라도{" "}
+                                        <strong>
+                                          {selectedStudentData?.name}
+                                        </strong>{" "}
+                                        학생과 개인적으로 대화할 시간을
+                                        만들어보세요. 학교생활에 대한 솔직한
+                                        생각을 들어보는 것이 중요합니다.
+                                      </p>
                                     </div>
                                   </div>
                                 </div>
