@@ -1136,8 +1136,7 @@ const SurveyManagement: React.FC = () => {
                 </p>
               </div>
               <p className="mt-3 text-sm text-red-600">
-                ⚠️ 이 작업은 되돌릴 수 없으며, 설문 응답 데이터도 함께
-                삭제됩니다.
+                이 작업은 되돌릴 수 없으며, 설문 응답 데이터도 함께 삭제됩니다.
               </p>
             </div>
 

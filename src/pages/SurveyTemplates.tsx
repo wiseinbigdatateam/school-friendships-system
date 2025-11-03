@@ -53,7 +53,6 @@ const SurveyTemplates: React.FC = () => {
 
           if (!teacherError && teacherData) {
             setTeacherInfo(teacherData);
-            
           } else {
             console.error("담임교사 정보 조회 오류:", teacherError);
           }
@@ -98,7 +97,6 @@ const SurveyTemplates: React.FC = () => {
             const metadata = template.metadata as any;
             const maxSelections = metadata?.maxSelections || [1];
 
-
             return {
               id: template.id,
               title: template.name,
@@ -136,17 +134,19 @@ const SurveyTemplates: React.FC = () => {
 
         // 학부모 개인정보 수집 동의서를 제일 위로, 그 다음 종합조사
         const sortedTemplates = filteredTemplates.sort((a, b) => {
-          const aIsParentConsent = a.title.includes("개인정보") && a.title.includes("동의");
-          const bIsParentConsent = b.title.includes("개인정보") && b.title.includes("동의");
-          
+          const aIsParentConsent =
+            a.title.includes("개인정보") && a.title.includes("동의");
+          const bIsParentConsent =
+            b.title.includes("개인정보") && b.title.includes("동의");
+
           // 학부모 동의서가 우선
           if (aIsParentConsent && !bIsParentConsent) return -1;
           if (!aIsParentConsent && bIsParentConsent) return 1;
-          
+
           // 그 다음 종합조사
           if (a.category === "종합조사" && b.category !== "종합조사") return -1;
           if (b.category === "종합조사" && a.category !== "종합조사") return 1;
-          
+
           return 0;
         });
 
@@ -214,7 +214,6 @@ const SurveyTemplates: React.FC = () => {
         return;
       }
 
-
       // 담임교사의 학교 ID 사용
       const schoolId = teacherInfo.school_id;
 
@@ -254,7 +253,6 @@ const SurveyTemplates: React.FC = () => {
           const options =
             (selectedTemplate as any).questionOptions?.[index] || [];
 
-
           return {
             id: `q${index + 1}`,
             text: question,
@@ -278,7 +276,6 @@ const SurveyTemplates: React.FC = () => {
           estimatedTime: selectedTemplate.estimatedTime,
         },
       };
-
 
       // Supabase에 설문 저장
       const { data: createdSurvey, error } = await supabase
@@ -339,7 +336,7 @@ const SurveyTemplates: React.FC = () => {
             : "완료";
 
       alert(
-        `✅ "${selectedTemplate.title}" 템플릿으로 새 설문이 생성되었습니다!\n\n📚 대상: ${teacherInfo.grade_level}학년 ${teacherInfo.class_number}반\n👥 대상 학생: ${students.length}명\n📅 기간: ${surveyConfig.startDate} ~ ${surveyConfig.endDate}\n📊 상태: ${statusText}\n\n📝 참고: 대상 학생 정보는 설문 응답 시 자동으로 필터링됩니다.\n\n설문 관리 페이지로 이동합니다.`,
+        `"${selectedTemplate.title}" 템플릿으로 새 설문이 생성되었습니다!\n\n 대상: ${teacherInfo.grade_level}학년 ${teacherInfo.class_number}반\n 대상 학생: ${students.length}명\n 기간: ${surveyConfig.startDate} ~ ${surveyConfig.endDate}\n 상태: ${statusText}\n\n 참고: 대상 학생 정보는 설문 응답 시 자동으로 필터링됩니다.\n\n설문 관리 페이지로 이동합니다.`,
       );
 
       // 모달 닫기
@@ -403,17 +400,21 @@ const SurveyTemplates: React.FC = () => {
 
           // 학부모 개인정보 수집 동의서를 제일 위로, 그 다음 종합조사
           const sortedTemplates = filteredTemplates.sort((a, b) => {
-            const aIsParentConsent = a.title.includes("개인정보") && a.title.includes("동의");
-            const bIsParentConsent = b.title.includes("개인정보") && b.title.includes("동의");
-            
+            const aIsParentConsent =
+              a.title.includes("개인정보") && a.title.includes("동의");
+            const bIsParentConsent =
+              b.title.includes("개인정보") && b.title.includes("동의");
+
             // 학부모 동의서가 우선
             if (aIsParentConsent && !bIsParentConsent) return -1;
             if (!aIsParentConsent && bIsParentConsent) return 1;
-            
+
             // 그 다음 종합조사
-            if (a.category === "종합조사" && b.category !== "종합조사") return -1;
-            if (b.category === "종합조사" && a.category !== "종합조사") return 1;
-            
+            if (a.category === "종합조사" && b.category !== "종합조사")
+              return -1;
+            if (b.category === "종합조사" && a.category !== "종합조사")
+              return 1;
+
             return 0;
           });
 
@@ -438,8 +439,9 @@ const SurveyTemplates: React.FC = () => {
   const TemplateCard: React.FC<{ template: SurveyTemplate }> = ({
     template,
   }) => {
-    const isParentConsentSurvey = template.title.includes("개인정보") && template.title.includes("동의");
-    
+    const isParentConsentSurvey =
+      template.title.includes("개인정보") && template.title.includes("동의");
+
     return (
       <div className="flex h-full w-full flex-col rounded-lg border border-gray-200 bg-white p-7 transition-shadow hover:shadow-md">
         <div className="flex-1">
@@ -465,7 +467,9 @@ const SurveyTemplates: React.FC = () => {
                 {!isParentConsentSurvey && (
                   <div className="flex items-center space-x-4 text-xs text-gray-500">
                     <span>📊 {template.questions.length}개 질문</span>
-                    <span className="hidden">⏱️ 약 {template.estimatedTime}분</span>
+                    <span className="hidden">
+                      ⏱️ 약 {template.estimatedTime}분
+                    </span>
                     <span className="hidden">
                       🎯 {template.targetGrades.join(", ")}학년
                     </span>
@@ -516,8 +520,12 @@ const SurveyTemplates: React.FC = () => {
                       const category = (template as any).questionCategories?.[
                         index
                       ];
-                      const questionType = (template as any).questionTypes?.[index];
-                      const options = (template as any).questionOptions?.[index];
+                      const questionType = (template as any).questionTypes?.[
+                        index
+                      ];
+                      const options = (template as any).questionOptions?.[
+                        index
+                      ];
 
                       return (
                         <div key={index} className="flex items-start space-x-3">

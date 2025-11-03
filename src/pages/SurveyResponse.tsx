@@ -60,24 +60,25 @@ const SurveyResponse: React.FC = () => {
   const [studentConsent, setStudentConsent] = useState<boolean>(false);
   const [consentError, setConsentError] = useState<string | null>(null);
   // 특정 설문(학부모 개인정보 수집·이용 동의서)은 동의 페이지를 건너뛰고 바로 설문 진행
-  const [isParentConsentSurvey, setIsParentConsentSurvey] = useState<boolean>(false);
-  
+  const [isParentConsentSurvey, setIsParentConsentSurvey] =
+    useState<boolean>(false);
+
   // 학부모 개인정보 동의서 상태
   const [consentStep, setConsentStep] = useState<number>(1); // 1: 동의서 전문, 2: 학생정보, 3: 보호자정보, 4: 최종확인
   const [privacyConsent, setPrivacyConsent] = useState<string>(""); // 예/아니오
   const [studentInfo, setStudentInfo] = useState({
     name: "",
     birthDate: "",
-    gradeClass: ""
+    gradeClass: "",
   });
   const [parentInfo, setParentInfo] = useState({
     name: "",
     relationship: "", // 부/모/기타
-    relationshipOther: ""
+    relationshipOther: "",
   });
   const [finalConsent, setFinalConsent] = useState({
     parentName: "",
-    date: new Date().toISOString().split("T")[0]
+    date: new Date().toISOString().split("T")[0],
   });
 
   // 각 질문별 검색어 상태 추가
@@ -155,34 +156,62 @@ const SurveyResponse: React.FC = () => {
 
               if (!templateError && templateDataResult) {
                 templateData = templateDataResult;
-                
+
                 // 종합조사 설문의 경우 settings에서 카테고리 정보 가져오기
                 let metadata = templateData.metadata as any;
-                if (surveyData.settings && (surveyData.settings as any).surveyType === "comprehensive") {
+                if (
+                  surveyData.settings &&
+                  (surveyData.settings as any).surveyType === "comprehensive"
+                ) {
                   metadata = {
                     ...metadata,
                     category: "종합조사",
-                    questionCategories: ["교우관계", "만족도", "만족도", "만족도", "만족도", "학교폭력", "학교폭력", "학교폭력", "주관식"],
-                    questionTypes: ["multiple_choice", "yes_no", "yes_no", "yes_no", "yes_no", "scale", "scale", "scale", "text"],
+                    questionCategories: [
+                      "교우관계",
+                      "만족도",
+                      "만족도",
+                      "만족도",
+                      "만족도",
+                      "학교폭력",
+                      "학교폭력",
+                      "학교폭력",
+                      "주관식",
+                    ],
+                    questionTypes: [
+                      "multiple_choice",
+                      "yes_no",
+                      "yes_no",
+                      "yes_no",
+                      "yes_no",
+                      "scale",
+                      "scale",
+                      "scale",
+                      "text",
+                    ],
                     questionOptions: [
                       ["아무도 없다"],
-                      ["예", "아니오"], ["예", "아니오"], ["예", "아니오"], ["예", "아니오"],
+                      ["예", "아니오"],
+                      ["예", "아니오"],
+                      ["예", "아니오"],
+                      ["예", "아니오"],
                       ["전혀 없다", "한 두번 당한 적 있다", "자주 있다"],
                       ["전혀 없다", "한 두번 당한 적 있다", "자주 있다"],
                       ["전혀 없다", "한 두번 당한 적 있다", "자주 있다"],
-                      []
-                    ]
+                      [],
+                    ],
                   };
                 }
-                
-                
+
                 setSurveyTemplate({
                   id: templateData.id,
                   name: templateData.name,
                   metadata: metadata,
                 });
                 const combinedTitle = `${surveyData.title || ""} ${templateData.name || ""}`;
-                if (combinedTitle.includes("개인정보") && combinedTitle.includes("동의")) {
+                if (
+                  combinedTitle.includes("개인정보") &&
+                  combinedTitle.includes("동의")
+                ) {
                   setIsParentConsentSurvey(true);
                 } else {
                   setIsParentConsentSurvey(false);
@@ -203,8 +232,8 @@ const SurveyResponse: React.FC = () => {
               (question: any, index: number) => {
                 // 교우관계 또는 종합조사 카테고리일 때 템플릿의 max_selections 배열에서 해당 질문의 값 가져오기
                 if (
-                  (templateData?.metadata?.category === "교우관계" || 
-                   templateData?.metadata?.category === "종합조사") &&
+                  (templateData?.metadata?.category === "교우관계" ||
+                    templateData?.metadata?.category === "종합조사") &&
                   (templateData?.metadata as any)?.max_selections &&
                   Array.isArray(
                     (templateData?.metadata as any)?.max_selections,
@@ -266,21 +295,29 @@ const SurveyResponse: React.FC = () => {
 
             // 종합조사 설문의 경우 question.options를 answer_options로 변환
             if (templateData?.metadata?.category === "종합조사") {
-              surveyData.questions = surveyData.questions.map((question: any, index: number) => {
-                if (question.options && Array.isArray(question.options) && question.options.length > 0) {
-                  // options 배열을 answer_options 객체로 변환
-                  const answerOptions: any = {};
-                  question.options.forEach((option: string, optionIndex: number) => {
-                    answerOptions[`option_${optionIndex + 1}`] = option;
-                  });
-                  
-                  return {
-                    ...question,
-                    answer_options: answerOptions
-                  };
-                }
-                return question;
-              });
+              surveyData.questions = surveyData.questions.map(
+                (question: any, index: number) => {
+                  if (
+                    question.options &&
+                    Array.isArray(question.options) &&
+                    question.options.length > 0
+                  ) {
+                    // options 배열을 answer_options 객체로 변환
+                    const answerOptions: any = {};
+                    question.options.forEach(
+                      (option: string, optionIndex: number) => {
+                        answerOptions[`option_${optionIndex + 1}`] = option;
+                      },
+                    );
+
+                    return {
+                      ...question,
+                      answer_options: answerOptions,
+                    };
+                  }
+                  return question;
+                },
+              );
             }
 
             surveyData.questions.forEach((question: any) => {
@@ -306,7 +343,9 @@ const SurveyResponse: React.FC = () => {
           ) {
             const { data: studentsData, error: studentsError } = await supabase
               .from("students")
-              .select("id, name, grade, class, current_school_id, birth_date, parent_consent")
+              .select(
+                "id, name, grade, class, current_school_id, birth_date, parent_consent",
+              )
               .eq("current_school_id", surveyData.school_id)
               .in("grade", surveyData.target_grades)
               .in("class", surveyData.target_classes)
@@ -384,10 +423,10 @@ const SurveyResponse: React.FC = () => {
       // 이미 응답했는지 확인
       try {
         // 학부모 동의서 설문인 경우 새 테이블 확인, 일반 설문인 경우 기존 테이블 확인
-        const tableName = isParentConsentSurvey 
-          ? "parent_consent_survey_responses" 
+        const tableName = isParentConsentSurvey
+          ? "parent_consent_survey_responses"
           : "survey_responses";
-        
+
         const { data: existingResponse, error } = await (supabase as any)
           .from(tableName)
           .select("id, submitted_at")
@@ -414,25 +453,28 @@ const SurveyResponse: React.FC = () => {
 
         // 응답하지 않은 경우에만 동의 단계로 진행
         setSelectedStudent(matchedStudent);
-        
+
         // 나이 계산 (14세 미만 여부 확인)
         const today = new Date();
         const birthDateObj = new Date(matchedStudent.birth_date);
         let age = today.getFullYear() - birthDateObj.getFullYear();
         const monthDiff = today.getMonth() - birthDateObj.getMonth();
-        if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDateObj.getDate())) {
+        if (
+          monthDiff < 0 ||
+          (monthDiff === 0 && today.getDate() < birthDateObj.getDate())
+        ) {
           age -= 1;
         }
         setIsUnder14(age < 14);
-        
+
         // 학부모 동의서 설문인 경우 최종 동의 날짜를 오늘 날짜로 초기화
         if (isParentConsentSurvey) {
           setFinalConsent({
             parentName: "",
-            date: new Date().toISOString().split("T")[0]
+            date: new Date().toISOString().split("T")[0],
           });
         }
-        
+
         // 동의 단계 건너뛰기: 학부모 개인정보 수집·이용 동의서 설문은 바로 설문으로 이동
         setCurrentStep(isParentConsentSurvey ? "survey" : "consent");
         setVerificationError(null);
@@ -480,22 +522,22 @@ const SurveyResponse: React.FC = () => {
       setStudentInfo({
         name: selectedStudent.name || "",
         birthDate: selectedStudent.birth_date || "",
-        gradeClass: `${selectedStudent.grade}학년 ${selectedStudent.class}반`
+        gradeClass: `${selectedStudent.grade}학년 ${selectedStudent.class}반`,
       });
       // 최종 동의 날짜를 오늘 날짜로 설정
       setFinalConsent({
         parentName: "",
-        date: new Date().toISOString().split("T")[0]
+        date: new Date().toISOString().split("T")[0],
       });
       return;
     }
-    
+
     // 학생 본인 동의 확인
     if (!studentConsent) {
       setConsentError("개인정보 수집·이용에 대한 동의가 필요합니다.");
       return;
     }
-    
+
     setConsentError(null);
     setCurrentStep("survey");
   };
@@ -509,7 +551,9 @@ const SurveyResponse: React.FC = () => {
         return;
       }
       if (privacyConsent === "아니오") {
-        alert("개인정보 수집·이용에 동의하지 않으시면 설문에 참여하실 수 없습니다.");
+        alert(
+          "개인정보 수집·이용에 동의하지 않으시면 설문에 참여하실 수 없습니다.",
+        );
         navigate("/");
         return;
       }
@@ -517,7 +561,11 @@ const SurveyResponse: React.FC = () => {
       setConsentError(null);
     } else if (consentStep === 2) {
       // 2단계: 학생정보 확인
-      if (!studentInfo.name || !studentInfo.birthDate || !studentInfo.gradeClass) {
+      if (
+        !studentInfo.name ||
+        !studentInfo.birthDate ||
+        !studentInfo.gradeClass
+      ) {
         setConsentError("모든 학생정보를 입력해주세요.");
         return;
       }
@@ -538,7 +586,7 @@ const SurveyResponse: React.FC = () => {
       setFinalConsent({
         ...finalConsent,
         parentName: parentInfo.name,
-        date: new Date().toISOString().split("T")[0]
+        date: new Date().toISOString().split("T")[0],
       });
     } else if (consentStep === 4) {
       // 4단계: 최종 동의 확인 및 저장
@@ -550,7 +598,10 @@ const SurveyResponse: React.FC = () => {
         // 1) parent_consents 테이블에 동의 레코드 저장
         const parentContact = {
           relationship: parentInfo.relationship,
-          relationship_other: parentInfo.relationship === "기타" ? parentInfo.relationshipOther : null,
+          relationship_other:
+            parentInfo.relationship === "기타"
+              ? parentInfo.relationshipOther
+              : null,
         };
 
         const { error: insertConsentError } = await supabase
@@ -566,7 +617,9 @@ const SurveyResponse: React.FC = () => {
 
         if (insertConsentError) {
           console.error("학부모 동의 저장 오류:", insertConsentError);
-          setConsentError("동의 저장 중 오류가 발생했습니다. 다시 시도해주세요.");
+          setConsentError(
+            "동의 저장 중 오류가 발생했습니다. 다시 시도해주세요.",
+          );
           return;
         }
 
@@ -578,7 +631,9 @@ const SurveyResponse: React.FC = () => {
 
         if (updateStudentError) {
           console.error("학생 동의 플래그 업데이트 오류:", updateStudentError);
-          setConsentError("동의 상태 업데이트 중 오류가 발생했습니다. 다시 시도해주세요.");
+          setConsentError(
+            "동의 상태 업데이트 중 오류가 발생했습니다. 다시 시도해주세요.",
+          );
           return;
         }
 
@@ -589,7 +644,9 @@ const SurveyResponse: React.FC = () => {
         setCurrentStep("survey");
       } catch (e) {
         console.error("동의 처리 중 예외:", e);
-        setConsentError("동의 처리 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.");
+        setConsentError(
+          "동의 처리 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.",
+        );
       }
     }
   };
@@ -697,7 +754,9 @@ const SurveyResponse: React.FC = () => {
     if (isParentConsentSurvey) {
       // 동의 여부 확인
       if (privacyConsent !== "예") {
-        alert("개인정보 수집·이용에 동의(예)해주셔야 설문을 제출할 수 있습니다.");
+        alert(
+          "개인정보 수집·이용에 동의(예)해주셔야 설문을 제출할 수 있습니다.",
+        );
         return;
       }
       if (!finalConsent.parentName || !finalConsent.date) {
@@ -717,11 +776,15 @@ const SurveyResponse: React.FC = () => {
         const parentContact = {
           relationship: parentInfo.relationship || null,
           relationship_other:
-            parentInfo.relationship === "기타" ? parentInfo.relationshipOther || null : null,
+            parentInfo.relationship === "기타"
+              ? parentInfo.relationshipOther || null
+              : null,
           student_info: {
             name: studentInfo.name || selectedStudent.name,
             birthDate: studentInfo.birthDate || selectedStudent.birth_date,
-            gradeClass: studentInfo.gradeClass || `${selectedStudent.grade}학년 ${selectedStudent.class}반`,
+            gradeClass:
+              studentInfo.gradeClass ||
+              `${selectedStudent.grade}학년 ${selectedStudent.class}반`,
           },
         };
 
@@ -750,7 +813,9 @@ const SurveyResponse: React.FC = () => {
 
         if (updateStudentError) {
           console.error("학생 동의 플래그 업데이트 오류:", updateStudentError);
-          alert("동의 상태 업데이트 중 오류가 발생했습니다. 다시 시도해주세요.");
+          alert(
+            "동의 상태 업데이트 중 오류가 발생했습니다. 다시 시도해주세요.",
+          );
           return;
         }
       } catch (err) {
@@ -789,12 +854,17 @@ const SurveyResponse: React.FC = () => {
             student_info: {
               name: studentInfo.name || selectedStudent.name,
               birth_date: studentInfo.birthDate || selectedStudent.birth_date,
-              grade_class: studentInfo.gradeClass || `${selectedStudent.grade}학년 ${selectedStudent.class}반`,
+              grade_class:
+                studentInfo.gradeClass ||
+                `${selectedStudent.grade}학년 ${selectedStudent.class}반`,
             },
             parent_info: {
               name: parentInfo.name,
               relationship: parentInfo.relationship,
-              relationship_other: parentInfo.relationship === "기타" ? parentInfo.relationshipOther : null,
+              relationship_other:
+                parentInfo.relationship === "기타"
+                  ? parentInfo.relationshipOther
+                  : null,
             },
             final_consent: {
               parent_name: finalConsent.parentName,
@@ -809,11 +879,15 @@ const SurveyResponse: React.FC = () => {
         const parentContact = {
           relationship: parentInfo.relationship || null,
           relationship_other:
-            parentInfo.relationship === "기타" ? parentInfo.relationshipOther || null : null,
+            parentInfo.relationship === "기타"
+              ? parentInfo.relationshipOther || null
+              : null,
           student_info: {
             name: studentInfo.name || selectedStudent.name,
             birthDate: studentInfo.birthDate || selectedStudent.birth_date,
-            gradeClass: studentInfo.gradeClass || `${selectedStudent.grade}학년 ${selectedStudent.class}반`,
+            gradeClass:
+              studentInfo.gradeClass ||
+              `${selectedStudent.grade}학년 ${selectedStudent.class}반`,
           },
         };
 
@@ -834,7 +908,7 @@ const SurveyResponse: React.FC = () => {
 
         // 완료 알림
         alert(
-          `✅ 학부모 개인정보 수집·이용 동의서가 완료되었습니다!\n\n📝 동의서 내용이 성공적으로 저장되었습니다.\n👋 감사합니다!`,
+          `학부모 개인정보 수집·이용 동의서가 완료되었습니다!\n\n 동의서 내용이 성공적으로 저장되었습니다.\n 감사합니다!`,
         );
 
         // 알림 생성
@@ -902,7 +976,7 @@ const SurveyResponse: React.FC = () => {
 
       // 완료 알림 표시
       alert(
-        `🎉 ${selectedStudent.name}님, 설문 응답이 완료되었습니다!\n\n📝 응답 내용이 성공적으로 저장되었습니다.\n👋 감사합니다!`,
+        `${selectedStudent.name}님, 설문 응답이 완료되었습니다!\n\n 응답 내용이 성공적으로 저장되었습니다.\n 감사합니다!`,
       );
 
       // 설문 응답 완료 알림 생성 (담임교사에게)
@@ -1189,7 +1263,7 @@ const SurveyResponse: React.FC = () => {
             <div className="mb-2 rounded-lg border border-gray-200 bg-white px-6 py-3 text-base font-semibold shadow-sm">
               {schoolName || "OO 초등학교"}
             </div>
-            
+
             {/* 설문 헤더 */}
             <div className="mb-6 rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
               <h1 className="mb-4 text-center text-lg font-bold text-gray-900">
@@ -1213,32 +1287,67 @@ const SurveyResponse: React.FC = () => {
                     <div className="space-y-3 text-sm text-gray-700">
                       <div>
                         <p className="mb-2 font-semibold">1. 수집·이용 목적</p>
-                        <p className="ml-4">학생의 교우관계·학교생활 관련 설문 응답 수집 및 분석, 학급·개별 리포트 제공, 교육지원 및 상담 참고 자료 활용</p>
+                        <p className="ml-4">
+                          학생의 교우관계·학교생활 관련 설문 응답 수집 및 분석,
+                          학급·개별 리포트 제공, 교육지원 및 상담 참고 자료 활용
+                        </p>
                       </div>
                       <div>
                         <p className="mb-2 font-semibold">2. 수집 항목</p>
-                        <p className="ml-4">(필수) 학생 이름, 생년월일, 학급/학번, 설문 응답</p>
-                        <p className="ml-4">(필수-운영) 보호자 성명, 보호자 이메일(연락처)</p>
-                        <p className="ml-4">(선택) 보호자 휴대폰(알림·전화확인용)</p>
+                        <p className="ml-4">
+                          (필수) 학생 이름, 생년월일, 학급/학번, 설문 응답
+                        </p>
+                        <p className="ml-4">
+                          (필수-운영) 보호자 성명, 보호자 이메일(연락처)
+                        </p>
+                        <p className="ml-4">
+                          (선택) 보호자 휴대폰(알림·전화확인용)
+                        </p>
                       </div>
                       <div>
                         <p className="mb-2 font-semibold">3. 보유·이용 기간</p>
-                        <p className="ml-4">수집일부터 학기 종료 후 6개월 보관, 이후 즉시 파기 (단, 법령에 따른 보관 의무가 있을 경우 해당 기간 준수)</p>
+                        <p className="ml-4">
+                          수집일부터 학기 종료 후 6개월 보관, 이후 즉시 파기
+                          (단, 법령에 따른 보관 의무가 있을 경우 해당 기간 준수)
+                        </p>
                       </div>
                       <div>
-                        <p className="mb-2 font-semibold">4. 개인정보 처리 위탁</p>
-                        <p className="ml-4">위탁받는 자(수탁자): (주)와이즈인컴퍼니</p>
-                        <p className="ml-4">위탁 업무의 내용: 설문 시스템 운영, 응답 데이터 저장·분석, 학급/개별 리포트 생성, 시스템 유지보수</p>
-                        <p className="ml-4">위탁 항목: 학생(이름, 생년월일, 학급/번호, 설문 응답), 보호자(성명, 이메일, 휴대폰번호[선택])</p>
-                        <p className="ml-4">위탁 처리 기간: 수집일부터 학기 종료 후 6개월까지 보관 후 즉시 파기 (법령상 별도 보관 의무가 있는 경우 해당 기간 준수)</p>
+                        <p className="mb-2 font-semibold">
+                          4. 개인정보 처리 위탁
+                        </p>
+                        <p className="ml-4">
+                          위탁받는 자(수탁자): (주)와이즈인컴퍼니
+                        </p>
+                        <p className="ml-4">
+                          위탁 업무의 내용: 설문 시스템 운영, 응답 데이터
+                          저장·분석, 학급/개별 리포트 생성, 시스템 유지보수
+                        </p>
+                        <p className="ml-4">
+                          위탁 항목: 학생(이름, 생년월일, 학급/번호, 설문 응답),
+                          보호자(성명, 이메일, 휴대폰번호[선택])
+                        </p>
+                        <p className="ml-4">
+                          위탁 처리 기간: 수집일부터 학기 종료 후 6개월까지 보관
+                          후 즉시 파기 (법령상 별도 보관 의무가 있는 경우 해당
+                          기간 준수)
+                        </p>
                       </div>
                       <div>
-                        <p className="mb-2 font-semibold">5. 동의 거부 권리 및 불이익</p>
-                        <p className="ml-4">귀하는 동의를 거부할 권리가 있으나, 동의 거부 시 본 설문에 따른 학급·개별 리포트 제공이 제한될 수 있습니다. 다만, 수업 참여 자체에는 영향이 없습니다.</p>
+                        <p className="mb-2 font-semibold">
+                          5. 동의 거부 권리 및 불이익
+                        </p>
+                        <p className="ml-4">
+                          귀하는 동의를 거부할 권리가 있으나, 동의 거부 시 본
+                          설문에 따른 학급·개별 리포트 제공이 제한될 수
+                          있습니다. 다만, 수업 참여 자체에는 영향이 없습니다.
+                        </p>
                       </div>
                       <div>
                         <p className="mb-2 font-semibold">6. 권리 행사</p>
-                        <p className="ml-4">법정대리인은 열람·정정·삭제·처리정지·동의철회를 요청할 수 있으며, 문의·청구는 위 문의처로 해 주시기 바랍니다.</p>
+                        <p className="ml-4">
+                          법정대리인은 열람·정정·삭제·처리정지·동의철회를 요청할
+                          수 있으며, 문의·청구는 위 문의처로 해 주시기 바랍니다.
+                        </p>
                       </div>
                     </div>
                   </div>
@@ -1305,7 +1414,12 @@ const SurveyResponse: React.FC = () => {
                         <input
                           type="text"
                           value={studentInfo.name}
-                          onChange={(e) => setStudentInfo({ ...studentInfo, name: e.target.value })}
+                          onChange={(e) =>
+                            setStudentInfo({
+                              ...studentInfo,
+                              name: e.target.value,
+                            })
+                          }
                           className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
                           placeholder="학생 이름을 입력하세요"
                         />
@@ -1317,7 +1431,12 @@ const SurveyResponse: React.FC = () => {
                         <input
                           type="date"
                           value={studentInfo.birthDate}
-                          onChange={(e) => setStudentInfo({ ...studentInfo, birthDate: e.target.value })}
+                          onChange={(e) =>
+                            setStudentInfo({
+                              ...studentInfo,
+                              birthDate: e.target.value,
+                            })
+                          }
                           className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
                         />
                       </div>
@@ -1328,7 +1447,12 @@ const SurveyResponse: React.FC = () => {
                         <input
                           type="text"
                           value={studentInfo.gradeClass}
-                          onChange={(e) => setStudentInfo({ ...studentInfo, gradeClass: e.target.value })}
+                          onChange={(e) =>
+                            setStudentInfo({
+                              ...studentInfo,
+                              gradeClass: e.target.value,
+                            })
+                          }
                           className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
                           placeholder="예: 3학년 1반"
                         />
@@ -1374,7 +1498,12 @@ const SurveyResponse: React.FC = () => {
                         <input
                           type="text"
                           value={parentInfo.name}
-                          onChange={(e) => setParentInfo({ ...parentInfo, name: e.target.value })}
+                          onChange={(e) =>
+                            setParentInfo({
+                              ...parentInfo,
+                              name: e.target.value,
+                            })
+                          }
                           className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
                           placeholder="보호자 이름을 입력하세요"
                         />
@@ -1390,7 +1519,13 @@ const SurveyResponse: React.FC = () => {
                               name="relationship"
                               value="부"
                               checked={parentInfo.relationship === "부"}
-                              onChange={(e) => setParentInfo({ ...parentInfo, relationship: e.target.value, relationshipOther: "" })}
+                              onChange={(e) =>
+                                setParentInfo({
+                                  ...parentInfo,
+                                  relationship: e.target.value,
+                                  relationshipOther: "",
+                                })
+                              }
                               className="h-4 w-4 text-blue-600 focus:ring-blue-500"
                             />
                             <span className="text-sm text-gray-700">부</span>
@@ -1401,7 +1536,13 @@ const SurveyResponse: React.FC = () => {
                               name="relationship"
                               value="모"
                               checked={parentInfo.relationship === "모"}
-                              onChange={(e) => setParentInfo({ ...parentInfo, relationship: e.target.value, relationshipOther: "" })}
+                              onChange={(e) =>
+                                setParentInfo({
+                                  ...parentInfo,
+                                  relationship: e.target.value,
+                                  relationshipOther: "",
+                                })
+                              }
                               className="h-4 w-4 text-blue-600 focus:ring-blue-500"
                             />
                             <span className="text-sm text-gray-700">모</span>
@@ -1412,7 +1553,12 @@ const SurveyResponse: React.FC = () => {
                               name="relationship"
                               value="기타"
                               checked={parentInfo.relationship === "기타"}
-                              onChange={(e) => setParentInfo({ ...parentInfo, relationship: e.target.value })}
+                              onChange={(e) =>
+                                setParentInfo({
+                                  ...parentInfo,
+                                  relationship: e.target.value,
+                                })
+                              }
                               className="h-4 w-4 text-blue-600 focus:ring-blue-500"
                             />
                             <span className="text-sm text-gray-700">기타</span>
@@ -1420,7 +1566,12 @@ const SurveyResponse: React.FC = () => {
                               <input
                                 type="text"
                                 value={parentInfo.relationshipOther}
-                                onChange={(e) => setParentInfo({ ...parentInfo, relationshipOther: e.target.value })}
+                                onChange={(e) =>
+                                  setParentInfo({
+                                    ...parentInfo,
+                                    relationshipOther: e.target.value,
+                                  })
+                                }
                                 className="ml-2 rounded-lg border border-gray-300 px-3 py-1 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
                                 placeholder="관계를 입력하세요"
                               />
@@ -1463,7 +1614,8 @@ const SurveyResponse: React.FC = () => {
                     </h3>
                     <div className="space-y-4">
                       <p className="text-sm text-gray-700">
-                        위 요약 고지 및 전문을 확인하였고, 법정대리인으로서 자녀의 설문 응답 수집·이용에 동의합니다.
+                        위 요약 고지 및 전문을 확인하였고, 법정대리인으로서
+                        자녀의 설문 응답 수집·이용에 동의합니다.
                       </p>
                       <div>
                         <label className="mb-2 block text-sm font-medium text-gray-700">
@@ -1472,7 +1624,12 @@ const SurveyResponse: React.FC = () => {
                         <input
                           type="text"
                           value={finalConsent.parentName}
-                          onChange={(e) => setFinalConsent({ ...finalConsent, parentName: e.target.value })}
+                          onChange={(e) =>
+                            setFinalConsent({
+                              ...finalConsent,
+                              parentName: e.target.value,
+                            })
+                          }
                           className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
                           placeholder="보호자 성명을 입력하세요"
                         />
@@ -1484,7 +1641,12 @@ const SurveyResponse: React.FC = () => {
                         <input
                           type="date"
                           value={finalConsent.date}
-                          onChange={(e) => setFinalConsent({ ...finalConsent, date: e.target.value })}
+                          onChange={(e) =>
+                            setFinalConsent({
+                              ...finalConsent,
+                              date: e.target.value,
+                            })
+                          }
                           className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
                         />
                       </div>
@@ -1536,7 +1698,7 @@ const SurveyResponse: React.FC = () => {
           <div className="mb-2 rounded-lg border border-gray-200 bg-white px-6 py-3 text-base font-semibold shadow-sm">
             {schoolName || "OO 초등학교"}
           </div>
-          
+
           {/* 설문 헤더 */}
           <div className="mb-6 rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
             <h1 className="mb-4 text-center text-lg font-bold text-gray-900">
@@ -1559,11 +1721,22 @@ const SurveyResponse: React.FC = () => {
                 개인정보 수집·이용 안내
               </h3>
               <div className="space-y-2 text-xs text-gray-600">
-                <p><strong>수집 목적:</strong> 교우관계 분석 및 학교생활 만족도 조사</p>
-                <p><strong>수집 항목:</strong> 이름, 학년, 반, 설문 응답 내용</p>
-                <p><strong>보유 기간:</strong> 설문 완료 후 1년</p>
-                <p><strong>처리 방법:</strong> 암호화하여 안전하게 보관</p>
-                <p><strong>제3자 제공:</strong> 없음</p>
+                <p>
+                  <strong>수집 목적:</strong> 교우관계 분석 및 학교생활 만족도
+                  조사
+                </p>
+                <p>
+                  <strong>수집 항목:</strong> 이름, 학년, 반, 설문 응답 내용
+                </p>
+                <p>
+                  <strong>보유 기간:</strong> 설문 완료 후 1년
+                </p>
+                <p>
+                  <strong>처리 방법:</strong> 암호화하여 안전하게 보관
+                </p>
+                <p>
+                  <strong>제3자 제공:</strong> 없음
+                </p>
               </div>
             </div>
 
@@ -1572,8 +1745,18 @@ const SurveyResponse: React.FC = () => {
               <div className="mb-6 rounded-lg border border-blue-200 bg-blue-50 p-4">
                 <div className="flex items-start">
                   <div className="flex-shrink-0">
-                    <svg className="h-6 w-6 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    <svg
+                      className="h-6 w-6 text-blue-500"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                      />
                     </svg>
                   </div>
                   <div className="ml-3">
@@ -1581,7 +1764,8 @@ const SurveyResponse: React.FC = () => {
                       만 14세 이상 학생
                     </h3>
                     <p className="mt-1 text-sm text-blue-700">
-                      만 14세 이상 학생은 본인 동의만으로 설문에 참여할 수 있습니다.
+                      만 14세 이상 학생은 본인 동의만으로 설문에 참여할 수
+                      있습니다.
                     </p>
                   </div>
                 </div>
@@ -1593,8 +1777,18 @@ const SurveyResponse: React.FC = () => {
               <div className="mb-6 rounded-lg border border-green-200 bg-green-50 p-4">
                 <div className="flex items-start">
                   <div className="flex-shrink-0">
-                    <svg className="h-6 w-6 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    <svg
+                      className="h-6 w-6 text-green-500"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+                      />
                     </svg>
                   </div>
                   <div className="ml-3">
@@ -1634,8 +1828,16 @@ const SurveyResponse: React.FC = () => {
               <div className="mb-4 rounded-lg border border-red-200 bg-red-50 p-4">
                 <div className="flex items-start">
                   <div className="flex-shrink-0">
-                    <svg className="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
-                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                    <svg
+                      className="h-5 w-5 text-red-400"
+                      viewBox="0 0 20 20"
+                      fill="currentColor"
+                    >
+                      <path
+                        fillRule="evenodd"
+                        d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
+                        clipRule="evenodd"
+                      />
                     </svg>
                   </div>
                   <div className="ml-3">
@@ -1686,7 +1888,9 @@ const SurveyResponse: React.FC = () => {
             <div className="mb-4 flex items-center justify-between">
               <div>
                 <h1 className="text-lg font-bold text-gray-900">
-                  {isParentConsentSurvey ? "학부모 개인정보 수집·이용 동의서" : survey.title}
+                  {isParentConsentSurvey
+                    ? "학부모 개인정보 수집·이용 동의서"
+                    : survey.title}
                 </h1>
                 {!isParentConsentSurvey && survey.description && (
                   <p className="mt-2 text-sm text-gray-600">
@@ -1709,23 +1913,54 @@ const SurveyResponse: React.FC = () => {
 
           {/* 학부모 개인정보 수집·이용 동의서 - 설문 상단에 표시 (동의 단계 스킵 시) */}
           {isParentConsentSurvey && (
-            <div className="mb-6 rounded-lg border border-amber-200 bg-amber-50 p-6 shadow-sm">
-              
-              <div className="space-y-4 text-sm text-amber-900">
-                <div className="rounded-lg border border-amber-200 bg-white p-4">
-                  <p className="mb-2 font-semibold">[개인정보 수집·이용 동의서 전문]</p>
+            <div className="mb-6 rounded-lg bg-white p-6 shadow-sm">
+              <div className="space-y-4 text-sm text-gray-900">
+                <div className="rounded-lg bg-white p-4">
+                  <p className="mb-2 font-semibold">
+                    [개인정보 수집·이용 동의서 전문]
+                  </p>
                   <div className="space-y-2">
-                    <p><span className="font-semibold">1. 수집·이용 목적</span> 학생의 교우관계·학교생활 관련 설문 응답 수집 및 분석, 학급·개별 리포트 제공, 교육지원 및 상담 참고 자료 활용</p>
-                    <p><span className="font-semibold">2. 수집 항목</span> (필수) 학생 이름, 생년월일, 학급/학번, 설문 응답 / (필수-운영) 보호자 성명, 보호자 이메일(연락처) / (선택) 보호자 휴대폰(알림·전화확인용)</p>
-                    <p><span className="font-semibold">3. 보유·이용 기간</span> 수집일부터 학년 종료 후 6개월 보관, 이후 즉시 파기 (단, 법령에 따른 보관 의무가 있을 경우 해당 기간 준수)</p>
-                    <p><span className="font-semibold">4. 개인정보 처리 위탁</span> (주)와이즈인컴퍼니, 설문 시스템 운영·저장·분석·리포트 생성·유지보수, 보관기간 동일</p>
-                    <p><span className="font-semibold">5. 동의 거부 권리 및 불이익</span> 동의 거부 시 학급·개별 리포트 제공 제한 (수업 참여에는 영향 없음)</p>
-                    <p><span className="font-semibold">6. 권리 행사</span> 법정대리인은 열람·정정·삭제·처리정지·동의철회 가능</p>
+                    <p>
+                      <span className="font-semibold">1. 수집·이용 목적</span>{" "}
+                      학생의 교우관계·학교생활 관련 설문 응답 수집 및 분석,
+                      학급·개별 리포트 제공, 교육지원 및 상담 참고 자료 활용
+                    </p>
+                    <p>
+                      <span className="font-semibold">2. 수집 항목</span> (필수)
+                      학생 이름, 생년월일, 학급/학번, 설문 응답 / (필수-운영)
+                      보호자 성명, 보호자 이메일(연락처) / (선택) 보호자
+                      휴대폰(알림·전화확인용)
+                    </p>
+                    <p>
+                      <span className="font-semibold">3. 보유·이용 기간</span>{" "}
+                      수집일부터 학년 종료 후 6개월 보관, 이후 즉시 파기 (단,
+                      법령에 따른 보관 의무가 있을 경우 해당 기간 준수)
+                    </p>
+                    <p>
+                      <span className="font-semibold">
+                        4. 개인정보 처리 위탁
+                      </span>{" "}
+                      (주)와이즈인컴퍼니, 설문 시스템 운영·저장·분석·리포트
+                      생성·유지보수, 보관기간 동일
+                    </p>
+                    <p>
+                      <span className="font-semibold">
+                        5. 동의 거부 권리 및 불이익
+                      </span>{" "}
+                      동의 거부 시 학급·개별 리포트 제공 제한 (수업 참여에는
+                      영향 없음)
+                    </p>
+                    <p>
+                      <span className="font-semibold">6. 권리 행사</span>{" "}
+                      법정대리인은 열람·정정·삭제·처리정지·동의철회 가능
+                    </p>
                   </div>
                 </div>
 
-                <div className="rounded-lg border border-amber-200 bg-white p-4">
-                  <p className="mb-3 font-medium">개인정보 수집·이용에 동의합십니까?</p>
+                <div className="rounded-lg bg-white p-4">
+                  <p className="mb-3 font-medium">
+                    개인정보 수집·이용에 동의합십니까?
+                  </p>
                   <div className="flex gap-6">
                     <label className="flex items-center gap-2">
                       <input
@@ -1753,50 +1988,76 @@ const SurveyResponse: React.FC = () => {
                 </div>
 
                 <div className="grid gap-4 md:grid-cols-2">
-                  <div className="rounded-lg border border-amber-200 bg-white p-4">
+                  <div className="rounded-lg bg-white p-4">
                     <p className="mb-3 font-medium">학생정보</p>
                     <div className="space-y-2">
                       <input
                         type="text"
                         value={studentInfo.name}
-                        onChange={(e) => setStudentInfo({ ...studentInfo, name: e.target.value })}
+                        onChange={(e) =>
+                          setStudentInfo({
+                            ...studentInfo,
+                            name: e.target.value,
+                          })
+                        }
                         placeholder="학생이름"
                         className="w-full rounded-md border border-gray-300 px-3 py-2"
                       />
                       <input
                         type="date"
                         value={studentInfo.birthDate}
-                        onChange={(e) => setStudentInfo({ ...studentInfo, birthDate: e.target.value })}
+                        onChange={(e) =>
+                          setStudentInfo({
+                            ...studentInfo,
+                            birthDate: e.target.value,
+                          })
+                        }
                         className="w-full rounded-md border border-gray-300 px-3 py-2"
                       />
                       <input
                         type="text"
                         value={studentInfo.gradeClass}
-                        onChange={(e) => setStudentInfo({ ...studentInfo, gradeClass: e.target.value })}
+                        onChange={(e) =>
+                          setStudentInfo({
+                            ...studentInfo,
+                            gradeClass: e.target.value,
+                          })
+                        }
                         placeholder="학년반 (예: 3학년 1반)"
                         className="w-full rounded-md border border-gray-300 px-3 py-2"
                       />
                     </div>
                   </div>
-                  <div className="rounded-lg border border-amber-200 bg-white p-4">
+                  <div className="rounded-lg bg-white p-4">
                     <p className="mb-3 font-medium">보호자(법정대리인) 정보</p>
                     <div className="space-y-2">
                       <input
                         type="text"
                         value={parentInfo.name}
-                        onChange={(e) => setParentInfo({ ...parentInfo, name: e.target.value })}
+                        onChange={(e) =>
+                          setParentInfo({ ...parentInfo, name: e.target.value })
+                        }
                         placeholder="보호자 성명"
                         className="w-full rounded-md border border-gray-300 px-3 py-2"
                       />
                       <div className="flex flex-wrap gap-4">
-                        {(["부","모","기타"] as const).map((rel) => (
+                        {(["부", "모", "기타"] as const).map((rel) => (
                           <label key={rel} className="flex items-center gap-2">
                             <input
                               type="radio"
                               name="relationshipInline"
                               value={rel}
                               checked={parentInfo.relationship === rel}
-                              onChange={(e) => setParentInfo({ ...parentInfo, relationship: e.target.value, relationshipOther: rel!=="기타"?"":parentInfo.relationshipOther })}
+                              onChange={(e) =>
+                                setParentInfo({
+                                  ...parentInfo,
+                                  relationship: e.target.value,
+                                  relationshipOther:
+                                    rel !== "기타"
+                                      ? ""
+                                      : parentInfo.relationshipOther,
+                                })
+                              }
                               className="h-4 w-4 text-amber-600 focus:ring-amber-500"
                             />
                             <span>{rel}</span>
@@ -1807,7 +2068,12 @@ const SurveyResponse: React.FC = () => {
                         <input
                           type="text"
                           value={parentInfo.relationshipOther}
-                          onChange={(e) => setParentInfo({ ...parentInfo, relationshipOther: e.target.value })}
+                          onChange={(e) =>
+                            setParentInfo({
+                              ...parentInfo,
+                              relationshipOther: e.target.value,
+                            })
+                          }
                           placeholder="관계 입력"
                           className="w-full rounded-md border border-gray-300 px-3 py-2"
                         />
@@ -1816,22 +2082,33 @@ const SurveyResponse: React.FC = () => {
                   </div>
                 </div>
 
-                <div className="rounded-lg border border-amber-200 bg-white p-4">
+                <div className="rounded-lg bg-white p-4">
                   <p className="mb-3 text-sm">
-                    위 요약 고지 및 전문을 확인하였고, 법정대리인으로서 자녀의 설문 응답 수집·이용에 동의합니다.
+                    위 요약 고지 및 전문을 확인하였고, 법정대리인으로서 자녀의
+                    설문 응답 수집·이용에 동의합니다.
                   </p>
                   <div className="grid gap-3 md:grid-cols-2">
                     <input
                       type="text"
                       value={finalConsent.parentName}
-                      onChange={(e) => setFinalConsent({ ...finalConsent, parentName: e.target.value })}
+                      onChange={(e) =>
+                        setFinalConsent({
+                          ...finalConsent,
+                          parentName: e.target.value,
+                        })
+                      }
                       placeholder="보호자 성명"
                       className="w-full rounded-md border border-gray-300 px-3 py-2"
                     />
                     <input
                       type="date"
                       value={finalConsent.date}
-                      onChange={(e) => setFinalConsent({ ...finalConsent, date: e.target.value })}
+                      onChange={(e) =>
+                        setFinalConsent({
+                          ...finalConsent,
+                          date: e.target.value,
+                        })
+                      }
                       className="w-full rounded-md border border-gray-300 px-3 py-2"
                     />
                   </div>
@@ -1845,7 +2122,8 @@ const SurveyResponse: React.FC = () => {
             onSubmit={handleSubmit}
             className="flex flex-col rounded-lg border border-gray-200 bg-white p-6 shadow-sm"
           >
-            {!isParentConsentSurvey && survey.questions &&
+            {!isParentConsentSurvey &&
+              survey.questions &&
               Array.isArray(survey.questions) &&
               survey.questions.map((question: any, index) => (
                 <div
@@ -1866,19 +2144,25 @@ const SurveyResponse: React.FC = () => {
                       {index === 0 ? (
                         <>
                           <p className="mb-3 text-sm text-gray-600">
-                            최근 한달 동안 가장 많이 함께 한 친구들을 선택해주세요
+                            최근 한달 동안 가장 많이 함께 한 친구들을
+                            선택해주세요
                             {(() => {
                               let maxSelections = 1; // 기본값
-                              
+
                               // 종합조사 설문의 첫 번째 질문인 경우 3명 선택 가능
-                              if (surveyTemplate?.metadata?.category === "종합조사" && index === 0) {
+                              if (
+                                surveyTemplate?.metadata?.category ===
+                                  "종합조사" &&
+                                index === 0
+                              ) {
                                 maxSelections = 3;
                               } else if (question.maxSelections) {
                                 maxSelections = question.maxSelections;
                               } else if (question.max_selections) {
-                                maxSelections = typeof question.max_selections === 'string' 
-                                  ? parseInt(question.max_selections) || 1 
-                                  : question.max_selections;
+                                maxSelections =
+                                  typeof question.max_selections === "string"
+                                    ? parseInt(question.max_selections) || 1
+                                    : question.max_selections;
                               }
 
                               return maxSelections > 1 ? (
@@ -1916,10 +2200,9 @@ const SurveyResponse: React.FC = () => {
                             responses[question.id].length > 0 && (
                               <div className="mb-3 rounded-lg border border-blue-200 bg-blue-50 p-2">
                                 <p className="mb-1 text-xs font-medium text-blue-800">
-                                  {responses[question.id].includes("none") 
+                                  {responses[question.id].includes("none")
                                     ? "선택된 답변:"
-                                    : "선택된 친구들:"
-                                  }
+                                    : "선택된 친구들:"}
                                 </p>
                                 <div className="flex flex-wrap gap-1">
                                   {responses[question.id].map(
@@ -1956,14 +2239,18 @@ const SurveyResponse: React.FC = () => {
                             {/* 아무도 없다 옵션 */}
                             <label
                               className={`flex cursor-pointer items-center rounded-lg border p-2 transition-colors ${
-                                responses[question.id] && responses[question.id].includes("none")
+                                responses[question.id] &&
+                                responses[question.id].includes("none")
                                   ? "border-red-300 bg-red-50"
                                   : "border-gray-200 hover:bg-gray-50"
                               }`}
                             >
                               <input
                                 type="checkbox"
-                                checked={responses[question.id] && responses[question.id].includes("none")}
+                                checked={
+                                  responses[question.id] &&
+                                  responses[question.id].includes("none")
+                                }
                                 onChange={(e) => {
                                   if (e.target.checked) {
                                     // "아무도 없다" 선택 시 다른 선택 모두 해제
@@ -1981,7 +2268,7 @@ const SurveyResponse: React.FC = () => {
                                 </p>
                               </div>
                             </label>
-                            
+
                             {students
                               .filter(
                                 (student) => student.id !== selectedStudent.id,
@@ -2005,18 +2292,22 @@ const SurveyResponse: React.FC = () => {
 
                                 // 질문의 maxSelections 값 사용
                                 let maxSelections = 1; // 기본값
-                                
+
                                 // 종합조사 설문의 첫 번째 질문인 경우 3명 선택 가능
-                                if (surveyTemplate?.metadata?.category === "종합조사" && index === 0) {
+                                if (
+                                  surveyTemplate?.metadata?.category ===
+                                    "종합조사" &&
+                                  index === 0
+                                ) {
                                   maxSelections = 3;
                                 } else if (question.maxSelections) {
                                   maxSelections = question.maxSelections;
                                 } else if (question.max_selections) {
-                                  maxSelections = typeof question.max_selections === 'string' 
-                                    ? parseInt(question.max_selections) || 1 
-                                    : question.max_selections;
+                                  maxSelections =
+                                    typeof question.max_selections === "string"
+                                      ? parseInt(question.max_selections) || 1
+                                      : question.max_selections;
                                 }
-                                
 
                                 const isDisabled =
                                   !isSelected &&
@@ -2044,9 +2335,10 @@ const SurveyResponse: React.FC = () => {
                                             currentValues.length < maxSelections
                                           ) {
                                             // "아무도 없다" 옵션이 선택되어 있다면 제거
-                                            const filteredValues = currentValues.filter(
-                                              (id: string) => id !== "none"
-                                            );
+                                            const filteredValues =
+                                              currentValues.filter(
+                                                (id: string) => id !== "none",
+                                              );
                                             handleResponseChange(question.id, [
                                               ...filteredValues,
                                               student.id,
@@ -2079,14 +2371,17 @@ const SurveyResponse: React.FC = () => {
                           <p className="mb-3 text-sm text-gray-600">
                             아래 옵션 중 하나를 선택해주세요
                           </p>
-                          
+
                           <div className="space-y-1">
                             {(() => {
-                             
-                              
                               // answer_options가 있는 경우 사용
-                              if (question.answer_options && typeof question.answer_options === 'object') {
-                                return Object.entries(question.answer_options).map(([key, value]) => (
+                              if (
+                                question.answer_options &&
+                                typeof question.answer_options === "object"
+                              ) {
+                                return Object.entries(
+                                  question.answer_options,
+                                ).map(([key, value]) => (
                                   <label
                                     key={key}
                                     className="flex cursor-pointer items-center rounded-lg p-3 transition-colors hover:bg-gray-50"
@@ -2095,7 +2390,9 @@ const SurveyResponse: React.FC = () => {
                                       type="radio"
                                       name={question.id}
                                       value={String(value)}
-                                      checked={responses[question.id] === String(value)}
+                                      checked={
+                                        responses[question.id] === String(value)
+                                      }
                                       onChange={(e) =>
                                         handleResponseChange(
                                           question.id,
@@ -2111,7 +2408,7 @@ const SurveyResponse: React.FC = () => {
                                   </label>
                                 ));
                               }
-                              
+
                               // answer_options가 없는 경우 하드코딩된 옵션 사용
                               let options: string[] = [];
                               if (index >= 1 && index <= 4) {
@@ -2119,13 +2416,16 @@ const SurveyResponse: React.FC = () => {
                                 options = ["예", "아니오"];
                               } else if (index >= 5 && index <= 7) {
                                 // 6~8번 질문 (학교폭력)
-                                options = ["전혀 없다", "한 두번 당한 적 있다", "자주 있다"];
+                                options = [
+                                  "전혀 없다",
+                                  "한 두번 당한 적 있다",
+                                  "자주 있다",
+                                ];
                               } else {
                                 // 기본 선택지
                                 options = ["예", "아니오"];
                               }
-                              
-                              
+
                               return options.map((option: string) => (
                                 <label
                                   key={option}
@@ -2157,53 +2457,62 @@ const SurveyResponse: React.FC = () => {
                     </div>
                   )}
 
-                  {(question.type === "yes_no" || question.type === "scale") && (
+                  {(question.type === "yes_no" ||
+                    question.type === "scale") && (
                     <div className="space-y-4">
                       <p className="mb-3 text-sm text-gray-600">
                         아래 옵션 중 하나를 선택해주세요
                       </p>
-                      
+
                       <div className="space-y-1">
                         {(() => {
-                          
-                          
                           // answer_options가 있는 경우 사용
-                          if (question.answer_options && typeof question.answer_options === 'object') {
-                            return Object.entries(question.answer_options).map(([key, value]) => (
-                              <label
-                                key={key}
-                                className="flex cursor-pointer items-center rounded-lg p-3 transition-colors hover:bg-gray-50"
-                              >
-                                <input
-                                  type="radio"
-                                  name={question.id}
-                                  value={String(value)}
-                                  checked={responses[question.id] === String(value)}
-                                  onChange={(e) =>
-                                    handleResponseChange(
-                                      question.id,
-                                      e.target.value,
-                                    )
-                                  }
-                                  className="mr-3 h-4 w-4 border-gray-300 text-[#3F80EA] focus:ring-blue-500"
-                                  required={question.required}
-                                />
-                                <span className="text-gray-900">
-                                  {String(value)}
-                                </span>
-                              </label>
-                            ));
+                          if (
+                            question.answer_options &&
+                            typeof question.answer_options === "object"
+                          ) {
+                            return Object.entries(question.answer_options).map(
+                              ([key, value]) => (
+                                <label
+                                  key={key}
+                                  className="flex cursor-pointer items-center rounded-lg p-3 transition-colors hover:bg-gray-50"
+                                >
+                                  <input
+                                    type="radio"
+                                    name={question.id}
+                                    value={String(value)}
+                                    checked={
+                                      responses[question.id] === String(value)
+                                    }
+                                    onChange={(e) =>
+                                      handleResponseChange(
+                                        question.id,
+                                        e.target.value,
+                                      )
+                                    }
+                                    className="mr-3 h-4 w-4 border-gray-300 text-[#3F80EA] focus:ring-blue-500"
+                                    required={question.required}
+                                  />
+                                  <span className="text-gray-900">
+                                    {String(value)}
+                                  </span>
+                                </label>
+                              ),
+                            );
                           }
-                          
+
                           // answer_options가 없는 경우 하드코딩된 옵션 사용
                           let options: string[] = [];
                           if (question.type === "yes_no") {
                             options = ["예", "아니오"];
                           } else if (question.type === "scale") {
-                            options = ["전혀 없다", "한 두번 당한 적 있다", "자주 있다"];
+                            options = [
+                              "전혀 없다",
+                              "한 두번 당한 적 있다",
+                              "자주 있다",
+                            ];
                           }
-                          
-                          
+
                           return options.map((option: string) => (
                             <label
                               key={option}
@@ -2223,9 +2532,7 @@ const SurveyResponse: React.FC = () => {
                                 className="mr-3 h-4 w-4 border-gray-300 text-[#3F80EA] focus:ring-blue-500"
                                 required={question.required}
                               />
-                              <span className="text-gray-900">
-                                {option}
-                              </span>
+                              <span className="text-gray-900">{option}</span>
                             </label>
                           ));
                         })()}
@@ -2248,7 +2555,6 @@ const SurveyResponse: React.FC = () => {
                 </div>
               ))}
 
-            <hr className="mb-6 w-full border-t border-gray-200" />
             {/* 제출 버튼 */}
             <div className="self-end">
               <button
@@ -2257,12 +2563,12 @@ const SurveyResponse: React.FC = () => {
                 className="rounded-lg bg-[#3F80EA] px-6 py-3 text-white hover:bg-blue-600 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {submitting
-                  ? "📤 제출 중..."
+                  ? "제출 중..."
                   : isParentConsentSurvey
                     ? "동의 완료하기"
                     : !isAllRequiredFieldsCompleted()
-                      ? "⚠️ 필수 항목을 완료해주세요"
-                      : "🎯 설문 제출하기"}
+                      ? "필수 항목을 완료해주세요"
+                      : "설문 제출하기"}
               </button>
             </div>
           </form>
@@ -2292,7 +2598,7 @@ const SurveyResponse: React.FC = () => {
             </svg>
           </div>
           <h2 className="mb-3 text-2xl font-bold text-[#3F80EA]">
-            📝 이미 응답 완료!
+            이미 응답 완료!
           </h2>
           <p className="mb-4 text-lg text-gray-700">
             <span className="font-semibold text-[#3F80EA]">
@@ -2301,19 +2607,12 @@ const SurveyResponse: React.FC = () => {
             님은 이미 이 설문에 응답하셨습니다.
           </p>
           <div className="mb-6 space-y-2 text-sm text-gray-600">
-            <p className="flex items-center justify-center">
-              <span className="mr-2">⏰</span>
+            <p>
               응답 시간:{" "}
               {new Date(existingResponse.submitted_at).toLocaleString("ko-KR")}
             </p>
-            <p className="flex items-center justify-center">
-              <span className="mr-2">✅</span>
-              응답 내용이 안전하게 저장되었습니다
-            </p>
-            <p className="flex items-center justify-center">
-              <span className="mr-2">🚫</span>
-              중복 응답은 불가능합니다
-            </p>
+            <p>응답 내용이 안전하게 저장되었습니다</p>
+            <p>중복 응답은 불가능합니다</p>
           </div>
           <div className="space-y-3">
             <button
@@ -2326,13 +2625,13 @@ const SurveyResponse: React.FC = () => {
               }}
               className="w-full rounded-lg bg-gray-100 px-6 py-3 text-gray-700 hover:bg-gray-200"
             >
-              🔄 다른 학생으로 확인하기
+              다른 학생으로 확인하기
             </button>
             <button
               onClick={() => navigate("/")}
               className="w-full rounded-lg bg-[#3F80EA] px-6 py-3 text-white hover:bg-blue-600"
             >
-              🏠 홈으로 돌아가기
+              홈으로 돌아가기
             </button>
           </div>
         </div>
@@ -2373,19 +2672,15 @@ const SurveyResponse: React.FC = () => {
             </p>
             <div className="mb-6 space-y-2 text-sm text-gray-600">
               <p className="flex items-center justify-center">
-                
                 - 동의서 내용이 안전하게 저장되었습니다
               </p>
               <p className="flex items-center justify-center">
-                
                 - 학생 등록/관리 페이지에 자동으로 반영되었습니다
               </p>
               <p className="flex items-center justify-center">
-                
                 - 개인정보는 관련 법령에 따라 안전하게 관리됩니다
               </p>
               <p className="flex items-center justify-center">
-                
                 - 동의해주셔서 정말 감사합니다!
               </p>
             </div>
@@ -2419,9 +2714,7 @@ const SurveyResponse: React.FC = () => {
               />
             </svg>
           </div>
-          <h2 className="mb-3 text-2xl font-bold text-green-600">
-            🎉 설문 완료!
-          </h2>
+          <h2 className="mb-3 text-2xl font-bold text-green-600">설문 완료!</h2>
           <p className="mb-4 text-lg text-gray-700">
             <span className="font-semibold text-[#3F80EA]">
               {selectedStudent.name}
@@ -2429,18 +2722,9 @@ const SurveyResponse: React.FC = () => {
             님, 설문 응답이 성공적으로 완료되었습니다!
           </p>
           <div className="mb-6 space-y-2 text-sm text-gray-600">
-            <p className="flex items-center justify-center">
-              <span className="mr-2">✅</span>
-              응답 내용이 안전하게 저장되었습니다
-            </p>
-            <p className="flex items-center justify-center">
-              <span className="mr-2">📊</span>
-              담임선생님이 결과를 확인 후 안내해드릴 예정입니다
-            </p>
-            <p className="flex items-center justify-center">
-              <span className="mr-2">👋</span>
-              참여해주셔서 정말 감사합니다!
-            </p>
+            <p>응답 내용이 안전하게 저장되었습니다</p>
+            <p>담임선생님이 결과를 확인 후 안내해드릴 예정입니다</p>
+            <p>참여해주셔서 정말 감사합니다!</p>
           </div>
           <button
             onClick={() => navigate("/")}
