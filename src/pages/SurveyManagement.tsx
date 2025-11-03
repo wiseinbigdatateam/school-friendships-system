@@ -39,7 +39,6 @@ const SurveyItem: React.FC<{
   const handleStatusChange = async (newStatus: string) => {
     if (isStatusChanging) return; // 이미 변경 중이면 무시
 
-
     setIsStatusChanging(true);
     try {
       await onStatusChange(survey.id, newStatus);
@@ -84,12 +83,13 @@ const SurveyItem: React.FC<{
               <option value="waiting">대기중</option>
             )}
             {/* 시작일이 지났고 종료일이 지나지 않은 경우 */}
-            {new Date() >= new Date(survey.start_date) && new Date() <= new Date(survey.end_date) && (
-              <>
-                <option value="active">진행중</option>
-                <option value="completed">완료</option>
-              </>
-            )}
+            {new Date() >= new Date(survey.start_date) &&
+              new Date() <= new Date(survey.end_date) && (
+                <>
+                  <option value="active">진행중</option>
+                  <option value="completed">완료</option>
+                </>
+              )}
             {/* 종료일이 지난 경우 */}
             {new Date() > new Date(survey.end_date) && (
               <>
@@ -142,7 +142,7 @@ const SurveyItem: React.FC<{
             {(survey.status === "active" || survey.status === "draft") && (
               <button
                 onClick={() => onGetSurveyLink(survey)}
-                className="inline-flex items-center rounded-full bg-purple-100 px-3 py-1.5 text-xs font-medium text-purple-700 transition-colors hover:bg-purple-200"
+                className="inline-flex items-center rounded-full bg-gray-100 px-3 py-1.5 text-xs font-medium text-gray-700 transition-colors hover:bg-gray-300"
               >
                 <svg
                   className="mr-1 h-3 w-3"
@@ -163,7 +163,7 @@ const SurveyItem: React.FC<{
             {survey.status === "active" && (
               <button
                 onClick={() => onMonitor(survey)}
-                className="inline-flex items-center rounded-full bg-orange-100 px-3 py-1.5 text-xs font-medium text-orange-700 transition-colors hover:bg-orange-200"
+                className="inline-flex items-center rounded-full bg-gray-100 px-3 py-1.5 text-xs font-medium text-gray-700 transition-colors hover:bg-gray-300"
               >
                 <svg
                   className="mr-1 h-3 w-3"
@@ -244,8 +244,7 @@ const SurveyManagement: React.FC = () => {
   const [itemsPerPage, setItemsPerPage] = useState(5);
 
   // 상태 필터 초기화 확인
-  useEffect(() => {
-  }, [statusFilter]);
+  useEffect(() => {}, [statusFilter]);
   const [error, setError] = useState<string | null>(null);
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [userSchoolId, setUserSchoolId] = useState<string | null>(null);
@@ -311,7 +310,6 @@ const SurveyManagement: React.FC = () => {
         }
 
         setUserSchoolId(schoolId);
-
       } catch (error) {
         console.error("사용자 정보 조회 오류:", error);
         // 에러 발생 시 로그인 페이지로 이동
@@ -340,10 +338,10 @@ const SurveyManagement: React.FC = () => {
 
       // 추가로 모든 활성 설문에 대해 응답 완료율 체크 수행
       const { data: activeSurveys, error: activeError } = await supabase
-        .from('surveys')
-        .select('id, status')
-        .eq('status', 'active')
-        .eq('school_id', userSchoolId);
+        .from("surveys")
+        .select("id, status")
+        .eq("status", "active")
+        .eq("school_id", userSchoolId);
 
       if (!activeError && activeSurveys) {
         for (const survey of activeSurveys) {
@@ -362,17 +360,13 @@ const SurveyManagement: React.FC = () => {
           user.grade,
           user.class,
         );
-
       } else if (user?.role === "grade_teacher" && user?.grade) {
         // 학년담당: 해당 학년의 설문
-        
 
         surveysData = await SurveyService.getSurveysBySchoolGradeClass(
           userSchoolId,
           user.grade,
         );
-
-        
       } else if (user?.role === "school_admin") {
         // 학교 관리자: 해당 학교의 모든 설문
 
@@ -384,7 +378,6 @@ const SurveyManagement: React.FC = () => {
         } else {
           surveysData = await SurveyService.getAllSurveys(userSchoolId);
         }
-
       } else if (user?.role === "district_admin") {
         // 교육청 관리자: 해당 교육청의 모든 학교 설문
 
@@ -396,7 +389,6 @@ const SurveyManagement: React.FC = () => {
         } else {
           surveysData = await SurveyService.getAllSurveys(""); // 빈 문자열로 모든 학교의 설문 조회
         }
-
       } else if (user?.role === "main_admin") {
         // 시스템 관리자: 모든 설문
 
@@ -408,7 +400,6 @@ const SurveyManagement: React.FC = () => {
         } else {
           surveysData = await SurveyService.getAllSurveys("all"); // "all" 문자열로 모든 설문 조회
         }
-
       } else {
         // 기타 역할: 학교 ID로 기본 설문 데이터
 
@@ -420,7 +411,6 @@ const SurveyManagement: React.FC = () => {
         } else {
           surveysData = await SurveyService.getAllSurveys(userSchoolId);
         }
-
       }
 
       // 데이터가 비어있으면 빈 배열로 설정
@@ -462,12 +452,9 @@ const SurveyManagement: React.FC = () => {
     )
       return;
 
-    const interval = setInterval(
-      () => {
-        loadSurveys();
-      },
-      30 * 1000,
-    ); // 30초마다
+    const interval = setInterval(() => {
+      loadSurveys();
+    }, 30 * 1000); // 30초마다
 
     return () => clearInterval(interval);
   }, [userSchoolId, user]);
@@ -507,7 +494,6 @@ const SurveyManagement: React.FC = () => {
   // 설문 삭제 관련 함수들
   const confirmDeleteSurvey = async () => {
     try {
-
       if (!deletingSurvey) {
         console.error("삭제할 설문이 없음");
         toast.error("삭제할 설문을 찾을 수 없습니다.");
@@ -522,14 +508,13 @@ const SurveyManagement: React.FC = () => {
           const updatedSurveys = prev.filter(
             (survey) => survey.id !== deletingSurvey.id,
           );
-          
+
           return updatedSurveys;
         });
 
         setIsDeleteModalOpen(false);
         setDeletingSurvey(null);
         toast.success("설문이 성공적으로 삭제되었습니다!");
-
       } else {
         console.error("설문 삭제 실패: success = false");
         toast.error("설문 삭제에 실패했습니다.");
@@ -610,7 +595,6 @@ const SurveyManagement: React.FC = () => {
 
       // 상태가 실제로 변경되었는지 확인
       if (currentSurvey.status === newStatus) {
-        
         return;
       }
 
