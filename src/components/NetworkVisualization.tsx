@@ -674,7 +674,7 @@ const NetworkVisualization: React.FC<NetworkVisualizationProps> = ({
 
       {/* 선택된 노드 정보 */}
       {selectedNode && (
-        <div className="mt-4 rounded-lg border border-blue-200 bg-blue-50 p-4">
+        <div className="mt-4 rounded-lg bg-gray-50 p-4">
           <div className="mb-3 flex items-center justify-between">
             <h4 className="font-semibold text-blue-800">선택된 학생 정보</h4>
             <button
@@ -686,26 +686,26 @@ const NetworkVisualization: React.FC<NetworkVisualizationProps> = ({
           </div>
           <div className="grid grid-cols-2 gap-4 text-sm">
             <div>
-              <span className="font-medium text-blue-700">이름:</span>{" "}
+              <span className="font-medium text-gray-900">이름:</span>{" "}
               {selectedNode.name}
             </div>
             <div>
-              <span className="font-medium text-blue-700">학년/반:</span>{" "}
+              <span className="font-medium text-gray-900">학년/반:</span>{" "}
               {selectedNode.grade}학년 {selectedNode.class}반
             </div>
             <div>
-              <span className="font-medium text-blue-700">친구 유형:</span>{" "}
+              <span className="font-medium text-gray-900">친구 유형:</span>{" "}
               {selectedNode.friendship_type}
             </div>
             <div>
-              <span className="font-medium text-blue-700">연결 수:</span>{" "}
+              <span className="font-medium text-gray-900">연결 수:</span>{" "}
               {selectedNode.connection_count}개
             </div>
           </div>
 
           {/* 연결된 친구 목록 */}
           {highlightedNodes.size > 1 && (
-            <div className="mt-3 border-t border-blue-200 pt-3">
+            <div className="mt-3 border-t border-gray-200 pt-3">
               <h5 className="mb-2 text-xs font-semibold text-blue-700">
                 연결된 친구 ({highlightedNodes.size - 1}명):
               </h5>

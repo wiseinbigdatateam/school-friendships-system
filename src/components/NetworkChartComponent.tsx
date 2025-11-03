@@ -5,6 +5,7 @@ import {
   FRIENDSHIP_TYPE_COLORS,
   FRIENDSHIP_TYPES,
 } from "../utils/colorMapping";
+import { Check, TriangleAlert } from "lucide-react";
 
 interface NetworkChartComponentProps {
   chartData: NetworkAnalysisData[];
@@ -75,17 +76,17 @@ const NetworkChartComponent: React.FC<NetworkChartComponentProps> = ({
 
   // 실제 네트워크 데이터 사용
   const getNetworkData = (data: NetworkAnalysisData) => {
-    console.log('🔄 getNetworkData 호출됨:', data);
+    console.log("🔄 getNetworkData 호출됨:", data);
     return data;
   };
 
   useEffect(() => {
-    console.log('📊 NetworkChartComponent - chartData 받음:', chartData);
+    console.log("📊 NetworkChartComponent - chartData 받음:", chartData);
     if (chartData && chartData.length > 0) {
-      console.log('✅ chartData[0]:', chartData[0]);
+      console.log("✅ chartData[0]:", chartData[0]);
       setFirstGraphData(chartData[0]);
       if (chartData.length > 1) {
-        console.log('✅ chartData[1]:', chartData[1]);
+        console.log("✅ chartData[1]:", chartData[1]);
         setSecondGraphData(chartData[1]);
       } else {
         setSecondGraphData(null);
@@ -94,7 +95,7 @@ const NetworkChartComponent: React.FC<NetworkChartComponentProps> = ({
   }, [chartData]);
 
   if (!firstGraphData) {
-    console.log('⚠️ firstGraphData가 없음!');
+    console.log("⚠️ firstGraphData가 없음!");
     return (
       <div className="py-8 text-center">
         <div className="mx-auto mb-4 h-8 w-8 animate-spin rounded-full border-b-2 border-blue-600"></div>
@@ -103,7 +104,12 @@ const NetworkChartComponent: React.FC<NetworkChartComponentProps> = ({
     );
   }
 
-  console.log('🎯 렌더링 시작 - activeTab:', activeTab, 'firstGraphData:', firstGraphData);
+  console.log(
+    "🎯 렌더링 시작 - activeTab:",
+    activeTab,
+    "firstGraphData:",
+    firstGraphData,
+  );
 
   return (
     <div className="space-y-6">
@@ -145,8 +151,8 @@ const NetworkChartComponent: React.FC<NetworkChartComponentProps> = ({
           {/* 기본 통계 정보 */}
           <div className="mt-6 grid grid-cols-1 gap-4 md:grid-cols-4">
             <div className="flex flex-col items-center rounded-lg bg-gray-50 p-4">
-              <h4 className="text-sm font-medium text-blue-400">총 학생 수</h4>
-              <p className="text-2xl font-bold text-blue-400">
+              <h4 className="text-sm font-medium text-blue-500">총 학생 수</h4>
+              <p className="text-2xl font-bold text-blue-500">
                 {firstGraphData.metrics.total_students}
               </p>
             </div>
@@ -158,14 +164,14 @@ const NetworkChartComponent: React.FC<NetworkChartComponentProps> = ({
                 {(firstGraphData.metrics.network_density * 100).toFixed(1)}%
               </p>
             </div>
-            <div className="flex flex-col items-center rounded-lg bg-gradient-to-br from-blue-50 to-blue-100 p-4 shadow-sm">
-              <h4 className="text-sm font-medium text-blue-700">
-                🎯 친구 그룹 수
+            <div className="flex flex-col items-center rounded-lg bg-gray-50 p-4">
+              <h4 className="text-sm font-medium text-blue-500">
+                친구 그룹 수
               </h4>
-              <p className="text-3xl font-bold text-blue-600">
+              <p className="text-2xl font-bold text-blue-500">
                 {getClusterCount(firstGraphData)}개
               </p>
-              <p className="mt-1 text-xs text-blue-600">
+              <p className="mt-1 text-xs text-blue-500">
                 {(() => {
                   const clusterCount = getClusterCount(firstGraphData);
                   return clusterCount <= 2
@@ -179,10 +185,10 @@ const NetworkChartComponent: React.FC<NetworkChartComponentProps> = ({
               </p>
             </div>
             <div className="flex flex-col items-center rounded-lg bg-gray-50 p-4">
-              <h4 className="text-sm font-medium text-blue-600">
+              <h4 className="text-sm font-medium text-blue-500">
                 평균 친구 수
               </h4>
-              <p className="text-2xl font-bold text-blue-600">
+              <p className="text-2xl font-bold text-blue-500">
                 {firstGraphData.metrics.average_degree.toFixed(1)}명
               </p>
             </div>
@@ -269,8 +275,8 @@ const NetworkChartComponent: React.FC<NetworkChartComponentProps> = ({
               <div className="flex">
                 {/* 학급 친구 관계 안정성 지표 */}
                 <div className="mt-8 w-1/2 rounded-lg bg-white p-6">
-                  <h4 className="mb-4 text-lg font-medium text-gray-900">
-                    🔍 학급 친구 관계 안정성 지표
+                  <h4 className="mb-1 text-lg font-medium text-gray-900">
+                    학급 친구 관계 안정성 지표
                   </h4>
                   <p className="mb-6 text-sm text-gray-600">
                     각 지표의 수치가 높을수록 학급 내 친구 관계가 더 활발하고
@@ -288,9 +294,9 @@ const NetworkChartComponent: React.FC<NetworkChartComponentProps> = ({
                           학급 내 친구 관계의 활발함
                         </span>
                       </div>
-                      <div className="relative h-6 rounded-full bg-gray-200">
+                      <div className="relative h-5 rounded-full bg-gray-200">
                         <div
-                          className="flex h-6 items-center justify-center rounded-full bg-gradient-to-r from-red-400 via-yellow-400 to-green-400"
+                          className="flex h-5 items-center justify-center rounded-full bg-gradient-to-r from-red-400 via-yellow-400 to-green-400"
                           style={{
                             width: `${Math.min(100, firstGraphData.metrics.network_density * 100)}%`,
                           }}
@@ -300,7 +306,7 @@ const NetworkChartComponent: React.FC<NetworkChartComponentProps> = ({
                           </span>
                         </div>
                       </div>
-                      <div className="flex justify-between text-xs text-gray-500">
+                      <div className="flex justify-between text-[10px] text-gray-500">
                         <span>낮음 (0.0)</span>
                         <span>보통 (0.5)</span>
                         <span>높음 (1.0)</span>
@@ -317,9 +323,9 @@ const NetworkChartComponent: React.FC<NetworkChartComponentProps> = ({
                           친구를 통해 다른 친구를 만나는 용이함
                         </span>
                       </div>
-                      <div className="relative h-6 rounded-full bg-gray-200">
+                      <div className="relative h-5 rounded-full bg-gray-200">
                         <div
-                          className="flex h-6 items-center justify-center rounded-full bg-gradient-to-r from-green-400 via-yellow-400 to-red-400"
+                          className="flex h-5 items-center justify-center rounded-full bg-gradient-to-r from-green-400 via-yellow-400 to-red-400"
                           style={{
                             width: `${Math.min(100, Math.max(0, 100 - firstGraphData.metrics.average_path_length * 20))}%`,
                           }}
@@ -331,7 +337,7 @@ const NetworkChartComponent: React.FC<NetworkChartComponentProps> = ({
                           </span>
                         </div>
                       </div>
-                      <div className="flex justify-between text-xs text-gray-500">
+                      <div className="flex justify-between text-[10px] text-gray-500">
                         <span>효율적 (1.0)</span>
                         <span>보통 (3.0)</span>
                         <span>비효율적 (5.0)</span>
@@ -348,9 +354,9 @@ const NetworkChartComponent: React.FC<NetworkChartComponentProps> = ({
                           작은 친구 그룹이 얼마나 잘 형성되는지
                         </span>
                       </div>
-                      <div className="relative h-6 rounded-full bg-gray-200">
+                      <div className="relative h-5 rounded-full bg-gray-200">
                         <div
-                          className="flex h-6 items-center justify-center rounded-full bg-gradient-to-r from-red-400 via-yellow-400 to-green-400"
+                          className="flex h-5 items-center justify-center rounded-full bg-gradient-to-r from-red-400 via-yellow-400 to-green-400"
                           style={{
                             width: `${Math.min(100, firstGraphData.metrics.clustering_coefficient * 100)}%`,
                           }}
@@ -362,7 +368,7 @@ const NetworkChartComponent: React.FC<NetworkChartComponentProps> = ({
                           </span>
                         </div>
                       </div>
-                      <div className="flex justify-between text-xs text-gray-500">
+                      <div className="flex justify-between text-[10px] text-gray-500">
                         <span>낮음 (0.0)</span>
                         <span>보통 (0.5)</span>
                         <span>높음 (1.0)</span>
@@ -379,9 +385,9 @@ const NetworkChartComponent: React.FC<NetworkChartComponentProps> = ({
                           명확한 친구 그룹이 얼마나 잘 형성되는지
                         </span>
                       </div>
-                      <div className="relative h-6 rounded-full bg-gray-200">
+                      <div className="relative h-5 rounded-full bg-gray-200">
                         <div
-                          className="flex h-6 items-center justify-center rounded-full bg-gradient-to-r from-red-400 via-yellow-400 to-green-400"
+                          className="flex h-5 items-center justify-center rounded-full bg-gradient-to-r from-red-400 via-yellow-400 to-green-400"
                           style={{
                             width: `${Math.min(100, Math.max(0, firstGraphData.metrics.modularity * 100))}%`,
                           }}
@@ -391,7 +397,7 @@ const NetworkChartComponent: React.FC<NetworkChartComponentProps> = ({
                           </span>
                         </div>
                       </div>
-                      <div className="flex justify-between text-xs text-gray-500">
+                      <div className="flex justify-between text-[10px] text-gray-500">
                         <span>낮음 (0.0)</span>
                         <span>보통 (0.3)</span>
                         <span>높음 (0.7)</span>
@@ -402,8 +408,8 @@ const NetworkChartComponent: React.FC<NetworkChartComponentProps> = ({
 
                 {/* 학생 유형별 수 */}
                 <div className="mt-8 w-1/2 rounded-lg bg-white p-6">
-                  <h4 className="mb-4 text-lg font-medium text-gray-900">
-                    👥 학생 유형별 분포
+                  <h4 className="mb-1 text-lg font-medium text-gray-900">
+                    학생 유형별 분포
                   </h4>
                   <p className="mb-6 text-sm text-gray-600">
                     각 학생의 친구 관계 패턴에 따른 유형별 분포를 확인할 수
@@ -426,7 +432,7 @@ const NetworkChartComponent: React.FC<NetworkChartComponentProps> = ({
                       return (
                         <div
                           key={type}
-                          className="flex items-center justify-between rounded-lg bg-gray-50 p-4"
+                          className="flex items-center justify-between rounded-xl bg-gray-50 px-4 py-3"
                         >
                           <div className="flex items-center space-x-3">
                             <div
@@ -480,8 +486,8 @@ const NetworkChartComponent: React.FC<NetworkChartComponentProps> = ({
           {/* 기본 통계 정보 */}
           <div className="mt-6 grid grid-cols-1 gap-4 md:grid-cols-4">
             <div className="flex flex-col items-center rounded-lg bg-gray-50 p-4">
-              <h4 className="text-sm font-medium text-blue-400">총 학생 수</h4>
-              <p className="text-2xl font-bold text-blue-400">
+              <h4 className="text-sm font-medium text-blue-500">총 학생 수</h4>
+              <p className="text-2xl font-bold text-blue-500">
                 {secondGraphData.metrics.total_students}
               </p>
             </div>
@@ -493,14 +499,14 @@ const NetworkChartComponent: React.FC<NetworkChartComponentProps> = ({
                 {(secondGraphData.metrics.network_density * 100).toFixed(1)}%
               </p>
             </div>
-            <div className="flex flex-col items-center rounded-lg bg-gradient-to-br from-blue-50 to-blue-100 p-4 shadow-sm">
-              <h4 className="text-sm font-medium text-blue-700">
-                🎯 친구 그룹 수
+            <div className="flex flex-col items-center rounded-lg bg-gray-50 p-4">
+              <h4 className="text-sm font-medium text-blue-500">
+                친구 그룹 수
               </h4>
-              <p className="text-3xl font-bold text-blue-600">
+              <p className="text-2xl font-bold text-blue-500">
                 {getClusterCount(secondGraphData)}개
               </p>
-              <p className="mt-1 text-xs text-blue-600">
+              <p className="mt-1 text-xs text-blue-500">
                 {(() => {
                   const clusterCount = getClusterCount(secondGraphData);
                   return clusterCount <= 2
@@ -514,10 +520,10 @@ const NetworkChartComponent: React.FC<NetworkChartComponentProps> = ({
               </p>
             </div>
             <div className="flex flex-col items-center rounded-lg bg-gray-50 p-4">
-              <h4 className="text-sm font-medium text-blue-600">
+              <h4 className="text-sm font-medium text-blue-500">
                 평균 친구 수
               </h4>
-              <p className="text-2xl font-bold text-blue-600">
+              <p className="text-2xl font-bold text-blue-500">
                 {secondGraphData.metrics.average_degree.toFixed(1)}명
               </p>
             </div>
@@ -528,30 +534,32 @@ const NetworkChartComponent: React.FC<NetworkChartComponentProps> = ({
       {/* 비교 분석 (두 개의 데이터가 있을 때) */}
       {firstGraphData && secondGraphData && (
         <div className="rounded-lg bg-white p-6">
-          <h3 className="mb-4 text-xl font-semibold text-gray-900">
+          <h3 className="mb-2 text-xl font-semibold text-gray-900">
             학급 친구 관계 변화 분석
           </h3>
-          <p className="mb-6 text-sm text-gray-600">
+          <p className="mb-6 text-base text-gray-600">
             두 시기의 설문 결과를 비교하여 학급 내 친구 관계가 어떻게 변화했는지
             확인할 수 있습니다.
           </p>
 
           <div className="grid grid-cols-1 gap-8 lg:grid-cols-2">
             {/* 주요 지표 비교 - 안정성 지표 변화 형태 */}
-            <div className="space-y-6">
-              <h4 className="text-lg font-medium text-gray-900">
-                🔍 학급 친구 관계 안정성 지표의 변화
-              </h4>
-              <p className="text-sm text-gray-600">
-                두 시기 간의 지표 변화를 통해 학급 내 친구 관계가 어떻게
-                발전했는지 확인할 수 있습니다.
-              </p>
+            <div className="space-y-5">
+              <div className="flex flex-col gap-1">
+                <h4 className="text-lg font-medium text-gray-900">
+                  학급 친구 관계 안정성 지표의 변화
+                </h4>
+                <p className="text-sm text-gray-600">
+                  두 시기 간의 지표 변화를 통해 학급 내 친구 관계가 어떻게
+                  발전했는지 확인할 수 있습니다.
+                </p>
+              </div>
 
               {/* 친구 그룹 수 변화 */}
-              <div className="rounded-lg bg-gradient-to-br from-blue-50 to-blue-100 p-4">
-                <div className="mb-3 flex items-center justify-between">
+              <div className="rounded-lg bg-gray-50 px-4 py-3">
+                <div className="mb-2 flex items-center justify-between">
                   <span className="text-sm font-medium text-blue-800">
-                    🎯 친구 그룹 수 변화
+                    친구 그룹 수 변화
                   </span>
                   {(() => {
                     const firstClusterCount = getClusterCount(firstGraphData);
@@ -585,11 +593,13 @@ const NetworkChartComponent: React.FC<NetworkChartComponentProps> = ({
                     {(() => {
                       const firstCount = getClusterCount(firstGraphData);
                       const secondCount = getClusterCount(secondGraphData);
-                      return secondCount < firstCount
-                        ? "✅"
-                        : secondCount > firstCount
-                          ? "⚠️"
-                          : "→";
+                      return secondCount < firstCount ? (
+                        <p>vs</p>
+                      ) : secondCount > firstCount ? (
+                        <TriangleAlert color="#1d42d8" />
+                      ) : (
+                        "→"
+                      );
                     })()}
                   </div>
                   <div className="text-center">
@@ -604,9 +614,9 @@ const NetworkChartComponent: React.FC<NetworkChartComponentProps> = ({
                     const firstCount = getClusterCount(firstGraphData);
                     const secondCount = getClusterCount(secondGraphData);
                     return secondCount < firstCount
-                      ? "✨ 그룹이 통합되어 학급 응집력이 향상되었습니다"
+                      ? "그룹이 통합되어 학급 응집력이 향상되었습니다"
                       : secondCount > firstCount
-                        ? "⚠️ 그룹이 분산되어 학급 통합에 관심이 필요합니다"
+                        ? "그룹이 분산되어 학급 통합에 관심이 필요합니다"
                         : "그룹 수는 동일하게 유지되고 있습니다";
                   })()}
                 </p>
@@ -644,9 +654,9 @@ const NetworkChartComponent: React.FC<NetworkChartComponentProps> = ({
                     })()}
                   </div>
                 </div>
-                <div className="relative h-6 rounded-full bg-gray-200">
+                <div className="relative h-5 rounded-full bg-gray-200">
                   <div
-                    className="flex h-6 items-center justify-center rounded-full bg-gradient-to-r from-red-400 via-yellow-400 to-green-400"
+                    className="flex h-5 items-center justify-center rounded-full bg-gradient-to-r from-red-400 via-yellow-400 to-green-400"
                     style={{
                       width: `${Math.min(100, secondGraphData.metrics.network_density * 100)}%`,
                     }}
@@ -656,7 +666,7 @@ const NetworkChartComponent: React.FC<NetworkChartComponentProps> = ({
                     </span>
                   </div>
                 </div>
-                <div className="flex justify-between text-xs text-gray-500">
+                <div className="flex justify-between text-[10px] text-gray-500">
                   <span>낮음 (0.0)</span>
                   <span>보통 (0.5)</span>
                   <span>높음 (1.0)</span>
@@ -695,9 +705,9 @@ const NetworkChartComponent: React.FC<NetworkChartComponentProps> = ({
                     })()}
                   </div>
                 </div>
-                <div className="relative h-6 rounded-full bg-gray-200">
+                <div className="relative h-5 rounded-full bg-gray-200">
                   <div
-                    className="flex h-6 items-center justify-center rounded-full bg-gradient-to-r from-green-400 via-yellow-400 to-red-400"
+                    className="flex h-5 items-center justify-center rounded-full bg-gradient-to-r from-green-400 via-yellow-400 to-red-400"
                     style={{
                       width: `${Math.min(100, Math.max(0, 100 - secondGraphData.metrics.average_path_length * 20))}%`,
                     }}
@@ -707,7 +717,7 @@ const NetworkChartComponent: React.FC<NetworkChartComponentProps> = ({
                     </span>
                   </div>
                 </div>
-                <div className="flex justify-between text-xs text-gray-500">
+                <div className="flex justify-between text-[10px] text-gray-500">
                   <span>효율적 (1.0)</span>
                   <span>보통 (3.0)</span>
                   <span>비효율적 (5.0)</span>
@@ -746,9 +756,9 @@ const NetworkChartComponent: React.FC<NetworkChartComponentProps> = ({
                     })()}
                   </div>
                 </div>
-                <div className="relative h-6 rounded-full bg-gray-200">
+                <div className="relative h-5 rounded-full bg-gray-200">
                   <div
-                    className="flex h-6 items-center justify-center rounded-full bg-gradient-to-r from-red-400 via-yellow-400 to-green-400"
+                    className="flex h-5 items-center justify-center rounded-full bg-gradient-to-r from-red-400 via-yellow-400 to-green-400"
                     style={{
                       width: `${Math.min(100, secondGraphData.metrics.clustering_coefficient * 100)}%`,
                     }}
@@ -760,7 +770,7 @@ const NetworkChartComponent: React.FC<NetworkChartComponentProps> = ({
                     </span>
                   </div>
                 </div>
-                <div className="flex justify-between text-xs text-gray-500">
+                <div className="flex justify-between text-[10px] text-gray-500">
                   <span>낮음 (0.0)</span>
                   <span>보통 (0.5)</span>
                   <span>높음 (1.0)</span>
@@ -799,9 +809,9 @@ const NetworkChartComponent: React.FC<NetworkChartComponentProps> = ({
                     })()}
                   </div>
                 </div>
-                <div className="relative h-6 rounded-full bg-gray-200">
+                <div className="relative h-5 rounded-full bg-gray-200">
                   <div
-                    className="flex h-6 items-center justify-center rounded-full bg-gradient-to-r from-red-400 via-yellow-400 to-green-400"
+                    className="flex h-5 items-center justify-center rounded-full bg-gradient-to-r from-red-400 via-yellow-400 to-green-400"
                     style={{
                       width: `${Math.min(100, Math.max(0, secondGraphData.metrics.modularity * 100))}%`,
                     }}
@@ -811,7 +821,7 @@ const NetworkChartComponent: React.FC<NetworkChartComponentProps> = ({
                     </span>
                   </div>
                 </div>
-                <div className="flex justify-between text-xs text-gray-500">
+                <div className="flex justify-between text-[10px] text-gray-500">
                   <span>낮음 (0.0)</span>
                   <span>보통 (0.3)</span>
                   <span>높음 (0.7)</span>
@@ -820,15 +830,18 @@ const NetworkChartComponent: React.FC<NetworkChartComponentProps> = ({
             </div>
 
             {/* 친구 관계 유형 변화 */}
-            <div className="space-y-6">
-              <h4 className="text-lg font-medium text-gray-900">
-                👥 학생 유형별 변화
-              </h4>
-              <p className="text-sm text-gray-600">
-                각 학생 유형의 변화를 통해 학급 전체의 친구 관계 패턴을 파악할
-                수 있습니다.
-              </p>
-              <div className="space-y-3">
+            <div className="space-y-5">
+              <div className="flex flex-col gap-1">
+                <h4 className="text-lg font-medium text-gray-900">
+                  학생 유형별 변화
+                </h4>
+                <p className="text-sm text-gray-600">
+                  각 학생 유형의 변화를 통해 학급 전체의 친구 관계 패턴을 파악할
+                  수 있습니다.
+                </p>
+              </div>
+
+              <div className="space-y-5">
                 {FRIENDSHIP_TYPES.map((type) => {
                   // 실제 노드 데이터에서 해당 유형의 개수 계산
                   const firstCount = firstGraphData.nodes.filter(
@@ -842,7 +855,7 @@ const NetworkChartComponent: React.FC<NetworkChartComponentProps> = ({
                   return (
                     <div
                       key={type}
-                      className="flex items-center justify-between rounded-lg bg-gray-50 p-3"
+                      className="flex items-center justify-between rounded-xl bg-gray-50 p-4"
                     >
                       <div className="flex items-center space-x-2">
                         <div
