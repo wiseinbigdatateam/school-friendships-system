@@ -4106,7 +4106,7 @@ const IndividualAnalysis: React.FC = () => {
 
                                 <div className="space-y-4">
                                   <div>
-                                    <h5 className="mb-2 text-sm font-medium text-cyan-500">
+                                    <h5 className="text-md mb-2 w-fit bg-gradient-to-t from-yellow-200 from-50% to-transparent to-50% font-medium text-gray-800">
                                       1. 현재 상태 (Current Status)
                                     </h5>
                                     <ul className="ml-4 space-y-1 text-sm text-gray-600">
@@ -4189,7 +4189,7 @@ const IndividualAnalysis: React.FC = () => {
                                   </div>
 
                                   <div>
-                                    <h5 className="mb-2 text-sm font-medium text-sky-500">
+                                    <h5 className="text-md mb-2 w-fit bg-gradient-to-t from-yellow-200 from-50% to-transparent to-50% font-medium text-gray-800">
                                       2. 네트워크 안정성 (Network Stability)
                                     </h5>
                                     <ul className="ml-4 space-y-1 text-sm text-gray-600">
@@ -4213,7 +4213,7 @@ const IndividualAnalysis: React.FC = () => {
                                   </div>
 
                                   <div>
-                                    <h5 className="mb-2 text-sm font-medium text-blue-500">
+                                    <h5 className="text-md mb-2 w-fit bg-gradient-to-t from-yellow-200 from-50% to-transparent to-50% font-medium text-gray-800">
                                       3. 개선방안 (Improvement Plan)
                                     </h5>
                                     <ul className="ml-4 space-y-1 text-sm text-gray-600">
@@ -4334,7 +4334,7 @@ const IndividualAnalysis: React.FC = () => {
                                     </ul>
                                   </div>
                                   <div>
-                                    <h5 className="mb-2 text-sm font-medium text-indigo-500">
+                                    <h5 className="text-md mb-2 w-fit bg-gradient-to-t from-yellow-200 from-50% to-transparent to-50% font-medium text-gray-800">
                                       4. 모니터링 포인트 (Monitoring Points)
                                     </h5>
                                     <ul className="ml-4 space-y-1 text-sm text-gray-600">
