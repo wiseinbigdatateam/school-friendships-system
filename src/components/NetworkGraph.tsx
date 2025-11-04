@@ -190,25 +190,25 @@ const NetworkGraph: React.FC<NetworkGraphProps> = ({
       .attr("fill", "#374151")
       .attr("pointer-events", "none");
 
-    // 추가 정보 텍스트
-    node
-      .append("text")
-      .text((d: D3Node) => `${d.grade}학년 ${d.class}반`)
-      .attr("text-anchor", "middle")
-      .attr("dy", (d: D3Node) => radiusScale(d.friendCount) + 35)
-      .attr("font-size", "10px")
-      .attr("fill", "#6b7280")
-      .attr("pointer-events", "none");
+    // 추가 정보 텍스트 (주석처리)
+    // node
+    //   .append("text")
+    //   .text((d: D3Node) => `${d.grade}학년 ${d.class}반`)
+    //   .attr("text-anchor", "middle")
+    //   .attr("dy", (d: D3Node) => radiusScale(d.friendCount) + 35)
+    //   .attr("font-size", "10px")
+    //   .attr("fill", "#6b7280")
+    //   .attr("pointer-events", "none");
 
-    // 친구 수 표시
-    node
-      .append("text")
-      .text((d: D3Node) => `친구: ${d.friendCount}명`)
-      .attr("text-anchor", "middle")
-      .attr("dy", (d: D3Node) => radiusScale(d.friendCount) + 50)
-      .attr("font-size", "10px")
-      .attr("fill", "#6b7280")
-      .attr("pointer-events", "none");
+    // 친구 수 표시 (주석처리)
+    // node
+    //   .append("text")
+    //   .text((d: D3Node) => `친구: ${d.friendCount}명`)
+    //   .attr("text-anchor", "middle")
+    //   .attr("dy", (d: D3Node) => radiusScale(d.friendCount) + 50)
+    //   .attr("font-size", "10px")
+    //   .attr("fill", "#6b7280")
+    //   .attr("pointer-events", "none");
 
     // 클릭 이벤트 (인터랙티브 모드에서만)
     if (isInteractive && onStudentSelect) {

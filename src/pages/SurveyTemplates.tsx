@@ -38,6 +38,16 @@ const SurveyTemplates: React.FC = () => {
   const [showSurveyConfigModal, setShowSurveyConfigModal] = useState(false);
   const [teacherInfo, setTeacherInfo] = useState<any>(null);
   const [isLoadingTeacherInfo, setIsLoadingTeacherInfo] = useState(true);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [successModalData, setSuccessModalData] = useState<{
+    title: string;
+    targetGrade: string;
+    targetClass: string;
+    studentCount: number;
+    startDate: string;
+    endDate: string;
+    status: string;
+  } | null>(null);
 
   // 사용자 정보 가져오기
   useEffect(() => {
@@ -338,9 +348,16 @@ const SurveyTemplates: React.FC = () => {
             ? "진행중"
             : "완료";
 
-      alert(
-        `✅ "${selectedTemplate.title}" 템플릿으로 새 설문이 생성되었습니다!\n\n📚 대상: ${teacherInfo.grade_level}학년 ${teacherInfo.class_number}반\n👥 대상 학생: ${students.length}명\n📅 기간: ${surveyConfig.startDate} ~ ${surveyConfig.endDate}\n📊 상태: ${statusText}\n\n📝 참고: 대상 학생 정보는 설문 응답 시 자동으로 필터링됩니다.\n\n설문 관리 페이지로 이동합니다.`,
-      );
+      // 성공 모달 데이터 설정
+      setSuccessModalData({
+        title: selectedTemplate.title,
+        targetGrade: teacherInfo.grade_level,
+        targetClass: teacherInfo.class_number,
+        studentCount: students.length,
+        startDate: surveyConfig.startDate,
+        endDate: surveyConfig.endDate,
+        status: statusText,
+      });
 
       // 모달 닫기
       setShowSurveyConfigModal(false);
@@ -425,8 +442,8 @@ const SurveyTemplates: React.FC = () => {
 
       fetchTemplates();
 
-      // 설문 관리 페이지로 이동
-      navigate("/survey-management");
+      // 성공 모달 표시
+      setShowSuccessModal(true);
     } catch (error) {
       console.error("Failed to create survey:", error);
       alert("설문 생성에 실패했습니다.");
@@ -626,6 +643,83 @@ const SurveyTemplates: React.FC = () => {
         teacherInfo={teacherInfo}
         isLoadingTeacherInfo={isLoadingTeacherInfo}
       />
+
+      {/* 설문 생성 성공 모달 */}
+      {showSuccessModal && successModalData && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+          <div className="mx-4 w-full max-w-md rounded-lg bg-white shadow-xl">
+            <div className="p-8">
+              <div className="mb-6 text-center">
+                <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-green-100">
+                  <svg
+                    className="h-8 w-8 text-green-600"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+                    />
+                  </svg>
+                </div>
+                <h3 className="mb-2 text-2xl font-bold text-gray-900">
+                  ✅ 설문 생성 완료
+                </h3>
+                <p className="text-lg text-gray-600">
+                  "{successModalData.title}" 템플릿으로 새 설문이 생성되었습니다!
+                </p>
+              </div>
+
+              <div className="mb-6 space-y-3 rounded-lg bg-gray-50 p-4">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium text-gray-600">📚 대상</span>
+                  <span className="text-sm font-semibold text-gray-900">
+                    {successModalData.targetGrade}학년 {successModalData.targetClass}반
+                  </span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium text-gray-600">👥 대상 학생</span>
+                  <span className="text-sm font-semibold text-gray-900">
+                    {successModalData.studentCount}명
+                  </span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium text-gray-600">📅 설문 기간</span>
+                  <span className="text-sm font-semibold text-gray-900">
+                    {successModalData.startDate} ~ {successModalData.endDate}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium text-gray-600">📊 상태</span>
+                  <span className="text-sm font-semibold text-gray-900">
+                    {successModalData.status}
+                  </span>
+                </div>
+              </div>
+
+              <div className="mb-6 rounded-lg bg-blue-50 p-3">
+                <p className="text-xs text-blue-800">
+                  📝 참고: 대상 학생 정보는 설문 응답 시 자동으로 필터링됩니다.
+                </p>
+              </div>
+
+              <button
+                onClick={() => {
+                  setShowSuccessModal(false);
+                  setSuccessModalData(null);
+                  navigate("/survey-management");
+                }}
+                className="w-full rounded-[4px] bg-[#3F80EA] px-4 py-3 text-base font-medium text-white transition-colors hover:bg-blue-600"
+              >
+                설문 관리 페이지로 이동
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* 템플릿 생성 모달 (향후 구현) */}
       {isCreateModalOpen && (

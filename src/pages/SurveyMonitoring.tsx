@@ -37,6 +37,7 @@ const SurveyMonitoring: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [autoRefresh, setAutoRefresh] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isSilentRefresh, setIsSilentRefresh] = useState(false);
 
   useEffect(() => {
     loadMonitoringData();
@@ -44,14 +45,20 @@ const SurveyMonitoring: React.FC = () => {
 
   useEffect(() => {
     if (autoRefresh) {
-      const interval = setInterval(loadMonitoringData, 30000); // 30초마다 새로고침
+      const interval = setInterval(() => {
+        setIsSilentRefresh(true);
+        loadMonitoringData();
+      }, 30000); // 30초마다 새로고침
       return () => clearInterval(interval);
     }
   }, [autoRefresh]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const loadMonitoringData = async () => {
     try {
-      setLoading(true);
+      // 자동 새로고침 시에는 로딩 상태를 변경하지 않음 (페이지가 깜빡이지 않음)
+      if (!isSilentRefresh) {
+        setLoading(true);
+      }
 
       if (!surveyId) {
         console.error("설문 ID가 없습니다.");
@@ -170,7 +177,10 @@ const SurveyMonitoring: React.FC = () => {
       console.error("모니터링 데이터 로드 실패:", error);
       setError("모니터링 데이터를 불러오는데 실패했습니다.");
     } finally {
-      setLoading(false);
+      if (!isSilentRefresh) {
+        setLoading(false);
+      }
+      setIsSilentRefresh(false);
     }
   };
 

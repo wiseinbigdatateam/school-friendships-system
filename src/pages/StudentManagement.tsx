@@ -669,6 +669,24 @@ const StudentManagement: React.FC = () => {
     }
   };
 
+  // 전화번호 포맷팅 함수 (자동 하이픈 추가)
+  const formatPhoneNumber = (value: string): string => {
+    // 숫자만 추출
+    const numbers = value.replace(/[^\d]/g, "");
+    
+    // 길이에 따라 하이픈 추가
+    if (numbers.length <= 3) {
+      return numbers;
+    } else if (numbers.length <= 7) {
+      return `${numbers.slice(0, 3)}-${numbers.slice(3)}`;
+    } else if (numbers.length <= 11) {
+      return `${numbers.slice(0, 3)}-${numbers.slice(3, 7)}-${numbers.slice(7)}`;
+    } else {
+      // 11자리 초과 시 11자리까지만
+      return `${numbers.slice(0, 3)}-${numbers.slice(3, 7)}-${numbers.slice(7, 11)}`;
+    }
+  };
+
   // Excel 날짜 serial number를 실제 날짜로 변환하는 함수
   const convertExcelDate = (excelDate: any): string => {
     if (!excelDate) return new Date().toISOString().split("T")[0];
@@ -1035,7 +1053,7 @@ const StudentManagement: React.FC = () => {
             birth_date: convertExcelDate(student["생년월일"]), // Excel 날짜 변환
             enrolled_at: convertExcelDate(student["입학일"]), // Excel 날짜 변환
             is_active: true,
-            phone: student["휴대폰"] || null, // 휴대폰 번호
+            phone: student["휴대폰"] ? formatPhoneNumber(student["휴대폰"]) : null, // 휴대폰 번호 (포맷팅)
             current_school_id: teacherInfo?.school_id || null, // 담임선생님의 학교 ID로 자동 설정
             parent_consent: false, // 기본값: 미동의
             parent_contact:
@@ -1045,9 +1063,9 @@ const StudentManagement: React.FC = () => {
               student["아버지_전화번호"]
                 ? {
                     mother_name: student["어머니_이름"] || null,
-                    mother_phone: student["어머니_전화번호"] || null,
+                    mother_phone: student["어머니_전화번호"] ? formatPhoneNumber(student["어머니_전화번호"]) : null,
                     father_name: student["아버지_이름"] || null,
-                    father_phone: student["아버지_전화번호"] || null,
+                    father_phone: student["아버지_전화번호"] ? formatPhoneNumber(student["아버지_전화번호"]) : null,
                   }
                 : null,
             created_at: new Date().toISOString(),
@@ -1433,13 +1451,29 @@ const StudentManagement: React.FC = () => {
       // 학생 번호 자동 생성 (기존 학생들의 최대 번호 + 1)
       let studentNumber = newStudent.student_number;
       if (!studentNumber) {
-        const existingNumbers = students
+        // 같은 학년/반의 학생들만 필터링
+        const sameGradeClassStudents = students.filter(
+          s => s.grade === newStudent.grade && s.class === newStudent.class
+        );
+        const existingNumbers = sameGradeClassStudents
           .map(s => parseInt(s.student_number))
           .filter(n => !isNaN(n));
         const maxNumber = existingNumbers.length > 0 ? Math.max(...existingNumbers) : 0;
         studentNumber = String(maxNumber + 1).padStart(3, "0");
       } else {
         studentNumber = String(parseInt(studentNumber)).padStart(3, "0");
+        
+        // 같은 학년/반 내에서 학생 번호 중복 체크
+        const isDuplicate = students.some(
+          s => s.grade === newStudent.grade && 
+               s.class === newStudent.class && 
+               s.student_number === studentNumber
+        );
+        
+        if (isDuplicate) {
+          toast.error(`${newStudent.grade}학년 ${newStudent.class}반에 ${parseInt(studentNumber)}번 학생이 이미 존재합니다.`);
+          return;
+        }
       }
 
       const studentData = {
@@ -2020,16 +2054,18 @@ const StudentManagement: React.FC = () => {
                 </div>
               </div>
 
+              {/* 탭 내용 영역 - 고정 높이 */}
+              <div className="mt-6 min-h-[270px]">
               {activeTab === "memo" ? (
                 // 교사메모
-                <div>
+                <div className="flex flex-col gap-5">
                   <h3 className="mb-4 text-base font-semibold text-gray-900">
                     • 학생 상담 기록
                   </h3>
                   {selectedStudent.teacher_memos &&
                   Array.isArray(selectedStudent.teacher_memos) &&
                   selectedStudent.teacher_memos.length > 0 ? (
-                    <div className="max-h-32 space-y-2 overflow-y-auto">
+                    <div className="max-h-[200px] space-y-2 overflow-y-auto">
                       {selectedStudent.teacher_memos.map((memo, index) => (
                         <div
                           key={memo.id || index}
@@ -2221,6 +2257,7 @@ const StudentManagement: React.FC = () => {
                   </div>
                 </div>
               )}
+              </div>
             </div>
           </div>
         </div>
@@ -2483,7 +2520,10 @@ const StudentManagement: React.FC = () => {
                     <input
                       type="tel"
                       value={newStudent.phone}
-                      onChange={(e) => setNewStudent(prev => ({ ...prev, phone: e.target.value }))}
+                      onChange={(e) => {
+                        const formatted = formatPhoneNumber(e.target.value);
+                        setNewStudent(prev => ({ ...prev, phone: formatted }));
+                      }}
                       className="w-full rounded-md border border-gray-300 px-3 py-2 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-blue-500"
                       placeholder="010-1234-5678"
                       required
@@ -2515,7 +2555,10 @@ const StudentManagement: React.FC = () => {
                     <input
                       type="tel"
                       value={newStudent.mother_phone}
-                      onChange={(e) => setNewStudent(prev => ({ ...prev, mother_phone: e.target.value }))}
+                      onChange={(e) => {
+                        const formatted = formatPhoneNumber(e.target.value);
+                        setNewStudent(prev => ({ ...prev, mother_phone: formatted }));
+                      }}
                       className="w-full rounded-md border border-gray-300 px-3 py-2 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-blue-500"
                       placeholder="010-1234-5678"
                     />
@@ -2541,7 +2584,10 @@ const StudentManagement: React.FC = () => {
                     <input
                       type="tel"
                       value={newStudent.father_phone}
-                      onChange={(e) => setNewStudent(prev => ({ ...prev, father_phone: e.target.value }))}
+                      onChange={(e) => {
+                        const formatted = formatPhoneNumber(e.target.value);
+                        setNewStudent(prev => ({ ...prev, father_phone: formatted }));
+                      }}
                       className="w-full rounded-md border border-gray-300 px-3 py-2 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-blue-500"
                       placeholder="010-1234-5678"
                     />
