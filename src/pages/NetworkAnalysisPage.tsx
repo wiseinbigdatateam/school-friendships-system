@@ -516,13 +516,13 @@ const NetworkAnalysisPage: React.FC = () => {
 
           {/* 선택 가능한 설문 - ResultMonitoring ListsBox 스타일 */}
           <div className="mb-3">
-            <div className="flex min-h-16 flex-wrap items-center justify-center gap-3 rounded-lg border border-gray-300 bg-gray-50 p-4">
+            <div className="flex min-h-16 items-center gap-3 overflow-x-auto rounded-lg border border-gray-300 bg-gray-50 p-4">
               {loading ? (
-                <p className="text-sm text-gray-500">
+                <p className="flex-shrink-0 text-sm text-gray-500">
                   설문 데이터를 불러오는 중...
                 </p>
               ) : draggableItems.length === 0 ? (
-                <p className="text-sm text-gray-500">
+                <p className="flex-shrink-0 text-sm text-gray-500">
                   {teacherInfo?.role === "homeroom_teacher"
                     ? "담당 반의 완료된 교우현황 설문이 없습니다."
                     : "선택할 교우현황 설문이 없습니다."}
@@ -541,7 +541,7 @@ const NetworkAnalysisPage: React.FC = () => {
                       <div
                         key={item.pid}
                         onClick={() => handleProjectSelect(item)}
-                        className="cursor-pointer rounded-lg border border-gray-300 bg-white p-3 transition-colors duration-200 hover:border-blue-500 hover:bg-blue-50"
+                        className="flex-shrink-0 cursor-pointer rounded-lg border border-gray-300 bg-white p-3 transition-colors duration-200 hover:border-blue-500 hover:bg-blue-50"
                       >
                         <div className="text-sm font-medium text-gray-900">
                           {item.name}

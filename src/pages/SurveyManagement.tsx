@@ -443,21 +443,24 @@ const SurveyManagement: React.FC = () => {
     setCurrentPage(1);
   }, [userSchoolId, statusFilter, user]);
 
-  // 실시간 상태 업데이트 (5분마다)
-  useEffect(() => {
-    if (
-      !userSchoolId &&
-      user?.role !== "district_admin" &&
-      user?.role !== "main_admin"
-    )
-      return;
+  // 실시간 상태 업데이트 (자동 새로고침 비활성화)
+  // useEffect(() => {
+  //   if (
+  //     !userSchoolId &&
+  //     user?.role !== "district_admin" &&
+  //     user?.role !== "main_admin"
+  //   )
+  //     return;
 
-    const interval = setInterval(() => {
-      loadSurveys();
-    }, 30 * 1000); // 30초마다
+  //   const interval = setInterval(
+  //     () => {
+  //       loadSurveys();
+  //     },
+  //     30 * 1000,
+  //   ); // 30초마다
 
-    return () => clearInterval(interval);
-  }, [userSchoolId, user]);
+  //   return () => clearInterval(interval);
+  // }, [userSchoolId, user]);
 
   const handleEditSurvey = (survey: SurveyWithStats) => {
     setEditingSurvey(survey);
