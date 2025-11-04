@@ -153,7 +153,7 @@ const StudentManagement: React.FC = () => {
   // 담임선생님 정보가 로드되면 학생 추가 폼의 학년/반을 자동 설정
   useEffect(() => {
     if (teacherInfo?.grade_level && teacherInfo?.class_number) {
-      setNewStudent(prev => ({
+      setNewStudent((prev) => ({
         ...prev,
         grade: teacherInfo.grade_level,
         class: teacherInfo.class_number,
@@ -258,7 +258,6 @@ const StudentManagement: React.FC = () => {
           setSchoolName("알 수 없는 학교");
         }
       }
-
     } catch (error) {
       console.error("사용자 정보 조회 오류:", error);
       // 에러 발생 시 로그인 페이지로 이동
@@ -295,7 +294,6 @@ const StudentManagement: React.FC = () => {
         teacherInfo.grade_level &&
         teacherInfo.class_number
       ) {
-        
         query = query
           .eq("grade", teacherInfo.grade_level)
           .eq("class", teacherInfo.class_number);
@@ -1419,7 +1417,12 @@ const StudentManagement: React.FC = () => {
 
   // 학생 추가 함수
   const handleAddStudent = async () => {
-    if (!newStudent.name || !newStudent.grade || !newStudent.class || !newStudent.phone) {
+    if (
+      !newStudent.name ||
+      !newStudent.grade ||
+      !newStudent.class ||
+      !newStudent.phone
+    ) {
       toast.error("이름, 학년, 반, 휴대폰 번호는 필수 입력 항목입니다.");
       return;
     }
@@ -1434,9 +1437,10 @@ const StudentManagement: React.FC = () => {
       let studentNumber = newStudent.student_number;
       if (!studentNumber) {
         const existingNumbers = students
-          .map(s => parseInt(s.student_number))
-          .filter(n => !isNaN(n));
-        const maxNumber = existingNumbers.length > 0 ? Math.max(...existingNumbers) : 0;
+          .map((s) => parseInt(s.student_number))
+          .filter((n) => !isNaN(n));
+        const maxNumber =
+          existingNumbers.length > 0 ? Math.max(...existingNumbers) : 0;
         studentNumber = String(maxNumber + 1).padStart(3, "0");
       } else {
         studentNumber = String(parseInt(studentNumber)).padStart(3, "0");
@@ -1448,19 +1452,25 @@ const StudentManagement: React.FC = () => {
         class: newStudent.class,
         student_number: studentNumber,
         gender: newStudent.gender,
-        birth_date: newStudent.birth_date || new Date().toISOString().split("T")[0],
+        birth_date:
+          newStudent.birth_date || new Date().toISOString().split("T")[0],
         enrolled_at: new Date().toISOString().split("T")[0],
         is_active: true,
         phone: newStudent.phone.trim(),
         current_school_id: teacherInfo.school_id,
         parent_consent: false,
-        parent_contact: (newStudent.mother_name || newStudent.mother_phone || 
-                       newStudent.father_name || newStudent.father_phone) ? {
-          mother_name: newStudent.mother_name || null,
-          mother_phone: newStudent.mother_phone || null,
-          father_name: newStudent.father_name || null,
-          father_phone: newStudent.father_phone || null,
-        } : null,
+        parent_contact:
+          newStudent.mother_name ||
+          newStudent.mother_phone ||
+          newStudent.father_name ||
+          newStudent.father_phone
+            ? {
+                mother_name: newStudent.mother_name || null,
+                mother_phone: newStudent.mother_phone || null,
+                father_name: newStudent.father_name || null,
+                father_phone: newStudent.father_phone || null,
+              }
+            : null,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
       };
@@ -1491,7 +1501,7 @@ const StudentManagement: React.FC = () => {
         intervention_logs: [],
       };
 
-      setStudents(prev => [...prev, newStudentData]);
+      setStudents((prev) => [...prev, newStudentData]);
       toast.success(`${newStudent.name} 학생이 성공적으로 추가되었습니다.`);
       closeAddStudentModal();
     } catch (error) {
@@ -1519,7 +1529,7 @@ const StudentManagement: React.FC = () => {
       if (error) throw error;
 
       // 로컬 상태에서 학생 제거
-      setStudents(prev => prev.filter(s => s.id !== studentToDelete.id));
+      setStudents((prev) => prev.filter((s) => s.id !== studentToDelete.id));
       toast.success(`${studentToDelete.name} 학생이 삭제되었습니다.`);
       closeDeleteStudentModal();
     } catch (error) {
@@ -1604,9 +1614,15 @@ const StudentManagement: React.FC = () => {
         </div>
 
         {/* 파일, 양식 다운로드 */}
-        <div className={`flex ${teacherInfo?.role === "homeroom_teacher" && teacherInfo?.grade_level && parseInt(teacherInfo.grade_level) >= 3 ? "justify-end" : "justify-between"} rounded-lg border border-gray-200 bg-white px-5 py-7`}>
+        <div
+          className={`flex ${teacherInfo?.role === "homeroom_teacher" && teacherInfo?.grade_level && parseInt(teacherInfo.grade_level) >= 3 ? "justify-end" : "justify-between"} rounded-lg border border-gray-200 bg-white px-5 py-7`}
+        >
           {/* 중학교 3학년 미만일 때만 개인정보동의서 다운로드 버튼 표시 */}
-          {!(teacherInfo?.role === "homeroom_teacher" && teacherInfo?.grade_level && parseInt(teacherInfo.grade_level) >= 3) && (
+          {!(
+            teacherInfo?.role === "homeroom_teacher" &&
+            teacherInfo?.grade_level &&
+            parseInt(teacherInfo.grade_level) >= 3
+          ) && (
             <button
               onClick={() => {
                 // 개인정보동의서_가정통신문 파일 다운로드
@@ -1889,7 +1905,9 @@ const StudentManagement: React.FC = () => {
             <h3 className="mb-2 text-lg font-medium text-gray-900">
               학생이 없습니다
             </h3>
-            <p className="text-gray-500">아래의 "학생 추가" 버튼을 클릭하여 학생을 등록해보세요.</p>
+            <p className="text-gray-500">
+              아래의 "학생 추가" 버튼을 클릭하여 학생을 등록해보세요.
+            </p>
           </div>
         ) : (
           sortedStudents.map((student) => (
@@ -1966,7 +1984,7 @@ const StudentManagement: React.FC = () => {
         {/* 학생 추가 카드 - 마지막에 배치 */}
         <div
           onClick={() => setAddStudentModalOpen(true)}
-          className="flex flex-col items-center justify-center gap-3 rounded-lg border-2 border-dashed border-gray-300 bg-white p-8 transition-colors hover:border-blue-400 hover:bg-blue-50 cursor-pointer"
+          className="flex cursor-pointer flex-col items-center justify-center gap-3 rounded-lg border-2 border-dashed border-gray-300 bg-white p-8 transition-colors hover:border-blue-400 hover:bg-blue-50"
         >
           <div className="flex h-12 w-12 items-center justify-center rounded-full bg-blue-100">
             <PlusIcon className="h-6 w-6 text-blue-600" />
@@ -1978,7 +1996,7 @@ const StudentManagement: React.FC = () => {
       {/* 상세보기 모달 */}
       {detailModalOpen && selectedStudent && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4">
-          <div className="max-h-[90vh] w-full max-w-4xl overflow-y-auto rounded-lg bg-white">
+          <div className="min-h-[425px] w-full max-w-4xl overflow-y-auto rounded-lg bg-white">
             {/* 모달 헤더 */}
             <div className="flex items-center justify-between border-b border-gray-200 p-6">
               <h2 className="text-lg font-bold text-gray-900">
@@ -2029,7 +2047,7 @@ const StudentManagement: React.FC = () => {
                   {selectedStudent.teacher_memos &&
                   Array.isArray(selectedStudent.teacher_memos) &&
                   selectedStudent.teacher_memos.length > 0 ? (
-                    <div className="max-h-32 space-y-2 overflow-y-auto">
+                    <div className="max-h-[216px] space-y-2 overflow-y-auto">
                       {selectedStudent.teacher_memos.map((memo, index) => (
                         <div
                           key={memo.id || index}
@@ -2347,14 +2365,17 @@ const StudentManagement: React.FC = () => {
       {/* 학생 추가 모달 */}
       {addStudentModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4">
-          <div className="w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-lg bg-white">
+          <div className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-lg bg-white">
             {/* 모달 헤더 */}
             <div className="flex items-center justify-between border-b border-gray-200 p-6">
               <div>
-                <h2 className="text-xl font-bold text-gray-900">새 학생 추가</h2>
+                <h2 className="text-xl font-bold text-gray-900">
+                  새 학생 추가
+                </h2>
                 {teacherInfo?.grade_level && teacherInfo?.class_number && (
-                  <p className="text-sm text-gray-600 mt-1">
-                    {teacherInfo.grade_level}학년 {teacherInfo.class_number}반 담임
+                  <p className="mt-1 text-sm text-gray-600">
+                    {teacherInfo.grade_level}학년 {teacherInfo.class_number}반
+                    담임
                   </p>
                 )}
               </div>
@@ -2371,8 +2392,10 @@ const StudentManagement: React.FC = () => {
               <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                 {/* 기본 정보 */}
                 <div className="space-y-4">
-                  <h3 className="text-lg font-semibold text-gray-900">기본 정보</h3>
-                  
+                  <h3 className="text-lg font-semibold text-gray-900">
+                    기본 정보
+                  </h3>
+
                   <div>
                     <label className="mb-1 block text-sm font-medium text-gray-700">
                       이름 *
@@ -2380,7 +2403,12 @@ const StudentManagement: React.FC = () => {
                     <input
                       type="text"
                       value={newStudent.name}
-                      onChange={(e) => setNewStudent(prev => ({ ...prev, name: e.target.value }))}
+                      onChange={(e) =>
+                        setNewStudent((prev) => ({
+                          ...prev,
+                          name: e.target.value,
+                        }))
+                      }
                       className="w-full rounded-md border border-gray-300 px-3 py-2 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-blue-500"
                       placeholder="학생 이름"
                     />
@@ -2394,7 +2422,9 @@ const StudentManagement: React.FC = () => {
                       <div className="relative">
                         <input
                           type="text"
-                          value={newStudent.grade ? `${newStudent.grade}학년` : ""}
+                          value={
+                            newStudent.grade ? `${newStudent.grade}학년` : ""
+                          }
                           readOnly
                           className="w-full rounded-md border border-gray-300 bg-gray-50 px-3 py-2 text-gray-600"
                         />
@@ -2410,7 +2440,9 @@ const StudentManagement: React.FC = () => {
                       <div className="relative">
                         <input
                           type="text"
-                          value={newStudent.class ? `${newStudent.class}반` : ""}
+                          value={
+                            newStudent.class ? `${newStudent.class}반` : ""
+                          }
                           readOnly
                           className="w-full rounded-md border border-gray-300 bg-gray-50 px-3 py-2 text-gray-600"
                         />
@@ -2428,7 +2460,12 @@ const StudentManagement: React.FC = () => {
                     <input
                       type="text"
                       value={newStudent.student_number}
-                      onChange={(e) => setNewStudent(prev => ({ ...prev, student_number: e.target.value }))}
+                      onChange={(e) =>
+                        setNewStudent((prev) => ({
+                          ...prev,
+                          student_number: e.target.value,
+                        }))
+                      }
                       className="w-full rounded-md border border-gray-300 px-3 py-2 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-blue-500"
                       placeholder="자동 생성 (비워두면 자동)"
                     />
@@ -2445,7 +2482,12 @@ const StudentManagement: React.FC = () => {
                           name="gender"
                           value="male"
                           checked={newStudent.gender === "male"}
-                          onChange={(e) => setNewStudent(prev => ({ ...prev, gender: e.target.value }))}
+                          onChange={(e) =>
+                            setNewStudent((prev) => ({
+                              ...prev,
+                              gender: e.target.value,
+                            }))
+                          }
                           className="mr-2"
                         />
                         남자
@@ -2456,7 +2498,12 @@ const StudentManagement: React.FC = () => {
                           name="gender"
                           value="female"
                           checked={newStudent.gender === "female"}
-                          onChange={(e) => setNewStudent(prev => ({ ...prev, gender: e.target.value }))}
+                          onChange={(e) =>
+                            setNewStudent((prev) => ({
+                              ...prev,
+                              gender: e.target.value,
+                            }))
+                          }
                           className="mr-2"
                         />
                         여자
@@ -2471,7 +2518,12 @@ const StudentManagement: React.FC = () => {
                     <input
                       type="date"
                       value={newStudent.birth_date}
-                      onChange={(e) => setNewStudent(prev => ({ ...prev, birth_date: e.target.value }))}
+                      onChange={(e) =>
+                        setNewStudent((prev) => ({
+                          ...prev,
+                          birth_date: e.target.value,
+                        }))
+                      }
                       className="w-full rounded-md border border-gray-300 px-3 py-2 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-blue-500"
                     />
                   </div>
@@ -2483,7 +2535,12 @@ const StudentManagement: React.FC = () => {
                     <input
                       type="tel"
                       value={newStudent.phone}
-                      onChange={(e) => setNewStudent(prev => ({ ...prev, phone: e.target.value }))}
+                      onChange={(e) =>
+                        setNewStudent((prev) => ({
+                          ...prev,
+                          phone: e.target.value,
+                        }))
+                      }
                       className="w-full rounded-md border border-gray-300 px-3 py-2 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-blue-500"
                       placeholder="010-1234-5678"
                       required
@@ -2493,8 +2550,10 @@ const StudentManagement: React.FC = () => {
 
                 {/* 학부모 정보 */}
                 <div className="space-y-4">
-                  <h3 className="text-lg font-semibold text-gray-900">학부모 정보</h3>
-                  
+                  <h3 className="text-lg font-semibold text-gray-900">
+                    학부모 정보
+                  </h3>
+
                   <div>
                     <label className="mb-1 block text-sm font-medium text-gray-700">
                       어머니 이름
@@ -2502,7 +2561,12 @@ const StudentManagement: React.FC = () => {
                     <input
                       type="text"
                       value={newStudent.mother_name}
-                      onChange={(e) => setNewStudent(prev => ({ ...prev, mother_name: e.target.value }))}
+                      onChange={(e) =>
+                        setNewStudent((prev) => ({
+                          ...prev,
+                          mother_name: e.target.value,
+                        }))
+                      }
                       className="w-full rounded-md border border-gray-300 px-3 py-2 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-blue-500"
                       placeholder="어머니 이름"
                     />
@@ -2515,7 +2579,12 @@ const StudentManagement: React.FC = () => {
                     <input
                       type="tel"
                       value={newStudent.mother_phone}
-                      onChange={(e) => setNewStudent(prev => ({ ...prev, mother_phone: e.target.value }))}
+                      onChange={(e) =>
+                        setNewStudent((prev) => ({
+                          ...prev,
+                          mother_phone: e.target.value,
+                        }))
+                      }
                       className="w-full rounded-md border border-gray-300 px-3 py-2 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-blue-500"
                       placeholder="010-1234-5678"
                     />
@@ -2528,7 +2597,12 @@ const StudentManagement: React.FC = () => {
                     <input
                       type="text"
                       value={newStudent.father_name}
-                      onChange={(e) => setNewStudent(prev => ({ ...prev, father_name: e.target.value }))}
+                      onChange={(e) =>
+                        setNewStudent((prev) => ({
+                          ...prev,
+                          father_name: e.target.value,
+                        }))
+                      }
                       className="w-full rounded-md border border-gray-300 px-3 py-2 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-blue-500"
                       placeholder="아버지 이름"
                     />
@@ -2541,7 +2615,12 @@ const StudentManagement: React.FC = () => {
                     <input
                       type="tel"
                       value={newStudent.father_phone}
-                      onChange={(e) => setNewStudent(prev => ({ ...prev, father_phone: e.target.value }))}
+                      onChange={(e) =>
+                        setNewStudent((prev) => ({
+                          ...prev,
+                          father_phone: e.target.value,
+                        }))
+                      }
                       className="w-full rounded-md border border-gray-300 px-3 py-2 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-blue-500"
                       placeholder="010-1234-5678"
                     />
@@ -2574,7 +2653,9 @@ const StudentManagement: React.FC = () => {
           <div className="w-full max-w-md rounded-lg bg-white">
             {/* 모달 헤더 */}
             <div className="flex items-center justify-between border-b border-gray-200 p-6">
-              <h2 className="text-xl font-bold text-gray-900">학생 삭제 확인</h2>
+              <h2 className="text-xl font-bold text-gray-900">
+                학생 삭제 확인
+              </h2>
               <button
                 onClick={closeDeleteStudentModal}
                 className="text-gray-400 transition-colors hover:text-gray-600"
@@ -2605,33 +2686,66 @@ const StudentManagement: React.FC = () => {
                   정말로 삭제하시겠습니까?
                 </h3>
                 <p className="text-gray-600">
-                  <strong>{studentToDelete.name}</strong> 학생을 삭제하면 다음 정보들이 함께 삭제됩니다:
+                  <strong>{studentToDelete.name}</strong> 학생을 삭제하면 다음
+                  정보들이 함께 삭제됩니다:
                 </p>
               </div>
 
               <div className="mb-6 rounded-lg bg-gray-50 p-4">
                 <ul className="space-y-2 text-sm text-gray-700">
                   <li className="flex items-center">
-                    <svg className="mr-2 h-4 w-4 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                    <svg
+                      className="mr-2 h-4 w-4 text-gray-400"
+                      fill="currentColor"
+                      viewBox="0 0 20 20"
+                    >
+                      <path
+                        fillRule="evenodd"
+                        d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                        clipRule="evenodd"
+                      />
                     </svg>
                     학생 기본 정보
                   </li>
                   <li className="flex items-center">
-                    <svg className="mr-2 h-4 w-4 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                    <svg
+                      className="mr-2 h-4 w-4 text-gray-400"
+                      fill="currentColor"
+                      viewBox="0 0 20 20"
+                    >
+                      <path
+                        fillRule="evenodd"
+                        d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                        clipRule="evenodd"
+                      />
                     </svg>
                     상담 기록 ({studentToDelete.teacher_memos?.length || 0}개)
                   </li>
                   <li className="flex items-center">
-                    <svg className="mr-2 h-4 w-4 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                    <svg
+                      className="mr-2 h-4 w-4 text-gray-400"
+                      fill="currentColor"
+                      viewBox="0 0 20 20"
+                    >
+                      <path
+                        fillRule="evenodd"
+                        d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                        clipRule="evenodd"
+                      />
                     </svg>
                     학부모 연락처 정보
                   </li>
                   <li className="flex items-center">
-                    <svg className="mr-2 h-4 w-4 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                    <svg
+                      className="mr-2 h-4 w-4 text-gray-400"
+                      fill="currentColor"
+                      viewBox="0 0 20 20"
+                    >
+                      <path
+                        fillRule="evenodd"
+                        d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                        clipRule="evenodd"
+                      />
                     </svg>
                     네트워크 분석 데이터
                   </li>
@@ -2640,7 +2754,8 @@ const StudentManagement: React.FC = () => {
 
               <div className="mb-4 rounded-lg bg-red-50 p-3">
                 <p className="text-sm text-red-800">
-                  <strong>⚠️ 주의:</strong> 이 작업은 되돌릴 수 없습니다. 삭제된 학생의 모든 데이터는 복구할 수 없습니다.
+                  <strong>⚠️ 주의:</strong> 이 작업은 되돌릴 수 없습니다. 삭제된
+                  학생의 모든 데이터는 복구할 수 없습니다.
                 </p>
               </div>
 

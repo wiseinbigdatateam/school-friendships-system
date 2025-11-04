@@ -1468,97 +1468,158 @@ const IndividualAnalysis: React.FC = () => {
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body { 
       font-family: 'Noto Sans KR', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-      line-height: 1.6;
-      color: #1f2937;
-      background: white;
+      background-color: #f8fafb;
       padding: 40px;
-      max-width: 1200px;
+      max-width: 1100px;
       margin: 0 auto;
     }
+
+    .go-back-btn {
+      background: #99a1a2;
+      color: white;
+      border: none;
+      padding: 8px 20px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 16px;
+    }
+
+    .print-btn {
+      background: #2563EB;
+      color: white;
+      border: none;
+      padding: 8px 20px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 16px;
+    }
+
     .header {
       text-align: center;
-      border-bottom: 3px solid #3F80EA;
-      padding-bottom: 20px;
       margin-bottom: 30px;
     }
+
     .header h1 {
       font-size: 28px;
-      color: #3F80EA;
-      margin-bottom: 10px;
+      color: #020712;
+      padding: 28px 0;
     }
-    .header .meta {
-      font-size: 14px;
-      color: #6b7280;
+
+    .document-info {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border: 1px solid #e5e7eb;
+      border-radius: 8px;
+      background-color: white;
+      padding: 28px;
     }
-    .section {
-      margin-bottom: 30px;
-      page-break-inside: avoid;
+
+    .student-info {
+      display: flex;
+      align-items: center;
+      gap: 8px
     }
-    .section-title {
-      font-size: 20px;
-      font-weight: 700;
-      color: #111827;
-      margin-bottom: 15px;
-      padding-bottom: 8px;
-      border-bottom: 2px solid #e5e7eb;
-    }
-    .subsection {
-      margin-bottom: 20px;
-    }
-    .subsection-title {
+
+    .student-name {
       font-size: 16px;
       font-weight: 600;
-      color: #374151;
-      margin-bottom: 10px;
+      color: #020712;
     }
-    .content {
-      font-size: 14px;
-      color: #4b5563;
-      line-height: 1.8;
-      white-space: pre-wrap;
+
+    .student-class {
+      font-size: 16px;
+      font-weight: 400;
+      color: #99a1ae;
     }
-    .list {
-      margin-left: 20px;
-    }
-    .list-item {
-      margin-bottom: 8px;
-      padding-left: 10px;
-      border-left: 3px solid #3F80EA;
-    }
-    .badge {
-      display: inline-block;
-      padding: 4px 12px;
+
+    .student-type {
+      font-size: 13px;
+      color: white;
+      background-color: #45b7d1;
       border-radius: 20px;
-      font-size: 12px;
-      font-weight: 600;
-      margin-right: 8px;
+      padding: 4px 12px;
     }
-    .badge-primary { background: #dbeafe; color: #1e40af; }
-    .badge-success { background: #d1fae5; color: #065f46; }
-    .badge-warning { background: #fef3c7; color: #92400e; }
-    .badge-danger { background: #fee2e2; color: #991b1b; }
-    .table {
-      width: 100%;
-      border-collapse: collapse;
-      margin-bottom: 15px;
+
+    .survey-title {
+      font-size: 14px;
+      color: #495565;
     }
-    .table td {
-      padding: 10px;
-      border-bottom: 1px solid #e5e7eb;
-    }
-    .table td:first-child {
-      font-weight: 600;
-      color: #6b7280;
-      width: 150px;
-    }
-    .footer {
-      margin-top: 40px;
-      padding-top: 20px;
-      border-top: 2px solid #e5e7eb;
-      text-align: center;
-      font-size: 12px;
-      color: #9ca3af;
-    }
+
+    .section {
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+        background-color: white;
+        border: 1px solid #e5e7eb;
+        border-radius: 8px;
+        padding: 30px;
+        margin-top: 10px;
+      }
+
+      .section-title-container {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+      }
+
+      .section-title {
+        color: #1d4ed8;
+        font-size: 16px;
+        font-weight: 600;
+      }
+
+    .desc {
+        font-size: 14px;
+        color: #020712;
+      }
+
+      .subsection {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+
+      .subsection-title {
+        font-size: 16px;
+        font-weight: 600;
+        color: #020712;
+      }
+
+      .list {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        font-size: 14px;
+        color: #020712;
+        padding-left: 14px;
+      }
+
+
+      .friendship-analysis {
+        width: 589px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        background-color: #f2f4f6;
+          border-radius: 12px;
+        padding: 10px 24px;
+        margin-left: 10px;
+      }
+
+      .analysis-list {
+        font-size: 16px;
+        color: #020712;
+          background: linear-gradient(to top, #f5c63a 40%, transparent 40%);
+      }
+      
+        .friendship-analysis-content {
+        font-size: 14px;
+        color: #495565;
+        text-decoration: underline;
+        margin-left: 12px;
+      }
+    
     @media print {
       body { padding: 20px; }
       .no-print { display: none; }
@@ -1566,46 +1627,63 @@ const IndividualAnalysis: React.FC = () => {
   </style>
 </head>
 <body>
-  <div class="header">
-    <h1>🎓 학생 개별 지도 리포트</h1>
-    <div class="meta">
-      <p><strong>${selectedStudentData.name}</strong> 학생 (${selectedStudentData.grade}학년 ${selectedStudentData.class}반)</p>
-      <p>설문: ${selectedSurvey.title}</p>
-      <p>생성일: ${new Date().toLocaleDateString("ko-KR", { year: "numeric", month: "long", day: "numeric" })}</p>
+  <div class="no-print" style="display: flex; gap: 10px; justify-content: flex-end;">
+    <button class="go-back-btn" onclick="window.close()">
+      이전으로 가기
+    </button>
+    <button class="print-btn" onclick="window.print()">
+      인쇄하기
+    </button>
+  </div>
+
+  <h1 class="header">학생 개별 지도 리포트</h1>
+
+  <div class="document-info">
+    <div class="student-info">
+      <p class="student-name">학생 : ${selectedStudentData.name} 
+        <span class="student-class"> (${selectedStudentData.grade}학년 ${selectedStudentData.class}반)</span>
+      </p>
+      <span class="student-type">${aiReport.comprehensiveDiagnosis.studentType}</span>
+    </div>
+    <p class="survey-title">설문: ${selectedSurvey.title}</p>
+  </div>
+
+  <div class="section">
+    <div class="section-title-container">
+      <div class="section-title">1. 종합 진단</div>
+      <div class="desc">${aiReport.comprehensiveDiagnosis.summary}</div>
+    </div>
+
+    <div class="subsection">
+      <div class="subsection-title">·&nbsp&nbsp주요 특징</div>
+      <div class="list">
+        ${aiReport.comprehensiveDiagnosis.keyCharacteristics.map((char) => `<div class="list-item">${char}</div>`).join("")}
+      </div>
+    </div>
+    <div class="subsection">
+      <div class="subsection-title">·&nbsp&nbsp개선 영역</div>
+      <div class="list">
+        ${aiReport.comprehensiveDiagnosis.challenges.map((challenge) => `<div class="list-item">${challenge}</div>`).join("")}
+      </div>
     </div>
   </div>
 
   <div class="section">
-    <div class="section-title">📊 1. 종합 진단</div>
-    <div class="subsection">
-      <div class="subsection-title">학생 유형</div>
-      <div class="content">
-        <span class="badge badge-primary">${aiReport.comprehensiveDiagnosis.studentType}</span>
-      </div>
-    </div>
-    <div class="subsection">
-      <div class="subsection-title">종합 평가</div>
-      <div class="content">${aiReport.comprehensiveDiagnosis.summary}</div>
-    </div>
-    <div class="subsection">
-      <div class="subsection-title">주요 특징</div>
-      <div class="list">
-        ${aiReport.comprehensiveDiagnosis.keyCharacteristics.map((char) => `<div class="list-item">✓ ${char}</div>`).join("")}
-      </div>
-    </div>
-    <div class="subsection">
-      <div class="subsection-title">개선 영역</div>
-      <div class="list">
-        ${aiReport.comprehensiveDiagnosis.challenges.map((challenge) => `<div class="list-item">• ${challenge}</div>`).join("")}
-      </div>
-    </div>
-  </div>
+    <div class="section-title">2. 세부 분석</div>
 
-  <div class="section">
-    <div class="section-title">📝 2. 세부 분석</div>
+    <div class="subsection">
+      <div class="subsection-title">·&nbsp&nbsp교우관계 네트워크 분석</div>
+
+      <div class="friendship-analysis">
+        <div class="analysis-list">받은 선택 수 : ${aiReport.detailedAnalysis.peerNetworkAnalysis.receivedChoices}명</div>
+        <div class="analysis-list">한 선택 수 : ${aiReport.detailedAnalysis.peerNetworkAnalysis.madeChoices}명</div>
+        <div class="analysis-list">네트워크 위치 : ${aiReport.detailedAnalysis.peerNetworkAnalysis.networkPosition}</div>
+      </div>
+      <div class="friendship-analysis-content">${aiReport.detailedAnalysis.peerNetworkAnalysis.analysis}</div>
+    </div>
     
     <div class="subsection">
-      <div class="subsection-title">학교생활 만족도</div>
+      <div class="subsection-title">·&nbsp&nbsp학교생활 만족도</div>
       <table class="table">
         ${aiReport.detailedAnalysis.schoolLifeSatisfaction.surveyResults
           .map(
@@ -1638,24 +1716,7 @@ const IndividualAnalysis: React.FC = () => {
       <div class="content">${aiReport.detailedAnalysis.violenceExperience.analysis}</div>
     </div>
 
-    <div class="subsection">
-      <div class="subsection-title">교우관계 네트워크 분석</div>
-      <table class="table">
-        <tr>
-          <td>받은 선택 수</td>
-          <td><strong>${aiReport.detailedAnalysis.peerNetworkAnalysis.receivedChoices}명</strong></td>
-        </tr>
-        <tr>
-          <td>한 선택 수</td>
-          <td><strong>${aiReport.detailedAnalysis.peerNetworkAnalysis.madeChoices}명</strong></td>
-        </tr>
-        <tr>
-          <td>네트워크 위치</td>
-          <td><strong>${aiReport.detailedAnalysis.peerNetworkAnalysis.networkPosition}</strong></td>
-        </tr>
-      </table>
-      <div class="content">${aiReport.detailedAnalysis.peerNetworkAnalysis.analysis}</div>
-    </div>
+    
   </div>
 
   <div class="section">
@@ -1757,34 +1818,7 @@ const IndividualAnalysis: React.FC = () => {
     <p>© 2025 WiseOn School. All rights reserved.</p>
   </div>
 
-  <div class="no-print" style="position: fixed; top: 20px; right: 20px; display: flex; gap: 10px;">
-    <button onclick="window.print()" style="
-      background: #3F80EA;
-      color: white;
-      border: none;
-      padding: 12px 24px;
-      border-radius: 8px;
-      cursor: pointer;
-      font-size: 14px;
-      font-weight: 600;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-    ">
-      🖨️ 인쇄하기
-    </button>
-    <button onclick="window.close()" style="
-      background: #6b7280;
-      color: white;
-      border: none;
-      padding: 12px 24px;
-      border-radius: 8px;
-      cursor: pointer;
-      font-size: 14px;
-      font-weight: 600;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-    ">
-      ✕ 닫기
-    </button>
-  </div>
+  
 </body>
 </html>
     `;
@@ -2210,14 +2244,14 @@ const IndividualAnalysis: React.FC = () => {
           <div className="p-6">
             <h2 className="mb-4 text-lg font-semibold text-gray-900">
               분석 대상 리스트 총 {surveys.length}개
-              {teacherInfo?.role === "homeroom_teacher" &&
+              {/* {teacherInfo?.role === "homeroom_teacher" &&
                 teacherInfo?.grade_level &&
                 teacherInfo?.class_number && (
                   <span className="ml-2 text-sm font-normal text-gray-600">
                     ({teacherInfo.grade_level}학년 {teacherInfo.class_number}반
                     담임)
                   </span>
-                )}
+                )} */}
             </h2>
 
             <div className="flex h-fit w-full gap-2 overflow-x-scroll">
@@ -2231,10 +2265,10 @@ const IndividualAnalysis: React.FC = () => {
                   }`}
                   onClick={() => setSelectedSurvey(survey)}
                 >
-                  <h3 className="mb-2 font-medium text-gray-900">
+                  <h3 className="mb-2 text-sm font-medium text-gray-900">
                     {survey.title}
                   </h3>
-                  <div className="space-y-1 text-sm text-gray-600">
+                  <div className="flex gap-3 text-xs text-gray-600">
                     <p>
                       템플릿형:{" "}
                       {survey.survey_templates?.metadata?.category ||
@@ -2253,7 +2287,7 @@ const IndividualAnalysis: React.FC = () => {
                             : survey.status}
                       </span>
                     </p>
-                    <p>날짜: {formatDate(survey.created_at || "")}</p>
+                    {/* <p>날짜: {formatDate(survey.created_at || "")}</p> */}
                   </div>
                 </div>
               ))}
@@ -2266,12 +2300,12 @@ const IndividualAnalysis: React.FC = () => {
           {/* 사이드 학생 목록 */}
           <div className="min-h-screen w-1/4 rounded-lg border border-gray-200 bg-white">
             <div className="p-4">
-              <h2 className="mb-4 text-lg font-semibold text-gray-900">
+              <h2 className="mb-4 ml-1 text-sm font-semibold text-gray-600">
                 {teacherInfo?.role === "homeroom_teacher" &&
                 teacherInfo?.grade_level &&
                 teacherInfo?.class_number
-                  ? `${teacherInfo.grade_level}학년 ${teacherInfo.class_number}반 총 ${students.length}명`
-                  : `학생 총 ${students.length}명`}
+                  ? `총 ${students.length}명`
+                  : `총 ${students.length}명`}
               </h2>
 
               <div className="space-y-1">
@@ -2457,7 +2491,7 @@ const IndividualAnalysis: React.FC = () => {
                                       setAiReportLoading(false);
                                     }
                                   }}
-                                  className="flex items-center space-x-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-blue-700"
+                                  className="flex items-center space-x-2 rounded-lg bg-slate-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-slate-700"
                                 >
                                   <svg
                                     className="h-4 w-4"

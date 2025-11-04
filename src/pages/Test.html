@@ -1,0 +1,333 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>${selectedStudentData.name} 학생 AI 리포트</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      .document-info {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        border: 1px solid #e5e7eb;
+        border-radius: 8px;
+        background-color: white;
+        padding: 28px;
+      }
+
+      .student-info {
+        display: flex;
+      }
+
+      .student-name {
+        font-size: 16px;
+        font-weight: 600;
+        color: #020712;
+      }
+
+      .student-class {
+        font-size: 16px;
+        color: #99a1ae;
+      }
+
+      .student-type {
+        font-size: 13px;
+        color: white;
+        background-color: #45b7d1;
+        border-radius: 20px;
+        padding: 4px 12px;
+      }
+
+      .survey-title {
+        font-size: 14px;
+        color: #495565;
+      }
+
+      .section {
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+        background-color: white;
+        border: 1px solid #e5e7eb;
+        border-radius: 8px;
+        padding: 30px;
+        margin-top: 10px;
+      }
+
+      .section-title-container {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+      }
+
+      .section-title {
+        color: #1d4ed8;
+        font-size: 16px;
+        font-weight: 600;
+      }
+
+      .desc {
+        font-size: 14px;
+        color: #020712;
+      }
+
+      .subsection {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+
+      .subsection-title {
+        font-size: 16px;
+        font-weight: 600;
+        color: #020712;
+      }
+
+      .list {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        font-size: 14px;
+        color: #020712;
+      }
+
+      .friendship-analysis {
+        width: fit-content;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        background-color: #f2f4f6;
+        border-radius: 12px;
+        padding: 10px 24px;
+      }
+
+      .analysis-list {
+        font-size: 16px;
+        color: #020712;
+        background: linear-gradient(to top, #f5c63a 40%, transparent 40%);
+      }
+
+      .friendship-analysis-content {
+        font-size: 14px;
+        color: #495565;
+        text-decoration: underline;
+      }
+    </style>
+  </head>
+  <body>
+    <div
+      class="no-print"
+      style="display: flex; gap: 10px; justify-content: flex-end"
+    >
+      <button class="goBackBtn" onclick="window.close()">이전으로 가기</button>
+      <button class="printBtn" onclick="window.print()">인쇄하기</button>
+    </div>
+
+    <div class="header">
+      <h1>학생 개별 지도 리포트</h1>
+      <div class="meta">
+        <p>
+          <strong>${selectedStudentData.name}</strong> 학생
+          (${selectedStudentData.grade}학년 ${selectedStudentData.class}반)
+        </p>
+        <p>설문: ${selectedSurvey.title}</p>
+        <p>
+          생성일: ${new Date().toLocaleDateString("ko-KR", { year: "numeric",
+          month: "long", day: "numeric" })}
+        </p>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">📊 1. 종합 진단</div>
+      <div class="subsection">
+        <div class="subsection-title">학생 유형</div>
+        <div class="content">
+          <span class="badge badge-primary"
+            >${aiReport.comprehensiveDiagnosis.studentType}</span
+          >
+        </div>
+      </div>
+      <div class="subsection">
+        <div class="subsection-title">종합 평가</div>
+        <div class="content">${aiReport.comprehensiveDiagnosis.summary}</div>
+      </div>
+      <div class="subsection">
+        <div class="subsection-title">주요 특징</div>
+        <div class="list">
+          ${aiReport.comprehensiveDiagnosis.keyCharacteristics.map((char) => `
+          <div class="list-item">✓ ${char}</div>
+          `).join("")}
+        </div>
+      </div>
+      <div class="subsection">
+        <div class="subsection-title">개선 영역</div>
+        <div class="list">
+          ${aiReport.comprehensiveDiagnosis.challenges.map((challenge) => `
+          <div class="list-item">• ${challenge}</div>
+          `).join("")}
+        </div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">📝 2. 세부 분석</div>
+
+      <div class="subsection">
+        <div class="subsection-title">학교생활 만족도</div>
+        <table class="table">
+          ${aiReport.detailedAnalysis.schoolLifeSatisfaction.surveyResults .map(
+          (result) => `
+          <tr>
+            <td>${result.question}</td>
+            <td><strong>${result.answer}</strong></td>
+          </tr>
+          `, ) .join("")}
+        </table>
+        <div class="content">
+          ${aiReport.detailedAnalysis.schoolLifeSatisfaction.analysis}
+        </div>
+      </div>
+
+      <div class="subsection">
+        <div class="subsection-title">폭력 경험도</div>
+        <table class="table">
+          ${aiReport.detailedAnalysis.violenceExperience.surveyResults .map(
+          (result) => `
+          <tr>
+            <td>${result.question}</td>
+            <td><strong>${result.answer}</strong></td>
+          </tr>
+          `, ) .join("")}
+        </table>
+        <div class="content">
+          ${aiReport.detailedAnalysis.violenceExperience.analysis}
+        </div>
+      </div>
+
+      <div class="subsection">
+        <div class="subsection-title">교우관계 네트워크 분석</div>
+        <table class="table">
+          <tr>
+            <td>받은 선택 수</td>
+            <td>
+              <strong
+                >${aiReport.detailedAnalysis.peerNetworkAnalysis.receivedChoices}명</strong
+              >
+            </td>
+          </tr>
+          <tr>
+            <td>한 선택 수</td>
+            <td>
+              <strong
+                >${aiReport.detailedAnalysis.peerNetworkAnalysis.madeChoices}명</strong
+              >
+            </td>
+          </tr>
+          <tr>
+            <td>네트워크 위치</td>
+            <td>
+              <strong
+                >${aiReport.detailedAnalysis.peerNetworkAnalysis.networkPosition}</strong
+              >
+            </td>
+          </tr>
+        </table>
+        <div class="content">
+          ${aiReport.detailedAnalysis.peerNetworkAnalysis.analysis}
+        </div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">💪 3. 강점 및 개선 영역</div>
+
+      <div class="subsection">
+        <div class="subsection-title">강점</div>
+        <div class="list">
+          ${aiReport.strengthsAndImprovements.strengths .map( (strength) => `
+          <div class="list-item">
+            <strong>${strength.title}</strong><br />
+            ${strength.description}
+          </div>
+          `, ) .join("")}
+        </div>
+      </div>
+
+      <div class="subsection">
+        <div class="subsection-title">개선 영역</div>
+        <div class="list">
+          ${aiReport.strengthsAndImprovements.improvementAreas .map( (area) => `
+          <div class="list-item">
+            <strong>${area.title}</strong><br />
+            ${area.description}
+          </div>
+          `, ) .join("")}
+        </div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">🎯 4. 맞춤형 솔루션</div>
+
+      <div class="subsection">
+        <div class="subsection-title">전체 목표</div>
+        <div class="content">${aiReport.customizedSolutions.overallGoal}</div>
+      </div>
+
+      <div class="subsection">
+        <div class="subsection-title">단기 솔루션 (1-2주)</div>
+        <div class="list">
+          ${aiReport.customizedSolutions.shortTermSolutions .map( (solution) =>
+          `
+          <div class="list-item">
+            <strong>${solution.title}</strong><br />
+            ${solution.description}
+          </div>
+          `, ) .join("")}
+        </div>
+      </div>
+
+      <div class="subsection">
+        <div class="subsection-title">중기 솔루션 (1-2개월)</div>
+        <div class="list">
+          ${aiReport.customizedSolutions.midTermSolutions .map( (solution) => `
+          <div class="list-item">
+            <strong>${solution.title}</strong><br />
+            ${solution.description}
+          </div>
+          `, ) .join("")}
+        </div>
+      </div>
+
+      <div class="subsection">
+        <div class="subsection-title">장기 솔루션 (3-6개월)</div>
+        <div class="list">
+          ${aiReport.customizedSolutions.longTermSolutions .map( (solution) => `
+          <div class="list-item">
+            <strong>${solution.title}</strong><br />
+            ${solution.description}
+          </div>
+          `, ) .join("")}
+        </div>
+      </div>
+    </div>
+
+    <div class="footer">
+      <p>
+        본 리포트는 와이즈온스쿨 AI 분석 시스템에서 자동으로 생성되었습니다.
+      </p>
+      <p>
+        생성 일시: ${new Date().toLocaleString("ko-KR", { timeZone: "Asia/Seoul"
+        })}
+      </p>
+      <p>© 2025 WiseOn School. All rights reserved.</p>
+    </div>
+  </body>
+</html>
