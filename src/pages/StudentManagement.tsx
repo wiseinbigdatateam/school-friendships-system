@@ -671,7 +671,7 @@ const StudentManagement: React.FC = () => {
   const formatPhoneNumber = (value: string): string => {
     // 숫자만 추출
     const numbers = value.replace(/[^\d]/g, "");
-    
+
     // 길이에 따라 하이픈 추가
     if (numbers.length <= 3) {
       return numbers;
@@ -1051,7 +1051,9 @@ const StudentManagement: React.FC = () => {
             birth_date: convertExcelDate(student["생년월일"]), // Excel 날짜 변환
             enrolled_at: convertExcelDate(student["입학일"]), // Excel 날짜 변환
             is_active: true,
-            phone: student["휴대폰"] ? formatPhoneNumber(student["휴대폰"]) : null, // 휴대폰 번호 (포맷팅)
+            phone: student["휴대폰"]
+              ? formatPhoneNumber(student["휴대폰"])
+              : null, // 휴대폰 번호 (포맷팅)
             current_school_id: teacherInfo?.school_id || null, // 담임선생님의 학교 ID로 자동 설정
             parent_consent: false, // 기본값: 미동의
             parent_contact:
@@ -1061,9 +1063,13 @@ const StudentManagement: React.FC = () => {
               student["아버지_전화번호"]
                 ? {
                     mother_name: student["어머니_이름"] || null,
-                    mother_phone: student["어머니_전화번호"] ? formatPhoneNumber(student["어머니_전화번호"]) : null,
+                    mother_phone: student["어머니_전화번호"]
+                      ? formatPhoneNumber(student["어머니_전화번호"])
+                      : null,
                     father_name: student["아버지_이름"] || null,
-                    father_phone: student["아버지_전화번호"] ? formatPhoneNumber(student["아버지_전화번호"]) : null,
+                    father_phone: student["아버지_전화번호"]
+                      ? formatPhoneNumber(student["아버지_전화번호"])
+                      : null,
                   }
                 : null,
             created_at: new Date().toISOString(),
@@ -1456,25 +1462,29 @@ const StudentManagement: React.FC = () => {
       if (!studentNumber) {
         // 같은 학년/반의 학생들만 필터링
         const sameGradeClassStudents = students.filter(
-          s => s.grade === newStudent.grade && s.class === newStudent.class
+          (s) => s.grade === newStudent.grade && s.class === newStudent.class,
         );
         const existingNumbers = sameGradeClassStudents
-          .map(s => parseInt(s.student_number))
-          .filter(n => !isNaN(n));
-        const maxNumber = existingNumbers.length > 0 ? Math.max(...existingNumbers) : 0;
+          .map((s) => parseInt(s.student_number))
+          .filter((n) => !isNaN(n));
+        const maxNumber =
+          existingNumbers.length > 0 ? Math.max(...existingNumbers) : 0;
         studentNumber = String(maxNumber + 1).padStart(3, "0");
       } else {
         studentNumber = String(parseInt(studentNumber)).padStart(3, "0");
-        
+
         // 같은 학년/반 내에서 학생 번호 중복 체크
         const isDuplicate = students.some(
-          s => s.grade === newStudent.grade && 
-               s.class === newStudent.class && 
-               s.student_number === studentNumber
+          (s) =>
+            s.grade === newStudent.grade &&
+            s.class === newStudent.class &&
+            s.student_number === studentNumber,
         );
-        
+
         if (isDuplicate) {
-          toast.error(`${newStudent.grade}학년 ${newStudent.class}반에 ${parseInt(studentNumber)}번 학생이 이미 존재합니다.`);
+          toast.error(
+            `${newStudent.grade}학년 ${newStudent.class}반에 ${parseInt(studentNumber)}번 학생이 이미 존재합니다.`,
+          );
           return;
         }
       }
@@ -2073,207 +2083,218 @@ const StudentManagement: React.FC = () => {
 
               {/* 탭 내용 영역 - 고정 높이 */}
               <div className="mt-6 min-h-[270px]">
-              {activeTab === "memo" ? (
-                // 교사메모
-                <div className="flex flex-col gap-5">
-                  <h3 className="mb-4 text-base font-semibold text-gray-900">
-                    • 학생 상담 기록
-                  </h3>
-                  {selectedStudent.teacher_memos &&
-                  Array.isArray(selectedStudent.teacher_memos) &&
-                  selectedStudent.teacher_memos.length > 0 ? (
-                    <div className="max-h-[200px] space-y-2 overflow-y-auto">
-                      {selectedStudent.teacher_memos.map((memo, index) => (
-                        <div
-                          key={memo.id || index}
-                          className="cursor-pointer rounded-lg bg-gray-50 p-3 transition-colors hover:bg-gray-100"
-                          onClick={() => handleEditMemo(memo)}
-                        >
-                          <div className="flex items-center space-x-2">
-                            <span className="whitespace-nowrap text-sm text-gray-600">
-                              {memo.created_at
-                                ? new Date(memo.created_at).toLocaleDateString()
-                                : "날짜 없음"}
-                            </span>
-                            <span className="truncate text-gray-900">
-                              {(() => {
-                                try {
-                                  const content = memo.content;
-                                  return content !== undefined &&
-                                    content !== null
-                                    ? content
-                                    : "내용 없음";
-                                } catch (error) {
-                                  console.error("상담 내용 파싱 오류:", error);
-                                  return "내용 없음";
-                                }
-                              })()}
-                            </span>
+                {activeTab === "memo" ? (
+                  // 교사메모
+                  <div className="flex flex-col gap-5">
+                    <h3 className="mb-4 text-base font-semibold text-gray-900">
+                      • 학생 상담 기록
+                    </h3>
+                    {selectedStudent.teacher_memos &&
+                    Array.isArray(selectedStudent.teacher_memos) &&
+                    selectedStudent.teacher_memos.length > 0 ? (
+                      <div className="max-h-[200px] space-y-2 overflow-y-auto">
+                        {selectedStudent.teacher_memos.map((memo, index) => (
+                          <div
+                            key={memo.id || index}
+                            className="cursor-pointer rounded-lg bg-gray-50 p-3 transition-colors hover:bg-gray-100"
+                            onClick={() => handleEditMemo(memo)}
+                          >
+                            <div className="flex items-center space-x-2">
+                              <span className="whitespace-nowrap text-sm text-gray-600">
+                                {memo.created_at
+                                  ? new Date(
+                                      memo.created_at,
+                                    ).toLocaleDateString()
+                                  : "날짜 없음"}
+                              </span>
+                              <span className="truncate text-gray-900">
+                                {(() => {
+                                  try {
+                                    const content = memo.content;
+                                    return content !== undefined &&
+                                      content !== null
+                                      ? content
+                                      : "내용 없음";
+                                  } catch (error) {
+                                    console.error(
+                                      "상담 내용 파싱 오류:",
+                                      error,
+                                    );
+                                    return "내용 없음";
+                                  }
+                                })()}
+                              </span>
+                            </div>
                           </div>
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <p className="text-gray-500">
-                      등록된 상담 기록이 없습니다.
-                    </p>
-                  )}
-                </div>
-              ) : (
-                // 정보
-                <div className="flex flex-col gap-5">
-                  {/* 개인정보 학부모 동의 - 중학교 3학년 미만일 때만 표시 */}
-                  {parseInt(selectedStudent.grade) <= 2 && (
-                    <div>
-                      <h3 className="mb-4 text-base font-semibold text-gray-900">
-                        • 개인정보 학부모 동의
-                      </h3>
-                      <div className="ml-4">
-                        <label className="flex items-center gap-2">
-                          <input
-                            type="checkbox"
-                            checked={selectedStudent.parent_consent || false}
-                            onChange={(e) => {
-                              handleParentConsentChange(
-                                selectedStudent.id,
-                                e.target.checked,
-                              );
-                            }}
-                            className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                          />
-                          <span className="text-sm text-gray-700">
-                            개인정보 수집·이용에 대한 학부모 동의
-                          </span>
-                        </label>
-                      </div>
-                    </div>
-                  )}
-
-                  <div>
-                    <h3 className="mb-4 text-base font-semibold text-gray-900">
-                      • 기본 정보
-                    </h3>
-                    <div className="ml-4 grid grid-cols-2 gap-4 text-sm">
-                      <div>
-                        <span className="text-gray-600">학급:</span>
-                        <span className="ml-2 text-gray-900">
-                          {selectedStudent.grade}학년 {selectedStudent.class}반{" "}
-                          {parseInt(selectedStudent.student_number)}번
-                        </span>
-                      </div>
-                      <div>
-                        <span className="text-gray-600">성별:</span>
-                        <span className="ml-2 text-gray-900">
-                          {getGenderLabel(selectedStudent.gender)}
-                        </span>
-                      </div>
-                      <div>
-                        <span className="text-gray-600">생년월일:</span>
-                        <span className="ml-2 text-gray-900">
-                          {selectedStudent.birth_date}
-                        </span>
-                      </div>
-                      <div>
-                        <span className="text-gray-600">핸드폰:</span>
-                        <span className="ml-2 text-gray-900">
-                          {selectedStudent.phone || "정보 없음"}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div>
-                    <h3 className="mb-4 text-base font-semibold text-gray-900">
-                      • 학부모 연락처
-                    </h3>
-                    {selectedStudent.parent_contact &&
-                    typeof selectedStudent.parent_contact === "object" ? (
-                      <div className="ml-4 grid grid-cols-2 gap-4 text-sm">
-                        <div>
-                          <span className="text-gray-600">어머니:</span>
-                          <span className="ml-2 text-gray-900">
-                            {(() => {
-                              try {
-                                const value = (
-                                  selectedStudent.parent_contact as any
-                                )?.mother_name;
-                                return value !== undefined && value !== null
-                                  ? value
-                                  : "정보 없음";
-                              } catch (error) {
-                                console.error("어머니 이름 파싱 오류:", error);
-                                return "정보 없음";
-                              }
-                            })()}
-                          </span>
-                          {(() => {
-                            try {
-                              const phone = (
-                                selectedStudent.parent_contact as any
-                              )?.mother_phone;
-                              return phone &&
-                                phone !== undefined &&
-                                phone !== null ? (
-                                <span className="ml-2 text-gray-600">
-                                  ({phone})
-                                </span>
-                              ) : null;
-                            } catch (error) {
-                              console.error(
-                                "어머니 전화번호 파싱 오류:",
-                                error,
-                              );
-                              return null;
-                            }
-                          })()}
-                        </div>
-                        <div>
-                          <span className="text-gray-600">아버지:</span>
-                          <span className="ml-2 text-gray-900">
-                            {(() => {
-                              try {
-                                const value = (
-                                  selectedStudent.parent_contact as any
-                                )?.father_name;
-                                return value !== undefined && value !== null
-                                  ? value
-                                  : "정보 없음";
-                              } catch (error) {
-                                console.error("아버지 이름 파싱 오류:", error);
-                                return "정보 없음";
-                              }
-                            })()}
-                          </span>
-                          {(() => {
-                            try {
-                              const phone = (
-                                selectedStudent.parent_contact as any
-                              )?.father_phone;
-                              return phone &&
-                                phone !== undefined &&
-                                phone !== null ? (
-                                <span className="ml-2 text-gray-600">
-                                  ({phone})
-                                </span>
-                              ) : null;
-                            } catch (error) {
-                              console.error(
-                                "아버지 전화번호 파싱 오류:",
-                                error,
-                              );
-                              return null;
-                            }
-                          })()}
-                        </div>
+                        ))}
                       </div>
                     ) : (
                       <p className="text-gray-500">
-                        등록된 학부모 연락처가 없습니다.
+                        등록된 상담 기록이 없습니다.
                       </p>
                     )}
                   </div>
-                </div>
-              )}
+                ) : (
+                  // 정보
+                  <div className="flex flex-col gap-5">
+                    {/* 개인정보 학부모 동의 - 중학교 3학년 미만일 때만 표시 */}
+                    {parseInt(selectedStudent.grade) <= 2 && (
+                      <div>
+                        <h3 className="mb-4 text-base font-semibold text-gray-900">
+                          • 개인정보 학부모 동의
+                        </h3>
+                        <div className="ml-4">
+                          <label className="flex items-center gap-2">
+                            <input
+                              type="checkbox"
+                              checked={selectedStudent.parent_consent || false}
+                              onChange={(e) => {
+                                handleParentConsentChange(
+                                  selectedStudent.id,
+                                  e.target.checked,
+                                );
+                              }}
+                              className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                            />
+                            <span className="text-sm text-gray-700">
+                              개인정보 수집·이용에 대한 학부모 동의
+                            </span>
+                          </label>
+                        </div>
+                      </div>
+                    )}
+
+                    <div>
+                      <h3 className="mb-4 text-base font-semibold text-gray-900">
+                        • 기본 정보
+                      </h3>
+                      <div className="ml-4 grid grid-cols-2 gap-4 text-sm">
+                        <div>
+                          <span className="text-gray-600">학급:</span>
+                          <span className="ml-2 text-gray-900">
+                            {selectedStudent.grade}학년 {selectedStudent.class}
+                            반 {parseInt(selectedStudent.student_number)}번
+                          </span>
+                        </div>
+                        <div>
+                          <span className="text-gray-600">성별:</span>
+                          <span className="ml-2 text-gray-900">
+                            {getGenderLabel(selectedStudent.gender)}
+                          </span>
+                        </div>
+                        <div>
+                          <span className="text-gray-600">생년월일:</span>
+                          <span className="ml-2 text-gray-900">
+                            {selectedStudent.birth_date}
+                          </span>
+                        </div>
+                        <div>
+                          <span className="text-gray-600">핸드폰:</span>
+                          <span className="ml-2 text-gray-900">
+                            {selectedStudent.phone || "정보 없음"}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div>
+                      <h3 className="mb-4 text-base font-semibold text-gray-900">
+                        • 학부모 연락처
+                      </h3>
+                      {selectedStudent.parent_contact &&
+                      typeof selectedStudent.parent_contact === "object" ? (
+                        <div className="ml-4 grid grid-cols-2 gap-4 text-sm">
+                          <div>
+                            <span className="text-gray-600">어머니:</span>
+                            <span className="ml-2 text-gray-900">
+                              {(() => {
+                                try {
+                                  const value = (
+                                    selectedStudent.parent_contact as any
+                                  )?.mother_name;
+                                  return value !== undefined && value !== null
+                                    ? value
+                                    : "정보 없음";
+                                } catch (error) {
+                                  console.error(
+                                    "어머니 이름 파싱 오류:",
+                                    error,
+                                  );
+                                  return "정보 없음";
+                                }
+                              })()}
+                            </span>
+                            {(() => {
+                              try {
+                                const phone = (
+                                  selectedStudent.parent_contact as any
+                                )?.mother_phone;
+                                return phone &&
+                                  phone !== undefined &&
+                                  phone !== null ? (
+                                  <span className="ml-2 text-gray-600">
+                                    ({phone})
+                                  </span>
+                                ) : null;
+                              } catch (error) {
+                                console.error(
+                                  "어머니 전화번호 파싱 오류:",
+                                  error,
+                                );
+                                return null;
+                              }
+                            })()}
+                          </div>
+                          <div>
+                            <span className="text-gray-600">아버지:</span>
+                            <span className="ml-2 text-gray-900">
+                              {(() => {
+                                try {
+                                  const value = (
+                                    selectedStudent.parent_contact as any
+                                  )?.father_name;
+                                  return value !== undefined && value !== null
+                                    ? value
+                                    : "정보 없음";
+                                } catch (error) {
+                                  console.error(
+                                    "아버지 이름 파싱 오류:",
+                                    error,
+                                  );
+                                  return "정보 없음";
+                                }
+                              })()}
+                            </span>
+                            {(() => {
+                              try {
+                                const phone = (
+                                  selectedStudent.parent_contact as any
+                                )?.father_phone;
+                                return phone &&
+                                  phone !== undefined &&
+                                  phone !== null ? (
+                                  <span className="ml-2 text-gray-600">
+                                    ({phone})
+                                  </span>
+                                ) : null;
+                              } catch (error) {
+                                console.error(
+                                  "아버지 전화번호 파싱 오류:",
+                                  error,
+                                );
+                                return null;
+                              }
+                            })()}
+                          </div>
+                        </div>
+                      ) : (
+                        <p className="text-gray-500">
+                          등록된 학부모 연락처가 없습니다.
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -2400,20 +2421,14 @@ const StudentManagement: React.FC = () => {
 
       {/* 학생 추가 모달 */}
       {addStudentModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4">
-          <div className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-lg bg-white">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4 text-gray-950">
+          <div className="flex max-h-[90vh] w-full max-w-2xl flex-col gap-5 overflow-y-auto rounded-lg bg-white p-6">
             {/* 모달 헤더 */}
-            <div className="flex items-center justify-between border-b border-gray-200 p-6">
+            <div className="flex items-center justify-between">
               <div>
                 <h2 className="text-xl font-bold text-gray-900">
                   새 학생 추가
                 </h2>
-                {teacherInfo?.grade_level && teacherInfo?.class_number && (
-                  <p className="mt-1 text-sm text-gray-600">
-                    {teacherInfo.grade_level}학년 {teacherInfo.class_number}반
-                    담임
-                  </p>
-                )}
               </div>
               <button
                 onClick={closeAddStudentModal}
@@ -2424,8 +2439,8 @@ const StudentManagement: React.FC = () => {
             </div>
 
             {/* 모달 내용 */}
-            <div className="p-6">
-              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+            <div className="">
+              <div className="flex flex-col gap-5">
                 {/* 기본 정보 */}
                 <div className="space-y-4">
                   <h3 className="text-lg font-semibold text-gray-900">
@@ -2449,136 +2464,101 @@ const StudentManagement: React.FC = () => {
                       placeholder="학생 이름"
                     />
                   </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <label className="mb-1 block text-sm font-medium text-gray-700">
+                        휴대폰 번호 <span>*</span>
+                      </label>
+                      <input
+                        type="tel"
+                        value={newStudent.phone}
+                        onChange={(e) => {
+                          const formatted = formatPhoneNumber(e.target.value);
+                          setNewStudent((prev) => ({
+                            ...prev,
+                            phone: formatted,
+                          }));
+                        }}
+                        className="w-full rounded-md border border-gray-300 px-3 py-2 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        placeholder="010-1234-5678"
+                        required
+                      />
+                    </div>
+
+                    <div>
+                      <label className="mb-1 block text-sm font-medium text-gray-700">
+                        학생 번호
+                      </label>
+                      <input
+                        type="text"
+                        value={newStudent.student_number}
+                        onChange={(e) =>
+                          setNewStudent((prev) => ({
+                            ...prev,
+                            student_number: e.target.value,
+                          }))
+                        }
+                        className="w-full rounded-md border border-gray-300 px-3 py-2 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        placeholder="자동 생성 (비워두면 자동)"
+                      />
+                    </div>
+                  </div>
 
                   <div className="grid grid-cols-2 gap-2">
                     <div>
                       <label className="mb-1 block text-sm font-medium text-gray-700">
-                        학년 *
+                        생년월일
                       </label>
-                      <div className="relative">
-                        <input
-                          type="text"
-                          value={
-                            newStudent.grade ? `${newStudent.grade}학년` : ""
-                          }
-                          readOnly
-                          className="w-full rounded-md border border-gray-300 bg-gray-50 px-3 py-2 text-gray-600"
-                        />
-                        <div className="absolute right-2 top-2 text-xs text-blue-600">
-                          담임
-                        </div>
-                      </div>
+                      <input
+                        type="date"
+                        value={newStudent.birth_date}
+                        onChange={(e) =>
+                          setNewStudent((prev) => ({
+                            ...prev,
+                            birth_date: e.target.value,
+                          }))
+                        }
+                        className="w-full rounded-md border border-gray-300 px-3 py-2 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      />
                     </div>
+
                     <div>
                       <label className="mb-1 block text-sm font-medium text-gray-700">
-                        반 *
+                        성별
                       </label>
-                      <div className="relative">
-                        <input
-                          type="text"
-                          value={
-                            newStudent.class ? `${newStudent.class}반` : ""
-                          }
-                          readOnly
-                          className="w-full rounded-md border border-gray-300 bg-gray-50 px-3 py-2 text-gray-600"
-                        />
-                        <div className="absolute right-2 top-2 text-xs text-blue-600">
-                          담임
-                        </div>
+                      <div className="flex gap-4 bg-[#F8FAFB]">
+                        <label className="flex items-center gap-[10px] rounded-md p-[10px]">
+                          <input
+                            type="radio"
+                            name="gender"
+                            value="male"
+                            checked={newStudent.gender === "male"}
+                            onChange={(e) =>
+                              setNewStudent((prev) => ({
+                                ...prev,
+                                gender: e.target.value,
+                              }))
+                            }
+                          />
+                          남
+                        </label>
+                        <label className="flex items-center gap-[10px] p-[10px]">
+                          <input
+                            type="radio"
+                            name="gender"
+                            value="female"
+                            checked={newStudent.gender === "female"}
+                            onChange={(e) =>
+                              setNewStudent((prev) => ({
+                                ...prev,
+                                gender: e.target.value,
+                              }))
+                            }
+                          />
+                          여
+                        </label>
                       </div>
                     </div>
-                  </div>
-
-                  <div>
-                    <label className="mb-1 block text-sm font-medium text-gray-700">
-                      학생 번호
-                    </label>
-                    <input
-                      type="text"
-                      value={newStudent.student_number}
-                      onChange={(e) =>
-                        setNewStudent((prev) => ({
-                          ...prev,
-                          student_number: e.target.value,
-                        }))
-                      }
-                      className="w-full rounded-md border border-gray-300 px-3 py-2 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      placeholder="자동 생성 (비워두면 자동)"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="mb-1 block text-sm font-medium text-gray-700">
-                      성별
-                    </label>
-                    <div className="flex gap-4">
-                      <label className="flex items-center">
-                        <input
-                          type="radio"
-                          name="gender"
-                          value="male"
-                          checked={newStudent.gender === "male"}
-                          onChange={(e) =>
-                            setNewStudent((prev) => ({
-                              ...prev,
-                              gender: e.target.value,
-                            }))
-                          }
-                          className="mr-2"
-                        />
-                        남자
-                      </label>
-                      <label className="flex items-center">
-                        <input
-                          type="radio"
-                          name="gender"
-                          value="female"
-                          checked={newStudent.gender === "female"}
-                          onChange={(e) =>
-                            setNewStudent((prev) => ({
-                              ...prev,
-                              gender: e.target.value,
-                            }))
-                          }
-                          className="mr-2"
-                        />
-                        여자
-                      </label>
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="mb-1 block text-sm font-medium text-gray-700">
-                      생년월일
-                    </label>
-                    <input
-                      type="date"
-                      value={newStudent.birth_date}
-                      onChange={(e) =>
-                        setNewStudent((prev) => ({
-                          ...prev,
-                          birth_date: e.target.value,
-                        }))
-                      }
-                      className="w-full rounded-md border border-gray-300 px-3 py-2 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="mb-1 block text-sm font-medium text-gray-700">
-                      휴대폰 번호 <span className="text-red-500">*</span>
-                    </label>
-                    <input
-                      type="tel"
-                      value={newStudent.phone}
-                      onChange={(e) => {
-                        const formatted = formatPhoneNumber(e.target.value);
-                        setNewStudent(prev => ({ ...prev, phone: formatted }));
-                      }}
-                      className="w-full rounded-md border border-gray-300 px-3 py-2 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      placeholder="010-1234-5678"
-                      required
-                    />
                   </div>
                 </div>
 
@@ -2588,86 +2568,88 @@ const StudentManagement: React.FC = () => {
                     학부모 정보
                   </h3>
 
-                  <div>
-                    <label className="mb-1 block text-sm font-medium text-gray-700">
-                      어머니 이름
-                    </label>
-                    <input
-                      type="text"
-                      value={newStudent.mother_name}
-                      onChange={(e) =>
-                        setNewStudent((prev) => ({
-                          ...prev,
-                          mother_name: e.target.value,
-                        }))
-                      }
-                      className="w-full rounded-md border border-gray-300 px-3 py-2 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      placeholder="어머니 이름"
-                    />
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <label className="mb-1 block text-sm font-medium text-gray-700">
+                        어머니 이름
+                      </label>
+                      <input
+                        type="text"
+                        value={newStudent.mother_name}
+                        onChange={(e) =>
+                          setNewStudent((prev) => ({
+                            ...prev,
+                            mother_name: e.target.value,
+                          }))
+                        }
+                        className="w-full rounded-md border border-gray-300 px-3 py-2 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="mb-1 block text-sm font-medium text-gray-700">
+                        어머니 전화번호
+                      </label>
+                      <input
+                        type="tel"
+                        value={newStudent.mother_phone}
+                        onChange={(e) => {
+                          const formatted = formatPhoneNumber(e.target.value);
+                          setNewStudent((prev) => ({
+                            ...prev,
+                            mother_phone: formatted,
+                          }));
+                        }}
+                        className="w-full rounded-md border border-gray-300 px-3 py-2 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        placeholder="010-1234-5678"
+                      />
+                    </div>
                   </div>
 
-                  <div>
-                    <label className="mb-1 block text-sm font-medium text-gray-700">
-                      어머니 전화번호
-                    </label>
-                    <input
-                      type="tel"
-                      value={newStudent.mother_phone}
-                      onChange={(e) => {
-                        const formatted = formatPhoneNumber(e.target.value);
-                        setNewStudent(prev => ({ ...prev, mother_phone: formatted }));
-                      }}
-                      className="w-full rounded-md border border-gray-300 px-3 py-2 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      placeholder="010-1234-5678"
-                    />
-                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <label className="mb-1 block text-sm font-medium text-gray-700">
+                        아버지 이름
+                      </label>
+                      <input
+                        type="text"
+                        value={newStudent.father_name}
+                        onChange={(e) =>
+                          setNewStudent((prev) => ({
+                            ...prev,
+                            father_name: e.target.value,
+                          }))
+                        }
+                        className="w-full rounded-md border border-gray-300 px-3 py-2 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      />
+                    </div>
 
-                  <div>
-                    <label className="mb-1 block text-sm font-medium text-gray-700">
-                      아버지 이름
-                    </label>
-                    <input
-                      type="text"
-                      value={newStudent.father_name}
-                      onChange={(e) =>
-                        setNewStudent((prev) => ({
-                          ...prev,
-                          father_name: e.target.value,
-                        }))
-                      }
-                      className="w-full rounded-md border border-gray-300 px-3 py-2 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      placeholder="아버지 이름"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="mb-1 block text-sm font-medium text-gray-700">
-                      아버지 전화번호
-                    </label>
-                    <input
-                      type="tel"
-                      value={newStudent.father_phone}
-                      onChange={(e) => {
-                        const formatted = formatPhoneNumber(e.target.value);
-                        setNewStudent(prev => ({ ...prev, father_phone: formatted }));
-                      }}
-                      className="w-full rounded-md border border-gray-300 px-3 py-2 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      placeholder="010-1234-5678"
-                    />
+                    <div>
+                      <label className="mb-1 block text-sm font-medium text-gray-700">
+                        아버지 전화번호
+                      </label>
+                      <input
+                        type="tel"
+                        value={newStudent.father_phone}
+                        onChange={(e) => {
+                          const formatted = formatPhoneNumber(e.target.value);
+                          setNewStudent((prev) => ({
+                            ...prev,
+                            father_phone: formatted,
+                          }));
+                        }}
+                        className="w-full rounded-md border border-gray-300 px-3 py-2 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        placeholder="010-1234-5678"
+                      />
+                    </div>
                   </div>
                 </div>
               </div>
 
-              <div className="mt-6 flex justify-end space-x-3">
-                <button
-                  onClick={closeAddStudentModal}
-                  className="rounded-md bg-gray-100 px-4 py-2 text-gray-700 transition-colors hover:bg-gray-200"
-                >
-                  취소
-                </button>
+              <div className="mt-6 flex w-full">
                 <button
                   onClick={handleAddStudent}
-                  className="rounded-md bg-[#3F80EA] px-4 py-2 text-white transition-colors hover:bg-blue-600"
+                  className="w-full rounded-md bg-[#3F80EA] px-4 py-2 text-white transition-colors hover:bg-blue-600"
                 >
                   학생 추가
                 </button>
