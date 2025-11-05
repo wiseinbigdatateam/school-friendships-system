@@ -1504,6 +1504,13 @@ const IndividualAnalysis: React.FC = () => {
       margin: 0 auto;
     }
 
+    .table1 {
+    width:300px;
+    }
+    .table2 {
+    width:580px;
+    }
+
     .go-back-btn {
       background: #99a1a2;
       color: white;
@@ -1642,6 +1649,15 @@ const IndividualAnalysis: React.FC = () => {
         color: #020712;
           background: linear-gradient(to top, #f5c63a 40%, transparent 40%);
       }
+
+
+      .analysis-list-title {
+        font-size: 16px;
+        width: fit-content;
+                color: #020712;
+          background: linear-gradient(to top, #f5c63a 40%, transparent 40%);
+      }
+          
       
         .friendship-analysis-content {
         font-size: 14px;
@@ -1650,6 +1666,20 @@ const IndividualAnalysis: React.FC = () => {
         margin-left: 12px;
       }
     
+      .footer {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+
+      font-size: 12px;
+      line-height: 16px;
+      padding : 28px 0;
+      color : #697282;
+  
+      }
+
     @media print {
       body { padding: 20px; }
       .no-print { display: none; }
@@ -1714,7 +1744,7 @@ const IndividualAnalysis: React.FC = () => {
     
     <div class="subsection">
       <div class="subsection-title">·&nbsp&nbsp학교생활 만족도</div>
-      <table class="table">
+      <table class="table1">
         ${aiReport.detailedAnalysis.schoolLifeSatisfaction.surveyResults
           .map(
             (result) => `
@@ -1726,12 +1756,12 @@ const IndividualAnalysis: React.FC = () => {
           )
           .join("")}
       </table>
-      <div class="content">${aiReport.detailedAnalysis.schoolLifeSatisfaction.analysis}</div>
+      <div  class="friendship-analysis-content">${aiReport.detailedAnalysis.schoolLifeSatisfaction.analysis}</div>
     </div>
 
     <div class="subsection">
-      <div class="subsection-title">폭력 경험도</div>
-      <table class="table">
+      <div class="subsection-title">·&nbsp&nbsp폭력 경험도</div>
+      <table class="table2">
         ${aiReport.detailedAnalysis.violenceExperience.surveyResults
           .map(
             (result) => `
@@ -1743,7 +1773,7 @@ const IndividualAnalysis: React.FC = () => {
           )
           .join("")}
       </table>
-      <div class="content">${aiReport.detailedAnalysis.violenceExperience.analysis}</div>
+      <div  class="friendship-analysis-content">${aiReport.detailedAnalysis.violenceExperience.analysis}</div>
     </div>
 
     
@@ -1753,14 +1783,14 @@ const IndividualAnalysis: React.FC = () => {
     <div class="section-title">💪 3. 강점 및 개선 영역</div>
     
     <div class="subsection">
-      <div class="subsection-title">강점</div>
+      <div class="subsection-title analysis-list-title">·&nbsp&nbsp강점</div>
       <div class="list">
         ${aiReport.strengthsAndImprovements.strengths
           .map(
             (strength) => `
           <div class="list-item">
             <strong>${strength.title}</strong><br>
-            ${strength.description}
+            - &nbsp;${strength.description}
           </div>
         `,
           )
@@ -1769,14 +1799,14 @@ const IndividualAnalysis: React.FC = () => {
     </div>
 
     <div class="subsection">
-      <div class="subsection-title">개선 영역</div>
+      <div class="subsection-title analysis-list-title">·&nbsp&nbsp개선 영역</div>
       <div class="list">
         ${aiReport.strengthsAndImprovements.improvementAreas
           .map(
             (area) => `
           <div class="list-item">
             <strong>${area.title}</strong><br>
-            ${area.description}
+            - &nbsp;${area.description}
           </div>
         `,
           )
@@ -1788,20 +1818,20 @@ const IndividualAnalysis: React.FC = () => {
   <div class="section">
     <div class="section-title">🎯 4. 맞춤형 솔루션</div>
     
-    <div class="subsection">
+    <div class="subsection" style="display: none;">
       <div class="subsection-title">전체 목표</div>
       <div class="content">${aiReport.customizedSolutions.overallGoal}</div>
     </div>
 
     <div class="subsection">
-      <div class="subsection-title">단기 솔루션 (1-2주)</div>
+      <div class="subsection-title analysis-list-title">·&nbsp&nbsp단기 솔루션 (1-2주)</div>
       <div class="list">
         ${aiReport.customizedSolutions.shortTermSolutions
           .map(
             (solution) => `
           <div class="list-item">
             <strong>${solution.title}</strong><br>
-            ${solution.description}
+            - &nbsp;${solution.description}
           </div>
         `,
           )
@@ -1809,15 +1839,15 @@ const IndividualAnalysis: React.FC = () => {
       </div>
     </div>
 
-    <div class="subsection">
-      <div class="subsection-title">중기 솔루션 (1-2개월)</div>
+    <div class="subsection ">
+      <div class="subsection-title analysis-list-title">·&nbsp&nbsp중기 솔루션 (1-2개월)</div>
       <div class="list">
         ${aiReport.customizedSolutions.midTermSolutions
           .map(
             (solution) => `
           <div class="list-item">
             <strong>${solution.title}</strong><br>
-            ${solution.description}
+            - &nbsp;${solution.description}
           </div>
         `,
           )
@@ -1825,15 +1855,15 @@ const IndividualAnalysis: React.FC = () => {
       </div>
     </div>
 
-    <div class="subsection">
-      <div class="subsection-title">장기 솔루션 (3-6개월)</div>
+    <div class="subsection ">
+      <div class="subsection-title analysis-list-title">·&nbsp&nbsp장기 솔루션 (3-6개월)</div>
       <div class="list">
         ${aiReport.customizedSolutions.longTermSolutions
           .map(
             (solution) => `
           <div class="list-item">
             <strong>${solution.title}</strong><br>
-            ${solution.description}
+            - &nbsp;${solution.description}
           </div>
         `,
           )
@@ -4106,7 +4136,7 @@ const IndividualAnalysis: React.FC = () => {
 
                                 <div className="space-y-4">
                                   <div>
-                                    <h5 className="mb-2 text-sm font-medium text-cyan-500">
+                                    <h5 className="text-md mb-2 w-fit bg-gradient-to-t from-yellow-200 from-50% to-transparent to-50% font-medium text-gray-800">
                                       1. 현재 상태 (Current Status)
                                     </h5>
                                     <ul className="ml-4 space-y-1 text-sm text-gray-600">
@@ -4189,7 +4219,7 @@ const IndividualAnalysis: React.FC = () => {
                                   </div>
 
                                   <div>
-                                    <h5 className="mb-2 text-sm font-medium text-sky-500">
+                                    <h5 className="text-md mb-2 w-fit bg-gradient-to-t from-yellow-200 from-50% to-transparent to-50% font-medium text-gray-800">
                                       2. 네트워크 안정성 (Network Stability)
                                     </h5>
                                     <ul className="ml-4 space-y-1 text-sm text-gray-600">
@@ -4213,7 +4243,7 @@ const IndividualAnalysis: React.FC = () => {
                                   </div>
 
                                   <div>
-                                    <h5 className="mb-2 text-sm font-medium text-blue-500">
+                                    <h5 className="text-md mb-2 w-fit bg-gradient-to-t from-yellow-200 from-50% to-transparent to-50% font-medium text-gray-800">
                                       3. 개선방안 (Improvement Plan)
                                     </h5>
                                     <ul className="ml-4 space-y-1 text-sm text-gray-600">
@@ -4334,7 +4364,7 @@ const IndividualAnalysis: React.FC = () => {
                                     </ul>
                                   </div>
                                   <div>
-                                    <h5 className="mb-2 text-sm font-medium text-indigo-500">
+                                    <h5 className="text-md mb-2 w-fit bg-gradient-to-t from-yellow-200 from-50% to-transparent to-50% font-medium text-gray-800">
                                       4. 모니터링 포인트 (Monitoring Points)
                                     </h5>
                                     <ul className="ml-4 space-y-1 text-sm text-gray-600">
