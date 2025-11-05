@@ -914,21 +914,22 @@ const IndividualAnalysis: React.FC = () => {
         let filteredStudents = data;
         if (survey && survey.created_at) {
           const surveyCreatedAt = new Date(survey.created_at);
-          
+
           filteredStudents = data.filter((student) => {
             const studentCreatedAt = student.created_at
               ? new Date(student.created_at)
               : new Date();
-            
+
             // 설문 생성 시점 이전에 생성되었고 현재 활성 상태인 학생만 포함
             return (
-              studentCreatedAt <= surveyCreatedAt &&
-              student.is_active === true
+              studentCreatedAt <= surveyCreatedAt && student.is_active === true
             );
           });
         } else {
           // 설문이 없거나 생성 시점이 없으면 활성 상태인 학생만 필터링
-          filteredStudents = data.filter((student) => student.is_active === true);
+          filteredStudents = data.filter(
+            (student) => student.is_active === true,
+          );
         }
 
         // 네트워크 분석 결과 조회 (StudentManagement.tsx와 동일한 방식)
@@ -4217,7 +4218,7 @@ const IndividualAnalysis: React.FC = () => {
                                       })()}
                                     </ul>
                                   </div>
-
+                                  <div className="h-0 w-full border border-dashed border-[#D0D5DB]"></div>
                                   <div>
                                     <h5 className="text-md mb-2 w-fit bg-gradient-to-t from-yellow-200 from-50% to-transparent to-50% font-medium text-gray-800">
                                       2. 네트워크 안정성 (Network Stability)
@@ -4241,7 +4242,7 @@ const IndividualAnalysis: React.FC = () => {
                                       </li>
                                     </ul>
                                   </div>
-
+                                  <div className="h-0 w-full border border-dashed border-[#D0D5DB]"></div>
                                   <div>
                                     <h5 className="text-md mb-2 w-fit bg-gradient-to-t from-yellow-200 from-50% to-transparent to-50% font-medium text-gray-800">
                                       3. 개선방안 (Improvement Plan)
@@ -4363,6 +4364,9 @@ const IndividualAnalysis: React.FC = () => {
                                       })()}
                                     </ul>
                                   </div>
+
+                                  <div className="h-0 w-full border border-dashed border-[#D0D5DB]"></div>
+
                                   <div>
                                     <h5 className="text-md mb-2 w-fit bg-gradient-to-t from-yellow-200 from-50% to-transparent to-50% font-medium text-gray-800">
                                       4. 모니터링 포인트 (Monitoring Points)
