@@ -483,14 +483,14 @@ const SurveyTemplates: React.FC = () => {
 
                 {!isParentConsentSurvey && (
                   <div className="flex items-center space-x-4 text-xs text-gray-500">
-                    <span>📊 {template.questions.length}개 질문</span>
+                    <span>• {template.questions.length}개 질문</span>
                     <span className="hidden">
-                      ⏱️ 약 {template.estimatedTime}분
+                      • 약 {template.estimatedTime}분
                     </span>
                     <span className="hidden">
-                      🎯 {template.targetGrades.join(", ")}학년
+                      • {template.targetGrades.join(", ")}학년
                     </span>
-                    <span>📈 {template.useCount}회 사용</span>
+                    <span>• {template.useCount}회 사용</span>
                   </div>
                 )}
               </div>

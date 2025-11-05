@@ -15,6 +15,44 @@ const AIReportDisplay: React.FC<AIReportDisplayProps> = ({
   aiReport,
   tokenUsage,
 }) => {
+  // 학생 유형에 따른 배경색 및 텍스트 색상 반환 함수
+  const getStudentTypeStyle = (studentType: string) => {
+    const type = studentType || "";
+    
+    if (type.includes("외톨이") || type.includes("isolated")) {
+      return {
+        backgroundColor: "#FF6B6B",
+        color: "#FFFFFF",
+      };
+    } else if (type.includes("소수 친구") || type.includes("few_friends")) {
+      return {
+        backgroundColor: "#4ECDC4",
+        color: "#FFFFFF",
+      };
+    } else if (type.includes("평균") || type.includes("average")) {
+      return {
+        backgroundColor: "#45B7D1",
+        color: "#FFFFFF",
+      };
+    } else if (type.includes("친구 많은") || type.includes("many_friends")) {
+      return {
+        backgroundColor: "#96CEB4",
+        color: "#FFFFFF",
+      };
+    } else if (type.includes("사교") || type.includes("social_star")) {
+      return {
+        backgroundColor: "#FFEAA7",
+        color: "#1F2937",
+      };
+    }
+    
+    // 기본값
+    return {
+      backgroundColor: "#45B7D1",
+      color: "#FFFFFF",
+    };
+  };
+
   return (
     <div className="space-y-6">
       {/* 토큰 사용량 정보 */}
@@ -56,7 +94,12 @@ const AIReportDisplay: React.FC<AIReportDisplayProps> = ({
         </h4>
         <div className="rounded-lg bg-white p-4">
           <div className="mb-3">
-            <span className="inline-block rounded-full bg-blue-100 px-3 py-1 text-sm font-medium text-blue-800">
+            <span
+              className="inline-block rounded-full px-3 py-1 text-sm font-medium"
+              style={getStudentTypeStyle(
+                aiReport.comprehensiveDiagnosis?.studentType || "일반형",
+              )}
+            >
               {aiReport.comprehensiveDiagnosis?.studentType || "일반형"}
             </span>
           </div>
