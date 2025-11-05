@@ -14,6 +14,7 @@ interface SurveyProject {
   targetClasses: any;
   isSelected: boolean;
   template_id?: string | null;
+  createdAt: string;
 }
 
 interface SurveyTemplate {
@@ -158,8 +159,34 @@ const Dashboard: React.FC = () => {
       return;
     }
 
+    // 선택된 설문 정보 가져오기
+    const selectedSurvey = surveyProjects.find((p) => p.id === projectId);
+    if (!selectedSurvey) {
+      return;
+    }
+
+    // 설문 생성 시점의 학생만 필터링
+    // 설문 생성 시점(createdAt) 이전에 생성되고, 설문 생성 시점에 is_active가 true였던 학생만 포함
+    const surveyCreatedAt = selectedSurvey.createdAt
+      ? new Date(selectedSurvey.createdAt)
+      : new Date();
+
+    // 설문 생성 시점의 학생 목록: 설문 생성 시점 이전에 생성되었고 현재 is_active가 true인 학생만 포함
+    // 주의: 설문 생성 시점에 is_active가 false였던 학생은 히스토리를 추적하기 어려우므로
+    // 현재 is_active가 true이고 설문 생성 시점 이전에 생성된 학생만 포함
+    const surveyStudents = students.filter((student) => {
+      const studentCreatedAt = student.created_at
+        ? new Date(student.created_at)
+        : new Date();
+      // 설문 생성 시점 이전에 생성되었고 현재 활성 상태인 학생만 포함
+      return (
+        studentCreatedAt <= surveyCreatedAt &&
+        student.is_active === true
+      );
+    });
+
     // 선택된 설문의 응답 데이터 조회
-    if (projectId && students.length > 0) {
+    if (projectId && surveyStudents.length > 0) {
       try {
         // 해당 설문의 응답 조회
         const { data: responsesData, error: responsesError } = await supabase
@@ -173,11 +200,11 @@ const Dashboard: React.FC = () => {
         } else {
           setResponses(responsesData || []);
 
-          // 참여 현황 재계산
-          const totalStudents = students.length;
+          // 참여 현황 재계산 (설문 생성 시점의 학생 기준)
+          const totalStudents = surveyStudents.length;
           const participatedStudents = responsesData
             ? responsesData.filter((r) =>
-                students.some((s) => s.id === r.student_id),
+                surveyStudents.some((s) => s.id === r.student_id),
               ).length
             : 0;
           const nonParticipatedStudents = totalStudents - participatedStudents;
@@ -193,8 +220,8 @@ const Dashboard: React.FC = () => {
             completionRate,
           });
 
-          // 학생 참여 리스트 업데이트
-          const studentList = students.map((student, index) => {
+          // 학생 참여 리스트 업데이트 (설문 생성 시점의 학생만)
+          const studentList = surveyStudents.map((student, index) => {
             const response = responsesData?.find(
               (r) => r.student_id === student.id,
             );
@@ -481,6 +508,7 @@ const Dashboard: React.FC = () => {
                   description: survey.description || "",
                   startDate: survey.start_date || "",
                   endDate: survey.end_date || "",
+                  createdAt: survey.created_at || "",
                   isSelected: false,
                 };
               }),
@@ -496,6 +524,23 @@ const Dashboard: React.FC = () => {
               firstProject.isSelected = true;
               setSelectedProject(firstProject.id);
 
+              // 설문 생성 시점의 학생만 필터링
+              const surveyCreatedAt = firstProject.createdAt
+                ? new Date(firstProject.createdAt)
+                : new Date();
+
+              // 설문 생성 시점의 학생 목록: 설문 생성 시점 이전에 생성되었고 현재 is_active가 true인 학생만 포함
+              const surveyStudents = studentsData.filter((student) => {
+                const studentCreatedAt = student.created_at
+                  ? new Date(student.created_at)
+                  : new Date();
+                // 설문 생성 시점 이전에 생성되었고 현재 활성 상태인 학생만 포함
+                return (
+                  studentCreatedAt <= surveyCreatedAt &&
+                  student.is_active === true
+                );
+              });
+
               // 해당 설문의 응답 조회 (더 자세한 정보 포함)
               const { data: responsesData, error: responsesError } =
                 await supabase
@@ -509,11 +554,11 @@ const Dashboard: React.FC = () => {
               } else {
                 setResponses(responsesData || []);
 
-                // 참여 현황 계산
-                const totalStudents = studentsData.length;
+                // 참여 현황 계산 (설문 생성 시점의 학생 기준)
+                const totalStudents = surveyStudents.length;
                 const participatedStudents = responsesData
                   ? responsesData.filter((r) =>
-                      studentsData.some((s) => s.id === r.student_id),
+                      surveyStudents.some((s) => s.id === r.student_id),
                     ).length
                   : 0;
                 const nonParticipatedStudents =
@@ -531,7 +576,7 @@ const Dashboard: React.FC = () => {
                 });
 
                 // 학생 참여 리스트 설정 (실제 응답 데이터 기반, 더 정확한 파싱)
-                const studentList = studentsData.map((student, index) => {
+                const studentList = surveyStudents.map((student, index) => {
                   const response = responsesData?.find(
                     (r) => r.student_id === student.id,
                   );
@@ -550,7 +595,7 @@ const Dashboard: React.FC = () => {
                       if (responseData.q1 && Array.isArray(responseData.q1)) {
                         const friendNames = responseData.q1
                           .map((friendId: string) => {
-                            const friend = studentsData.find(
+                            const friend = surveyStudents.find(
                               (s) => s.id === friendId,
                             );
                             return friend ? friend.name : "알 수 없음";
@@ -563,7 +608,7 @@ const Dashboard: React.FC = () => {
                       if (responseData.q2 && Array.isArray(responseData.q2)) {
                         const friendNames = responseData.q2
                           .map((friendId: string) => {
-                            const friend = studentsData.find(
+                            const friend = surveyStudents.find(
                               (s) => s.id === friendId,
                             );
                             return friend ? friend.name : "알 수 없음";
@@ -576,7 +621,7 @@ const Dashboard: React.FC = () => {
                       if (responseData.q3 && Array.isArray(responseData.q3)) {
                         const friendNames = responseData.q3
                           .map((friendId: string) => {
-                            const friend = studentsData.find(
+                            const friend = surveyStudents.find(
                               (s) => s.id === friendId,
                             );
                             return friend ? friend.name : "알 수 없음";
@@ -589,7 +634,7 @@ const Dashboard: React.FC = () => {
                       if (responseData.q4 && Array.isArray(responseData.q4)) {
                         const friendNames = responseData.q4
                           .map((friendId: string) => {
-                            const friend = studentsData.find(
+                            const friend = surveyStudents.find(
                               (s) => s.id === friendId,
                             );
                             return friend ? friend.name : "알 수 없음";
@@ -1430,7 +1475,7 @@ const Dashboard: React.FC = () => {
               <h3 className="mb-4 text-lg font-semibold text-gray-900">
                 일별 참여 현황
               </h3>
-              <BarChart data={dailyParticipationData} />
+              <BarChart data={dailyParticipationData} totalStudents={participationData.totalStudents} />
             </div>
           </div>
         </div>

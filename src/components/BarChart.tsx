@@ -1,13 +1,24 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import {
   BarElement,
   CategoryScale,
   Chart as ChartJS,
   LinearScale,
   Tooltip,
+  LineElement,
+  PointElement,
+  Legend,
 } from "chart.js";
-import { Bar } from "react-chartjs-2";
-ChartJS.register(CategoryScale, LinearScale, BarElement, Tooltip);
+import { Chart } from "react-chartjs-2";
+ChartJS.register(
+  CategoryScale,
+  LinearScale,
+  BarElement,
+  LineElement,
+  PointElement,
+  Tooltip,
+  Legend,
+);
 
 interface BarChartProps {
   data: {
@@ -15,20 +26,36 @@ interface BarChartProps {
     count: number;
     cumulative: number;
   }[];
+  totalStudents?: number;
 }
 
 interface GraphData {
   labels: string[];
-  datasets: {
-    label: string;
-    data: number[];
-    backgroundColor: string;
-    barThickness: number;
-    borderRadius: number;
-  }[];
+  datasets: (
+    | {
+        type: "bar";
+        label: string;
+        data: number[];
+        backgroundColor: string;
+        barThickness: number;
+        borderRadius: number;
+      }
+    | {
+        type: "line";
+        label: string;
+        data: number[];
+        borderColor: string;
+        backgroundColor: string;
+        borderWidth: number;
+        pointRadius: number;
+        pointBackgroundColor: string;
+        pointBorderColor: string;
+        fill: boolean;
+      }
+  )[];
 }
 
-const BarChart: React.FC<BarChartProps> = ({ data }) => {
+const BarChart: React.FC<BarChartProps> = ({ data, totalStudents }) => {
   const [graphData, setGraphData] = useState<GraphData>({
     labels: [],
     datasets: [],
@@ -47,6 +74,7 @@ const BarChart: React.FC<BarChartProps> = ({ data }) => {
         labels: labels,
         datasets: [
           {
+            type: "bar",
             label: "응답수",
             data: data.map((item) => {
               return item.count;
@@ -55,12 +83,26 @@ const BarChart: React.FC<BarChartProps> = ({ data }) => {
             barThickness: 6,
             borderRadius: 5,
           },
+          {
+            type: "line",
+            label: "누적 응답수",
+            data: data.map((item) => {
+              return item.cumulative;
+            }),
+            borderColor: "rgba(255, 255, 255, 0.8)",
+            backgroundColor: "rgba(255, 255, 255, 0.1)",
+            borderWidth: 3,
+            pointRadius: 3,
+            pointBackgroundColor: "rgba(255, 255, 255, 1)",
+            pointBorderColor: "rgba(255, 255, 255, 1)",
+            fill: false,
+          },
         ],
       });
     }
-  }, [labels]);
+  }, [labels, data]);
 
-  const options = {
+  const options = useMemo(() => ({
     responsive: true,
     // 캔버스 비율 유지
     maintainAspectRatio: false,
@@ -83,9 +125,9 @@ const BarChart: React.FC<BarChartProps> = ({ data }) => {
           color: "#fff",
         },
       },
-      // y축 글씨 및 고정최대값 설정
+      // y축 글씨 및 동적 최대값 설정
       y: {
-        max: 20, // 동적인 데이터여야 함 (전체인원)
+        max: totalStudents && totalStudents > 0 ? totalStudents : undefined,
         grid: {
           color: "rgba(228,228,228,0.3)", // x-axis grid color
         },
@@ -97,7 +139,7 @@ const BarChart: React.FC<BarChartProps> = ({ data }) => {
         },
       },
     },
-  };
+  }), [totalStudents]);
 
   if (!data || data.length === 0) {
     return (
@@ -117,7 +159,7 @@ const BarChart: React.FC<BarChartProps> = ({ data }) => {
 
       {/* 차트 컨테이너 */}
       <div className="relative px-5 py-6 h-96 bg-[#3F80EA] rounded-lg overflow-hidden">
-        <Bar data={graphData} options={options} />
+        <Chart type="bar" data={graphData} options={options} />
       </div>
 
       {/* 데이터 테이블 */}

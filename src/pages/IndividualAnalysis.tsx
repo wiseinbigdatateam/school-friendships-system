@@ -643,9 +643,16 @@ const IndividualAnalysis: React.FC = () => {
   useEffect(() => {
     if (teacherInfo) {
       fetchSurveys();
-      fetchStudents();
+      fetchStudents(null);
     }
   }, [teacherInfo]);
+
+  // 선택된 설문이 변경될 때 학생 목록 다시 로드
+  useEffect(() => {
+    if (teacherInfo && selectedSurvey) {
+      fetchStudents(selectedSurvey);
+    }
+  }, [selectedSurvey, teacherInfo]);
 
   // 강제 리렌더링을 위한 useEffect
   useEffect(() => {}, [forceUpdate, surveyResponseCounts]);
@@ -871,7 +878,7 @@ const IndividualAnalysis: React.FC = () => {
     }
   };
 
-  const fetchStudents = async () => {
+  const fetchStudents = async (survey?: Survey | null) => {
     try {
       if (!teacherInfo) {
         setStudents([]);
@@ -903,6 +910,27 @@ const IndividualAnalysis: React.FC = () => {
       if (error) throw error;
 
       if (data && data.length > 0) {
+        // 설문 생성 시점 기준 필터링
+        let filteredStudents = data;
+        if (survey && survey.created_at) {
+          const surveyCreatedAt = new Date(survey.created_at);
+          
+          filteredStudents = data.filter((student) => {
+            const studentCreatedAt = student.created_at
+              ? new Date(student.created_at)
+              : new Date();
+            
+            // 설문 생성 시점 이전에 생성되었고 현재 활성 상태인 학생만 포함
+            return (
+              studentCreatedAt <= surveyCreatedAt &&
+              student.is_active === true
+            );
+          });
+        } else {
+          // 설문이 없거나 생성 시점이 없으면 활성 상태인 학생만 필터링
+          filteredStudents = data.filter((student) => student.is_active === true);
+        }
+
         // 네트워크 분석 결과 조회 (StudentManagement.tsx와 동일한 방식)
         const { data: networkData, error: networkError } = await supabase
           .from("network_analysis_results")
@@ -916,7 +944,7 @@ const IndividualAnalysis: React.FC = () => {
         }
 
         // 학생 데이터에 네트워크 메트릭 연결
-        const studentsWithMetrics = data.map((student) => {
+        const studentsWithMetrics = filteredStudents.map((student) => {
           let metrics = null;
           if (networkData && networkData.length > 0) {
             const completeAnalysis = networkData[0];
@@ -954,7 +982,9 @@ const IndividualAnalysis: React.FC = () => {
         });
 
         setStudents(studentsWithMetrics);
-        setSelectedStudent(studentsWithMetrics[0].id);
+        if (studentsWithMetrics.length > 0) {
+          setSelectedStudent(studentsWithMetrics[0].id);
+        }
       } else {
         setStudents([]);
       }

@@ -674,7 +674,7 @@ const SurveyTemplates: React.FC = () => {
                   </svg>
                 </div>
                 <h3 className="mb-2 text-2xl font-bold text-gray-900">
-                  ✅ 설문 생성 완료
+                  설문 생성 완료
                 </h3>
                 <p className="text-lg text-gray-600">
                   "{successModalData.title}" 템플릿으로 새 설문이 생성되었습니다!
@@ -683,25 +683,25 @@ const SurveyTemplates: React.FC = () => {
 
               <div className="mb-6 space-y-3 rounded-lg bg-gray-50 p-4">
                 <div className="flex items-center justify-between">
-                  <span className="text-sm font-medium text-gray-600">📚 대상</span>
+                  <span className="text-sm font-medium text-gray-600">대상</span>
                   <span className="text-sm font-semibold text-gray-900">
                     {successModalData.targetGrade}학년 {successModalData.targetClass}반
                   </span>
                 </div>
                 <div className="flex items-center justify-between">
-                  <span className="text-sm font-medium text-gray-600">👥 대상 학생</span>
+                  <span className="text-sm font-medium text-gray-600">대상 학생</span>
                   <span className="text-sm font-semibold text-gray-900">
                     {successModalData.studentCount}명
                   </span>
                 </div>
                 <div className="flex items-center justify-between">
-                  <span className="text-sm font-medium text-gray-600">📅 설문 기간</span>
+                  <span className="text-sm font-medium text-gray-600">설문 기간</span>
                   <span className="text-sm font-semibold text-gray-900">
                     {successModalData.startDate} ~ {successModalData.endDate}
                   </span>
                 </div>
                 <div className="flex items-center justify-between">
-                  <span className="text-sm font-medium text-gray-600">📊 상태</span>
+                  <span className="text-sm font-medium text-gray-600">상태</span>
                   <span className="text-sm font-semibold text-gray-900">
                     {successModalData.status}
                   </span>
@@ -710,7 +710,7 @@ const SurveyTemplates: React.FC = () => {
 
               <div className="mb-6 rounded-lg bg-blue-50 p-3">
                 <p className="text-xs text-blue-800">
-                  📝 참고: 대상 학생 정보는 설문 응답 시 자동으로 필터링됩니다.
+                  참고: 대상 학생 정보는 설문 응답 시 자동으로 필터링됩니다.
                 </p>
               </div>
 
