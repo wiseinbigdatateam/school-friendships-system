@@ -4101,7 +4101,7 @@ const IndividualAnalysis: React.FC = () => {
                               <div className="space-y-4">
                                 <div>
                                   <h5 className="text-md mb-2 w-fit bg-gradient-to-t from-amber-400 from-30% to-transparent to-30% pl-2 font-medium text-gray-800">
-                                    1. 현재 상태 (Current Status)
+                                    1. 현재 상태
                                   </h5>
                                   <ul className="ml-4 space-y-1 text-sm text-gray-600">
                                     {(() => {
@@ -4180,7 +4180,7 @@ const IndividualAnalysis: React.FC = () => {
 
                                 <div>
                                   <h5 className="text-md mb-2 w-fit bg-gradient-to-t from-amber-400 from-30% to-transparent to-30% pl-2 font-medium text-gray-800">
-                                    2. 네트워크 안정성 (Network Stability)
+                                    2. 네트워크 안정성
                                   </h5>
                                   <ul className="ml-4 space-y-1 text-sm text-gray-600">
                                     <li>
@@ -4204,7 +4204,7 @@ const IndividualAnalysis: React.FC = () => {
 
                                 <div>
                                   <h5 className="text-md mb-2 w-fit bg-gradient-to-t from-amber-400 from-30% to-transparent to-30% pl-2 font-medium text-gray-800">
-                                    3. 개선방안 (Improvement Plan)
+                                    3. 개선방안
                                   </h5>
                                   <ul className="ml-4 space-y-1 text-sm text-gray-600">
                                     {(() => {
@@ -4323,7 +4323,7 @@ const IndividualAnalysis: React.FC = () => {
 
                                 <div>
                                   <h5 className="text-md mb-2 w-fit bg-gradient-to-t from-amber-400 from-30% to-transparent to-30% pl-2 font-medium text-gray-800">
-                                    4. 모니터링 포인트 (Monitoring Points)
+                                    4. 모니터링 포인트
                                   </h5>
                                   <ul className="ml-4 space-y-1 text-sm text-gray-600">
                                     {(() => {
