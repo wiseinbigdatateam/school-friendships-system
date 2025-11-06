@@ -820,7 +820,7 @@ const SurveyConfigModal: React.FC<{
         .split("T")[0];
 
       setConfig({
-        title: `${template.title} (${new Date().toLocaleDateString()})`,
+        title: `${template.title} (${new Date().toLocaleDateString().replace(/\.$/, '')})`,
         description: template.description,
         targetGrades:
           template.targetGrades.length > 0 ? template.targetGrades : ["3"],
