@@ -1507,9 +1507,17 @@ const IndividualAnalysis: React.FC = () => {
 
     .table1 {
     width:300px;
+
     }
     .table2 {
     width:580px;
+    }
+
+    td {
+      font-size: 14px;
+      font-style: normal;
+      font-weight: 400;
+      line-height: 20px; 
     }
 
     .go-back-btn {
@@ -1648,7 +1656,7 @@ const IndividualAnalysis: React.FC = () => {
       .analysis-list {
         font-size: 16px;
         color: #020712;
-          background: linear-gradient(to top, #f5c63a 40%, transparent 40%);
+          background: linear-gradient(to top, #FBBF24 30%, transparent 30%);
       }
 
 
@@ -1656,7 +1664,7 @@ const IndividualAnalysis: React.FC = () => {
         font-size: 16px;
         width: fit-content;
                 color: #020712;
-          background: linear-gradient(to top, #f5c63a 40%, transparent 40%);
+          background: linear-gradient(to top, #FBBF24 30%, transparent 30%);
       }
           
       
