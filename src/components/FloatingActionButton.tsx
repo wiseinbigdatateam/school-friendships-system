@@ -143,36 +143,51 @@ const FloatingActionButton: React.FC<FloatingActionButtonProps> = ({
         </div>
       )}
 
-      <div className="fixed bottom-6 right-6 z-50">
+      <div className="fixed bottom-0 right-6 z-50">
         <div className="relative">
           {/* 확장된 메뉴 */}
           <div className="absolute bottom-16 right-0 space-y-3 rounded-[50px] border-[1px] border-[#E5E7EB] bg-white p-3">
             {/* 채팅 버튼 */}
-            <button
-              onClick={handleChat}
-              className="flex h-12 w-12 items-center justify-center rounded-full bg-[#F2F4F6] transition-all duration-200 hover:scale-105 hover:shadow-xl"
-              title="문의하기"
-            >
-              <MessageSquareMoreIcon className="text-[#697282]" />
-            </button>
+            <div className="group relative">
+              <button
+                onClick={handleChat}
+                className="flex h-12 w-12 items-center justify-center rounded-full bg-[#F2F4F6] transition-all duration-200 hover:scale-105 hover:bg-[#3B82F6] hover:shadow-xl"
+                title="문의하기"
+              >
+                <MessageSquareMoreIcon className="text-[#697282] transition-colors duration-200 group-hover:text-white" />
+              </button>
+              <span className="absolute right-full top-1/2 mr-2 hidden -translate-y-1/2 items-center whitespace-nowrap rounded-md bg-gray-900 px-3 py-1.5 text-sm text-white opacity-0 transition-opacity duration-200 group-hover:flex group-hover:opacity-100">
+                문의하기
+              </span>
+            </div>
 
             {/* 다운로드 버튼 */}
-            <button
-              onClick={handleDownload}
-              className="flex h-12 w-12 items-center justify-center rounded-full bg-[#3B82F6] transition-all duration-200 hover:scale-105 hover:shadow-xl"
-              title="매뉴얼 다운로드"
-            >
-              <DownloadIcon className="text-white" />
-            </button>
+            <div className="group relative">
+              <button
+                onClick={handleDownload}
+                className="group flex h-12 w-12 items-center justify-center rounded-full bg-[#F2F4F6] transition-all duration-200 hover:scale-105 hover:bg-[#3B82F6] hover:shadow-xl"
+                title="매뉴얼 다운로드"
+              >
+                <DownloadIcon className="text-[#697282] group-hover:text-white" />
+              </button>
+              <span className="absolute right-full top-1/2 mr-2 hidden -translate-y-1/2 items-center whitespace-nowrap rounded-md bg-gray-900 px-3 py-1.5 text-sm text-white opacity-0 transition-opacity duration-200 group-hover:flex group-hover:opacity-100">
+                매뉴얼 다운로드
+              </span>
+            </div>
 
             {/* 맨 위로 스크롤 버튼 */}
-            <button
-              onClick={handleScrollTop}
-              className="flex h-12 w-12 items-center justify-center rounded-full bg-[#F2F4F6] transition-all duration-200 hover:scale-105 hover:shadow-xl"
-              title="맨 위로"
-            >
-              <ArrowUpFromDotIcon className="text-[#697282]" />
-            </button>
+            <div className="group relative">
+              <button
+                onClick={handleScrollTop}
+                className="group flex h-12 w-12 items-center justify-center rounded-full bg-[#F2F4F6] transition-all duration-200 hover:scale-105 hover:bg-[#3B82F6] hover:shadow-xl"
+                title="맨 위로"
+              >
+                <ArrowUpFromDotIcon className="text-[#697282] group-hover:text-white" />
+              </button>
+              <span className="absolute right-full top-1/2 mr-2 hidden -translate-y-1/2 items-center whitespace-nowrap rounded-md bg-gray-900 px-3 py-1.5 text-sm text-white opacity-0 transition-opacity duration-200 group-hover:flex group-hover:opacity-100">
+                TOP
+              </span>
+            </div>
           </div>
         </div>
       </div>
