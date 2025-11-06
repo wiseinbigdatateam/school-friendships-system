@@ -266,9 +266,9 @@ const NetworkChartComponent: React.FC<NetworkChartComponentProps> = ({
                 </div>
               )}
 
-              <div className="flex">
+              <div className="flex gap-8">
                 {/* 학급 친구 관계 안정성 지표 */}
-                <div className="mt-8 w-1/2 rounded-lg bg-white p-6">
+                <div className="mt-8 w-1/2 rounded-lg bg-white">
                   <h4 className="mb-1 text-lg font-medium text-gray-950">
                     학급 친구 관계 안정성 지표
                   </h4>
@@ -401,7 +401,7 @@ const NetworkChartComponent: React.FC<NetworkChartComponentProps> = ({
                 </div>
 
                 {/* 학생 유형별 수 */}
-                <div className="mt-8 w-1/2 rounded-lg bg-white p-6">
+                <div className="mt-8 w-1/2 rounded-lg bg-white">
                   <h4 className="mb-1 text-lg font-medium text-gray-900">
                     학생 유형별 분포
                   </h4>
