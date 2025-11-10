@@ -807,19 +807,25 @@ const StudentManagement: React.FC = () => {
   const handleDownloadTemplate = () => {
     // Excel 템플릿 생성
     const headers = [
-      "번호 (1, 2, 3...)",
-      "이름",
-      "학년",
-      "반",
-      "성별",
-      "생년월일",
+      "번호 *",
+      "이름 *",
+      "학년 *",
+      "반 *",
+      "성별 *",
+      "생년월일 *",
       "입학일",
-      "휴대폰",
+      "휴대폰 *",
       "어머니_이름",
       "어머니_전화번호",
       "아버지_이름",
       "아버지_전화번호",
     ];
+
+    const infoRow = headers.map((_, index) =>
+      index === 0
+        ? "※ 필수 입력 항목은 *로 표시되어 있으며, 공란으로 업로드하면 실패합니다."
+        : "",
+    );
 
     const sampleData = [
       "1",
@@ -840,7 +846,7 @@ const StudentManagement: React.FC = () => {
     const workbook = XLSX.utils.book_new();
 
     // 워크시트 데이터 생성
-    const worksheetData = [headers, sampleData];
+    const worksheetData = [infoRow, headers, sampleData];
     const worksheet = XLSX.utils.aoa_to_sheet(worksheetData);
 
     // 컬럼 너비 자동 조정
@@ -856,6 +862,11 @@ const StudentManagement: React.FC = () => {
     XLSX.writeFile(workbook, "학생_명단_템플릿.xlsx");
 
     toast.success("Excel 템플릿이 다운로드되었습니다.");
+  };
+
+  const normalizeHeader = (header: string | undefined) => {
+    if (!header) return "";
+    return header.replace(/\s*(\(필수\)|\*)\s*$/, "").trim();
   };
 
   const handleUploadStudents = () => {
@@ -913,7 +924,18 @@ const StudentManagement: React.FC = () => {
       lines[0] = lines[0].substring(1);
     }
 
-    const headers = lines[0].split(",").map((h) => h.trim());
+    while (lines.length > 0 && lines[0].trim().startsWith("※")) {
+      lines.shift();
+    }
+
+    if (lines.length === 0) {
+      toast.error("파일에 데이터가 없습니다.");
+      return;
+    }
+
+    const headers = lines[0]
+      .split(",")
+      .map((h) => normalizeHeader(h.trim()));
     const data = lines.slice(1).filter((line) => line.trim());
 
     if (data.length === 0) {
@@ -924,14 +946,20 @@ const StudentManagement: React.FC = () => {
     // 데이터 파싱 및 검증
     const students = data.map((line, index) => {
       const values = line.split(",").map((v) => v.trim());
+      if (line.trim().startsWith("※")) {
+        return null;
+      }
+
       const student: any = {};
 
       headers.forEach((header, i) => {
+        const normalizedHeader = normalizeHeader(header);
+        if (!normalizedHeader) return;
         student[header] = values[i] || "";
       });
 
       return student;
-    });
+    }).filter((student): student is Record<string, string> => student !== null);
 
     // 업로드 확인 다이얼로그
     if (
@@ -953,14 +981,25 @@ const StudentManagement: React.FC = () => {
       // 워크시트를 JSON으로 변환
       const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
 
-      if (jsonData.length < 2) {
+      const filteredRows = (jsonData as any[][]).filter((row) => {
+        if (!row || row.length === 0) return false;
+        const firstCell = String(row[0] ?? "").trim();
+        if (firstCell === "") {
+          return row.some((cell: any) => String(cell ?? "").trim() !== "");
+        }
+        return !firstCell.startsWith("※");
+      });
+
+      if (filteredRows.length < 2) {
         toast.error("Excel 파일에 데이터가 없습니다.");
         return;
       }
 
       // 헤더와 데이터 분리
-      const headers = jsonData[0] as string[];
-      const data = jsonData.slice(1) as any[][];
+      const headers = filteredRows[0].map((header) =>
+        normalizeHeader(String(header ?? "").trim()),
+      );
+      const data = filteredRows.slice(1) as any[][];
 
       // 데이터 파싱 및 검증
       const students = data.map((row, index) => {
@@ -1445,9 +1484,10 @@ const StudentManagement: React.FC = () => {
       !newStudent.name ||
       !newStudent.grade ||
       !newStudent.class ||
-      !newStudent.phone
+      !newStudent.phone ||
+      !newStudent.birth_date
     ) {
-      toast.error("이름, 학년, 반, 휴대폰 번호는 필수 입력 항목입니다.");
+      toast.error("이름, 학년, 반, 생년월일, 휴대폰 번호는 필수 입력 항목입니다.");
       return;
     }
 
@@ -1495,8 +1535,7 @@ const StudentManagement: React.FC = () => {
         class: newStudent.class,
         student_number: studentNumber,
         gender: newStudent.gender,
-        birth_date:
-          newStudent.birth_date || new Date().toISOString().split("T")[0],
+        birth_date: newStudent.birth_date,
         enrolled_at: new Date().toISOString().split("T")[0],
         is_active: true,
         phone: newStudent.phone.trim(),
@@ -2507,7 +2546,7 @@ const StudentManagement: React.FC = () => {
                   <div className="grid grid-cols-2 gap-2">
                     <div>
                       <label className="mb-1 block text-sm font-medium text-gray-700">
-                        생년월일
+                        생년월일 *
                       </label>
                       <input
                         type="date"
@@ -2519,6 +2558,7 @@ const StudentManagement: React.FC = () => {
                           }))
                         }
                         className="w-full rounded-md border border-gray-300 px-3 py-2 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        required
                       />
                     </div>
 

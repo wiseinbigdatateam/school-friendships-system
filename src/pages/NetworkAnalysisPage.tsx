@@ -505,9 +505,9 @@ const NetworkAnalysisPage: React.FC = () => {
               <span className="font-medium text-[#3F80EA]">
                 *최대 2개까지 가능
               </span>
-              <span className="ml-2 text-xs text-gray-500">
+              {/* <span className="ml-2 text-xs text-gray-500">
                 (응답자가 있는 완료된 설문만 분석 가능)
-              </span>
+              </span> */}
               <span className="ml-auto text-xs text-gray-500">
                 총 {projectsData.length}개 설문
               </span>
