@@ -154,7 +154,7 @@ const Header: React.FC<HeaderProps> = ({ logo, navigationItems }) => {
               onClick={handleLogoClick}
               className="flex items-center space-x-2 text-lg font-bold text-blue-600 transition-colors hover:text-blue-700"
             >
-              <div className="flex h-36 w-36 items-center justify-center">
+              <div className="flex h-auto w-36 items-center justify-center">
                 <img
                   src="/logo_school.png"
                   alt="WiseOn School Logo"

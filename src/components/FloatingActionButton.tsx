@@ -152,7 +152,7 @@ const FloatingActionButton: React.FC<FloatingActionButtonProps> = ({
               <button
                 onClick={handleChat}
                 className="flex h-12 w-12 items-center justify-center rounded-full bg-[#F2F4F6] transition-all duration-200 hover:scale-105 hover:bg-[#3B82F6] hover:shadow-xl"
-                title="문의하기"
+                title=""
               >
                 <MessageSquareMoreIcon className="text-[#697282] transition-colors duration-200 group-hover:text-white" />
               </button>
@@ -166,7 +166,7 @@ const FloatingActionButton: React.FC<FloatingActionButtonProps> = ({
               <button
                 onClick={handleDownload}
                 className="group flex h-12 w-12 items-center justify-center rounded-full bg-[#F2F4F6] transition-all duration-200 hover:scale-105 hover:bg-[#3B82F6] hover:shadow-xl"
-                title="매뉴얼 다운로드"
+                title=""
               >
                 <DownloadIcon className="text-[#697282] group-hover:text-white" />
               </button>
@@ -180,7 +180,7 @@ const FloatingActionButton: React.FC<FloatingActionButtonProps> = ({
               <button
                 onClick={handleScrollTop}
                 className="group flex h-12 w-12 items-center justify-center rounded-full bg-[#F2F4F6] transition-all duration-200 hover:scale-105 hover:bg-[#3B82F6] hover:shadow-xl"
-                title="맨 위로"
+                title=""
               >
                 <ArrowUpFromDotIcon className="text-[#697282] group-hover:text-white" />
               </button>
