@@ -1034,6 +1034,14 @@ const SurveyResponse: React.FC = () => {
 
   // 학생 본인 확인 단계
   if (currentStep === "verify") {
+    const nameLabel = isParentConsentSurvey ? "학생 이름" : "이름";
+    const namePlaceholder = isParentConsentSurvey
+      ? "학생 이름을 입력하세요"
+      : "이름을 입력하세요";
+    const birthLabel = isParentConsentSurvey ? "학생 생년월일" : "생년월일";
+    const birthPlaceholder = isParentConsentSurvey
+      ? "학생 생년월일 (예: 2005-03-15)"
+      : "YYYY-MM-DD (예: 2005-03-15)";
     return (
       <div className="flex min-h-screen w-full items-center justify-center bg-gray-50 py-8">
         {/* 배경 이미지 */}
@@ -1078,11 +1086,11 @@ const SurveyResponse: React.FC = () => {
             {/* 이름 입력 */}
             <div className="mb-4">
               <label className="mb-2 block text-sm font-medium text-gray-700">
-                이름
+                {nameLabel}
               </label>
               <input
                 type="text"
-                placeholder="이름을 입력하세요"
+                placeholder={namePlaceholder}
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -1092,12 +1100,12 @@ const SurveyResponse: React.FC = () => {
             {/* 생년월일 입력 */}
             <div className="mb-6">
               <label className="mb-2 block text-sm font-medium text-gray-700">
-                생년월일
+                {birthLabel}
               </label>
               <div className="relative">
                 <input
                   type="text"
-                  placeholder="YYYY-MM-DD (예: 2005-03-15)"
+                  placeholder={birthPlaceholder}
                   value={birthDate}
                   onChange={(e) => {
                     const value = e.target.value;
